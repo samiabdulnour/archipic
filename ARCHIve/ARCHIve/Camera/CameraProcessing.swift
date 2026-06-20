@@ -14,6 +14,7 @@ enum CameraLook: String, CaseIterable, Identifiable {
     case ektar     = "Ektar 100"       // clean, a little vivid
     case pro400h   = "Pro 400H"        // Fuji: soft, green-leaning, creamy
     case cinestill = "CineStill 800T"  // tungsten: cool, teal shadows, soft halation
+    case eterna    = "Eterna 500"      // night: cold WB, pushed greens, deep blacks, neon glow
     case trix      = "Tri-X 400"       // soft-contrast black & white
     var id: String { rawValue }
 }
@@ -89,6 +90,16 @@ enum CameraProcessing {
             x = bloom(x)                                      // subtle halation glow
             let y = curve(x, [p(0,0.0), p(0.25,0.23), p(0.5,0.5), p(0.78,0.79), p(1,0.95)])
             return finish(y, clarity: 0.15, grain: 0.20, on: applyGrain)
+
+        case .eterna:                                  // Eterna 500 — night: cold, green-pushed, cinematic
+            var x = temperature(ci, from: 6500, to: 7000, tint: -12)  // cold white balance + green
+            x = applyCube(x, data: eternaCube)
+            x = controls(x, sat: 1.04, con: 1.05)                     // a little punch
+            x = splitTone(x, strength: 1.0)                           // teal shadows / warm city-light highlights
+            x = bloom(x)                                              // neon halation
+            // deep, slightly crushed blacks; protect the warm highlights
+            let y = curve(x, [p(0,0.0), p(0.25,0.21), p(0.5,0.49), p(0.78,0.78), p(1,0.95)])
+            return finish(y, clarity: 0.18, grain: 0.14, on: applyGrain)
 
         case .trix:                                    // Tri-X 400 — soft black & white
             let m = CIFilter.photoEffectMono(); m.inputImage = ci
@@ -275,6 +286,17 @@ enum CameraProcessing {
         let h = hsv.x
         if h > 70 && h < 175 { hsv.x = min(h + 5, 180); hsv.y *= 0.96 }  // greens → cyan-green, eased
         else if h < 30 || h > 330 { hsv.y *= 0.95 }                     // reds eased
+        return hsv2rgb(hsv)
+    }
+
+    // Eterna: night cinema — greens & cyans pushed and pulled toward teal; warm
+    // city lights (reds/oranges) kept saturated so they pop against the cold green.
+    private static let eternaCube = makeCube { rgb in
+        var hsv = rgb2hsv(rgb)
+        let h = hsv.x
+        if h > 90 && h < 165 { hsv.x = min(h + 12, 175); hsv.y = min(hsv.y * 1.18, 1) }   // greens → teal, pushed
+        else if h >= 165 && h < 200 { hsv.y = min(hsv.y * 1.15, 1) }                       // cyans pushed
+        else if h <= 30 || h > 335 { hsv.y = min(hsv.y * 1.05, 1) }                        // warm lights kept
         return hsv2rgb(hsv)
     }
 
