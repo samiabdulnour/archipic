@@ -11,6 +11,7 @@ enum CameraLook: String, CaseIterable, Identifiable {
     case portra    = "Portra 400"      // warm, soft, peachy reds, blacks kept
     case gold      = "Gold 200"        // gently golden, nostalgic
     case superia   = "Superia 400"     // sunny, warm, pastel — Fuji summer (no grain)
+    case astia     = "Astia 100"       // airy cinematic: high-key whites, dark greens, deep reds
     case ektar     = "Ektar 100"       // clean, a little vivid
     case pro400h   = "Pro 400H"        // Fuji: soft, green-leaning, creamy
     case cinestill = "CineStill 800T"  // tungsten: cool, teal shadows, soft halation
@@ -66,6 +67,15 @@ enum CameraProcessing {
             // airy: a whisper of black lift + bright mids + soft highlight rolloff
             let y = curve(x, [p(0,0.012), p(0.25,0.27), p(0.5,0.52), p(0.78,0.8), p(1,0.96)])
             return finish(y, clarity: 0.12, grain: 0, on: applyGrain) // clean, grain-free
+
+        case .astia:                                   // Astia 100 — airy cinematic: white, dark greens, deep reds
+            var x = temperature(ci, from: 6500, to: 6600)        // clean, faintly cool whites
+            x = controls(x, sat: 0.90, con: 0.95)                // muted, low-contrast (cinematic)
+            x = applyCube(x, data: astiaCube)                    // reds back to rich/deep, greens pushed dark
+            x = splitTone(x, strength: 0.3)                      // a whisper of warmth up top
+            // airy: lifted milky blacks, bright soft highlights
+            let y = curve(x, [p(0,0.04), p(0.25,0.29), p(0.5,0.53), p(0.78,0.82), p(1,0.97)])
+            return finish(y, clarity: 0.10, grain: 0, on: applyGrain) // clean & airy, grain-free
 
         case .ektar:                                   // Ektar 100 — clean, lightly vivid (the punchy one)
             var x = temperature(ci, from: 6500, to: 6560)
@@ -267,6 +277,17 @@ enum CameraProcessing {
         else if h >= 38 && h <= 65 { hsv.y = min(hsv.y * 1.05, 1) }               // yellows fuller (sun)
         else if h > 165 && h < 205 { hsv.y = min(hsv.y * 1.03, 1) }               // teal / cyan kept clean
         else if h <= 22 { hsv.x = h + 4; hsv.y *= 0.98 }                          // reds → faint orange
+        return hsv2rgb(hsv)
+    }
+
+    // Astia: airy cinematic — reds kept rich & deep, greens darkened and muted into
+    // cinematic forest-green, the rest gently desaturated (after a global desat).
+    private static let astiaCube = makeCube { rgb in
+        var hsv = rgb2hsv(rgb)
+        let h = hsv.x
+        if h <= 25 || h > 335 { hsv.y = min(hsv.y * 1.22, 1); hsv.z *= 0.97 }       // reds → deep & rich
+        else if h > 80 && h < 165 { hsv.z *= 0.86; hsv.y = min(hsv.y * 1.05, 1) }   // greens → dark, still green
+        else if h >= 38 && h <= 70 { hsv.y *= 0.90 }                               // yellows eased
         return hsv2rgb(hsv)
     }
 
