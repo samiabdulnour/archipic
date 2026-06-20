@@ -174,14 +174,17 @@ enum CameraProcessing {
         return x
     }
 
-    /// Film grain: the finite noise tile repeated at 1:1 (no upscaling) so the
-    /// grain stays fine and photographic at any resolution, then overlay-blended.
+    /// Film grain: the finite noise tile scaled to cover the frame, overlay-blended.
+    /// Kept STRICTLY bounded — both an infinite `randomGenerator` and a degenerate
+    /// `affineTile` (infinite extent) crash the editor's off-screen `createCGImage`
+    /// render at full resolution. The tile is baked large (below) so this modest
+    /// upscale stays fine, not chunky.
     private static func grain(_ ci: CIImage, _ amount: Float) -> CIImage {
         let e = ci.extent
-        let tile = CIFilter.affineTile()
-        tile.inputImage = grainTile
-        tile.transform = .identity                        // repeat 1:1 — fine grain
-        let n = (tile.outputImage ?? grainTile)
+        let t = grainTile.extent
+        let s = max(e.width / t.width, e.height / t.height)
+        let n = grainTile
+            .transformed(by: CGAffineTransform(scaleX: s, y: s))
             .cropped(to: e)
             .applyingFilter("CIColorMatrix", parameters: ["inputAVector": CIVector(x: 0, y: 0, z: 0, w: CGFloat(amount))])
         let b = CIFilter.overlayBlendMode(); b.backgroundImage = ci; b.inputImage = n
@@ -192,7 +195,7 @@ enum CameraProcessing {
     /// live procedural generator) keeps every render's memory bounded — the
     /// infinite generator was spiking memory and getting the app jetsam-killed.
     private static let grainTile: CIImage = {
-        let dim: CGFloat = 1024
+        let dim: CGFloat = 2048   // large enough that covering a full-res photo barely upscales → fine grain
         let ctx = CIContext(options: [.useSoftwareRenderer: false])
         let raw = (CIFilter.randomGenerator().outputImage ?? CIImage())
             .cropped(to: CGRect(x: 0, y: 0, width: dim, height: dim))
