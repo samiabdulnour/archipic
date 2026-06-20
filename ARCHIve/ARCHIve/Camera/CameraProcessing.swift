@@ -18,6 +18,22 @@ enum CameraLook: String, CaseIterable, Identifiable {
     case eterna    = "Eterna 500"      // night: cold WB, pushed greens, deep blacks, neon glow
     case trix      = "Tri-X 400"       // soft-contrast black & white
     var id: String { rawValue }
+
+    /// One-line description shown in the camera, under the look's name.
+    var blurb: String {
+        switch self {
+        case .original:  return "No look — the scene as captured."
+        case .portra:    return "Warm and soft, peachy tones. Kodak's portrait classic."
+        case .gold:      return "Nostalgic golden warmth. Everyday sunny film."
+        case .superia:   return "Sunny Fuji pastel — fresh greens, warm light. Grain-free."
+        case .astia:     return "Airy and cinematic — bright whites, dark greens, deep reds."
+        case .ektar:     return "Clean and vivid, the punchiest colour. Fine grain."
+        case .pro400h:   return "Soft, creamy, green-leaning. The Fuji wedding look."
+        case .cinestill: return "Tungsten night — cool teal shadows, soft halation glow."
+        case .eterna:    return "Cinematic night — cold, green-pushed, deep blacks, neon glow."
+        case .trix:      return "Classic black & white. Soft contrast, rich grain."
+        }
+    }
 }
 
 enum CameraProcessing {

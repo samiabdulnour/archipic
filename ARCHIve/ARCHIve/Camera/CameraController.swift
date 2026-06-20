@@ -297,7 +297,7 @@ final class CameraController: NSObject {
     private func processedStill(_ image: UIImage, keystone: Double, look: CameraLook) -> UIImage {
         let upright = CameraController.normalized(image)
         guard let cg = upright.cgImage else { return image }
-        let ci = CameraProcessing.apply(to: CIImage(cgImage: cg), keystone: keystone, look: look)
+        let ci = CameraProcessing.apply(to: CIImage(cgImage: cg), keystone: keystone, look: look, grain: Settings.grainEnabled)
         guard let out = stillContext.createCGImage(ci, from: ci.extent) else { return upright }
         return UIImage(cgImage: out, scale: upright.scale, orientation: .up)
     }

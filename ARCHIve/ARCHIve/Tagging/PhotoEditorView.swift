@@ -346,7 +346,7 @@ struct PhotoEditorView: View {
                 ci = ci.transformed(by: CGAffineTransform(rotationAngle: -CGFloat(rot) * .pi / 180))
                 ci = ci.transformed(by: CGAffineTransform(translationX: -ci.extent.minX, y: -ci.extent.minY))
             }
-            ci = CameraProcessing.apply(to: ci, keystone: ks, look: lk)
+            ci = CameraProcessing.apply(to: ci, keystone: ks, look: lk, grain: Settings.grainEnabled)
             guard let out = Self.ciContext.createCGImage(ci, from: ci.extent) else { return }
             let img = UIImage(cgImage: out)
             Self.ciContext.clearCaches()   // don't let rapid re-renders accumulate

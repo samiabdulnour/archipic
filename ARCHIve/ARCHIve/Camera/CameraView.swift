@@ -124,7 +124,7 @@ struct CameraView: View {
         // reminder chips) sit above the shutter, so nothing touches the 4:3 border.
         let trayOpen = tool != .none
         let tiltActive = camera.keystoneStrength != 0
-        let bottomReserve = botSafe + 172 + (trayOpen ? 70 : (tiltActive ? 44 : 0))
+        let bottomReserve = botSafe + 172 + (trayOpen ? (tool == .looks ? 104 : 70) : (tiltActive ? 44 : 0))
         let availH = max(0, fullH - topReserve - bottomReserve)
         let frameH = min(availH, fullW / ratio)
         let frameW = min(fullW, frameH * ratio)
@@ -660,6 +660,7 @@ private struct CameraSettingsSheet: View {
     var onSelectTool: (CameraView.CameraTool) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var showAppSettings = false
+    @AppStorage("grainEnabled") private var grainEnabled = true
 
     private let cols = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
 
@@ -677,6 +678,7 @@ private struct CameraSettingsSheet: View {
                 item("TILT", "skew", active: camera.keystoneStrength != 0) {
                     onSelectTool(.keystone); dismiss()
                 }
+                item("GRAIN", "circle.dotted", active: grainEnabled) { grainEnabled.toggle() }
                 item("GRID", "grid", active: camera.gridOn) { camera.gridOn.toggle() }
                 item("LEVEL", "level", active: camera.levelOn) { camera.levelOn.toggle() }
                 item("SETTINGS", "gearshape", active: false) { showAppSettings = true }

@@ -11,6 +11,22 @@ struct LooksWheel: View {
     private let hitHeight: CGFloat = 46     // tall, finger-friendly tap target
 
     var body: some View {
+        VStack(spacing: 7) {
+            wheel
+            // One-line description of the centred look.
+            Text(centered?.blurb ?? " ")
+                .font(.system(size: 10.5))
+                .foregroundStyle(.white.opacity(0.62))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .frame(maxWidth: 300, minHeight: 28, alignment: .top)
+                .id(centered)
+                .transition(.opacity)
+                .animation(.easeInOut(duration: 0.2), value: centered)
+        }
+    }
+
+    private var wheel: some View {
         GeometryReader { geo in
             let side = max(0, (geo.size.width - itemWidth) / 2)
             ScrollView(.horizontal, showsIndicators: false) {
