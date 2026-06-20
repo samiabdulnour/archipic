@@ -58,24 +58,24 @@ enum CameraProcessing {
             let y = curve(x, [p(0,0.0), p(0.25,0.245), p(0.5,0.5), p(0.78,0.79), p(1,0.95)])
             return finish(y, clarity: 0.15, grain: 0.17, on: applyGrain)
 
-        case .superia:                                 // Superia 400 — sunny, warm, pastel; no grain
+        case .superia:                                 // Superia 400 — sunny, warm, pastel; deep blacks; no grain
             var x = temperature(ci, from: 6500, to: 6700)            // warm, sunny
             x = applyCube(x, data: superiaCube)
-            x = controls(x, sat: 1.03, con: 0.98)
+            x = controls(x, sat: 1.04, con: 1.0)
             x = vibrance(x, 0.10)
             x = splitTone(x, strength: 0.4)                          // warm highlights, faint teal shadows
-            // airy: a whisper of black lift + bright mids + soft highlight rolloff
-            let y = curve(x, [p(0,0.012), p(0.25,0.27), p(0.5,0.52), p(0.78,0.8), p(1,0.96)])
-            return finish(y, clarity: 0.12, grain: 0, on: applyGrain) // clean, grain-free
+            // DEEP blacks, bright sunny highlights — no shadow lift
+            let y = curve(x, [p(0,0.0), p(0.25,0.235), p(0.5,0.52), p(0.78,0.82), p(1,0.97)])
+            return finish(y, clarity: 0.15, grain: 0, on: applyGrain) // clean, grain-free
 
-        case .astia:                                   // Astia 100 — airy cinematic: white, dark greens, deep reds
+        case .astia:                                   // Astia 100 — airy cinematic: bright whites, DEEP blacks, dark greens, deep reds
             var x = temperature(ci, from: 6500, to: 6600)        // clean, faintly cool whites
-            x = controls(x, sat: 0.90, con: 0.95)                // muted, low-contrast (cinematic)
-            x = applyCube(x, data: astiaCube)                    // reds back to rich/deep, greens pushed dark
+            x = controls(x, sat: 0.96, con: 1.0)                 // crisp, near-neutral (the cube does the colour)
+            x = applyCube(x, data: astiaCube)                    // reds rich/deep, greens pushed dark
             x = splitTone(x, strength: 0.3)                      // a whisper of warmth up top
-            // airy: lifted milky blacks, bright soft highlights
-            let y = curve(x, [p(0,0.04), p(0.25,0.29), p(0.5,0.53), p(0.78,0.82), p(1,0.97)])
-            return finish(y, clarity: 0.10, grain: 0, on: applyGrain) // clean & airy, grain-free
+            // bright airy HIGHLIGHTS but DEEP cinematic blacks — no shadow lift
+            let y = curve(x, [p(0,0.0), p(0.25,0.215), p(0.5,0.52), p(0.78,0.84), p(1,0.99)])
+            return finish(y, clarity: 0.16, grain: 0, on: applyGrain) // clean, crisp, grain-free
 
         case .ektar:                                   // Ektar 100 — clean, lightly vivid (the punchy one)
             var x = temperature(ci, from: 6500, to: 6560)
@@ -89,7 +89,7 @@ enum CameraProcessing {
             x = applyCube(x, data: pro400hCube)
             x = controls(x, sat: 0.97, con: 0.97)                     // soft, refined
             x = splitTone(x, strength: 0.6)                           // gentle, green-leaning (no purple)
-            let y = curve(x, [p(0,0.0), p(0.25,0.255), p(0.5,0.51), p(0.78,0.79), p(1,0.94)])
+            let y = curve(x, [p(0,0.0), p(0.25,0.245), p(0.5,0.5), p(0.78,0.79), p(1,0.94)])
             return finish(y, clarity: 0.15, grain: 0.17, on: applyGrain)
 
         case .cinestill:                               // CineStill 800T — moody tungsten, teal shadows
