@@ -124,7 +124,7 @@ struct CameraView: View {
         // reminder chips) sit above the shutter, so nothing touches the 4:3 border.
         let trayOpen = tool != .none
         let tiltActive = camera.keystoneStrength != 0
-        let bottomReserve = botSafe + 172 + (trayOpen ? (tool == .looks ? 104 : 70) : (tiltActive ? 44 : 0))
+        let bottomReserve = botSafe + 172 + (trayOpen ? (tool == .looks ? 124 : 70) : (tiltActive ? 44 : 0))
         let availH = max(0, fullH - topReserve - bottomReserve)
         let frameH = min(availH, fullW / ratio)
         let frameW = min(fullW, frameH * ratio)

@@ -11,18 +11,27 @@ struct LooksWheel: View {
     private let hitHeight: CGFloat = 46     // tall, finger-friendly tap target
 
     var body: some View {
-        VStack(spacing: 7) {
+        VStack(spacing: 5) {
             wheel
-            // One-line description of the centred look.
-            Text(centered?.blurb ?? " ")
-                .font(.system(size: 10.5))
-                .foregroundStyle(.white.opacity(0.62))
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .frame(maxWidth: 300, minHeight: 28, alignment: .top)
-                .id(centered)
-                .transition(.opacity)
-                .animation(.easeInOut(duration: 0.2), value: centered)
+            // Description + a "best for" time/weather recommendation of the centred look.
+            VStack(spacing: 3) {
+                Text(centered?.blurb ?? " ")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.white.opacity(0.62))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .frame(minHeight: 26, alignment: .top)
+                if let look = centered {
+                    Label(look.recommendation.text, systemImage: look.recommendation.icon)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(Palette.lemon.opacity(0.9))
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: 320)
+            .id(centered)
+            .transition(.opacity)
+            .animation(.easeInOut(duration: 0.2), value: centered)
         }
     }
 

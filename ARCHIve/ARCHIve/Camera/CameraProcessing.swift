@@ -36,6 +36,24 @@ enum CameraLook: String, CaseIterable, Identifiable {
         case .acros:     return "Fine-grain black & white — crisp, clean, deep blacks."
         }
     }
+
+    /// When the look is at its best — a time-of-day / weather hint, with an
+    /// SF Symbol. Shown under the description in the camera.
+    var recommendation: (icon: String, text: String) {
+        switch self {
+        case .original:  return ("circle.dashed", "Any conditions")
+        case .portra:    return ("sun.haze", "Golden hour & soft daylight")
+        case .gold:      return ("sun.max", "Sunny afternoons, warm light")
+        case .superia:   return ("sun.max.fill", "Bright sun, blue skies, greenery")
+        case .astia:     return ("cloud.sun", "Bright daylight, white & airy scenes")
+        case .ektar:     return ("sun.max", "Bright sun, bold colour, clear skies")
+        case .pro400h:   return ("cloud", "Overcast, open shade, soft light")
+        case .cinestill: return ("moon.stars", "Night, neon & tungsten light")
+        case .eterna:    return ("moon.stars.fill", "Night, city lights, dusk")
+        case .trix:      return ("cloud.fog", "Overcast, gritty street")
+        case .acros:     return ("sun.max", "Harsh sun & strong shadows")
+        }
+    }
 }
 
 enum CameraProcessing {
