@@ -16,7 +16,8 @@ enum CameraLook: String, CaseIterable, Identifiable {
     case pro400h   = "Pro 400H"        // Fuji: soft, green-leaning, creamy
     case cinestill = "CineStill 800T"  // tungsten: cool, teal shadows, soft halation
     case eterna    = "Eterna 500"      // night: cold WB, pushed greens, deep blacks, neon glow
-    case trix      = "Tri-X 400"       // soft-contrast black & white
+    case trix      = "Tri-X 400"       // soft-contrast black & white, heavy grain
+    case acros     = "Acros 100"       // fine-grain B&W: crisp, clean, deep blacks
     var id: String { rawValue }
 
     /// One-line description shown in the camera, under the look's name.
@@ -32,6 +33,7 @@ enum CameraLook: String, CaseIterable, Identifiable {
         case .cinestill: return "Tungsten night — cool teal shadows, soft halation glow."
         case .eterna:    return "Cinematic night — cold, green-pushed, deep blacks, neon glow."
         case .trix:      return "Classic black & white. Soft contrast, rich grain."
+        case .acros:     return "Fine-grain black & white — crisp, clean, deep blacks."
         }
     }
 }
@@ -132,6 +134,13 @@ enum CameraProcessing {
             let base = controls(m.outputImage ?? ci, sat: 1, con: 1.02)
             let y = curve(base, [p(0,0.0), p(0.25,0.23), p(0.5,0.5), p(0.78,0.79), p(1,0.95)])
             return finish(y, clarity: 0.2, grain: 0.28, on: applyGrain)
+
+        case .acros:                                   // Acros 100 — fine-grain B&W: crisp, deep blacks
+            let m = CIFilter.photoEffectMono(); m.inputImage = ci
+            let base = controls(m.outputImage ?? ci, sat: 1, con: 1.08)        // crisper than Tri-X
+            // deep blacks, clean bright whites — punchier, fine-grain
+            let y = curve(base, [p(0,0.0), p(0.25,0.20), p(0.5,0.5), p(0.78,0.82), p(1,0.98)])
+            return finish(y, clarity: 0.28, grain: 0.12, on: applyGrain)       // sharp, fine grain
         }
     }
 
