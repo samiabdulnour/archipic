@@ -379,7 +379,8 @@ extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
                        from connection: AVCaptureConnection) {
         guard let pb = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         let raw = CIImage(cvPixelBuffer: pb)
-        let processed = CameraProcessing.apply(to: raw, keystone: liveKeystone, look: liveLook)
+        // Grain off for the live preview — it's baked into the captured photo only.
+        let processed = CameraProcessing.apply(to: raw, keystone: liveKeystone, look: liveLook, grain: false)
         DispatchQueue.main.async { [weak self] in
             self?.metalView?.update(processed)
             self?.latestFrame = raw

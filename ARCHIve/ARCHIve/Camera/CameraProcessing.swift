@@ -10,24 +10,28 @@ enum CameraLook: String, CaseIterable, Identifiable {
     case original  = "Original"
     case portra    = "Portra 400"      // warm, soft, peachy reds, blacks kept
     case gold      = "Gold 200"        // gently golden, nostalgic
+    case superia   = "Superia 400"     // sunny, warm, pastel — Fuji summer (no grain)
     case ektar     = "Ektar 100"       // clean, a little vivid
-    case pro400h   = "Pro 400H"        // Fuji: cold, bright, airy, green-leaning
+    case pro400h   = "Pro 400H"        // Fuji: soft, green-leaning, creamy
     case cinestill = "CineStill 800T"  // tungsten: cool, teal shadows, soft halation
     case trix      = "Tri-X 400"       // soft-contrast black & white
     var id: String { rawValue }
 }
 
 enum CameraProcessing {
-    static func apply(to input: CIImage, keystone: Double, look: CameraLook) -> CIImage {
+    static func apply(to input: CIImage, keystone: Double, look: CameraLook, grain: Bool = true) -> CIImage {
         var img = input
         if abs(keystone) > 0.01 { img = keystoned(img, strength: keystone) }
-        img = colored(img, look: look)
+        img = colored(img, look: look, applyGrain: grain)
         return img
     }
 
     // MARK: Colour looks
 
-    static func colored(_ ci: CIImage, look: CameraLook) -> CIImage {
+    /// `applyGrain` is false for the live preview — grain is baked into the
+    /// captured photo only, so the preview stays clean (a static grain overlay
+    /// "swims" over moving content, which reads as the grain moving).
+    static func colored(_ ci: CIImage, look: CameraLook, applyGrain: Bool = true) -> CIImage {
         switch look {
         case .original:
             return ci
@@ -43,66 +47,77 @@ enum CameraProcessing {
             x = splitTone(x, strength: 0.6)            // gentle cool shadows / warm highlights
             // deep blacks, smooth highlight rolloff (highlights compress, don't clip)
             let y = curve(x, [p(0,0.0), p(0.25,0.25), p(0.5,0.5), p(0.78,0.78), p(1,0.94)])
-            return finish(y, clarity: 0.15, grain: 0.17)
+            return finish(y, clarity: 0.15, grain: 0.17, on: applyGrain)
 
         case .gold:                                    // Gold 200 — gently warm, nostalgic
             var x = temperature(ci, from: 6500, to: 6360)
             x = applyCube(x, data: goldCube)
             x = controls(x, sat: 1.02, con: 1.0)
             let y = curve(x, [p(0,0.0), p(0.25,0.245), p(0.5,0.5), p(0.78,0.79), p(1,0.95)])
-            return finish(y, clarity: 0.15, grain: 0.17)
+            return finish(y, clarity: 0.15, grain: 0.17, on: applyGrain)
+
+        case .superia:                                 // Superia 400 — sunny, warm, pastel; no grain
+            var x = temperature(ci, from: 6500, to: 6700)            // warm, sunny
+            x = applyCube(x, data: superiaCube)
+            x = controls(x, sat: 1.03, con: 0.98)
+            x = vibrance(x, 0.10)
+            x = splitTone(x, strength: 0.4)                          // warm highlights, faint teal shadows
+            // airy: a whisper of black lift + bright mids + soft highlight rolloff
+            let y = curve(x, [p(0,0.012), p(0.25,0.27), p(0.5,0.52), p(0.78,0.8), p(1,0.96)])
+            return finish(y, clarity: 0.12, grain: 0, on: applyGrain) // clean, grain-free
 
         case .ektar:                                   // Ektar 100 — clean, lightly vivid (the punchy one)
             var x = temperature(ci, from: 6500, to: 6560)
             x = applyCube(x, data: ektarCube)
             x = controls(x, sat: 1.06, con: 1.03)
             let y = curve(x, [p(0,0.0), p(0.25,0.24), p(0.5,0.5), p(0.78,0.8), p(1,0.99)])
-            return finish(y, clarity: 0.25, grain: 0.13)
+            return finish(y, clarity: 0.25, grain: 0.13, on: applyGrain)
 
-        case .pro400h:                                 // Fuji Pro 400H — the Fuji look: soft, green-leaning
+        case .pro400h:                                 // Fuji Pro 400H — soft, green-leaning, creamy
             var x = temperature(ci, from: 6500, to: 6650, tint: -6)   // gently cool + green
             x = applyCube(x, data: pro400hCube)
             x = controls(x, sat: 0.97, con: 0.97)                     // soft, refined
-            x = splitTone(x, strength: 1.0)                           // cool shadows / warm highlights (Superia)
+            x = splitTone(x, strength: 0.6)                           // gentle, green-leaning (no purple)
             let y = curve(x, [p(0,0.0), p(0.25,0.255), p(0.5,0.51), p(0.78,0.79), p(1,0.94)])
-            return finish(y, clarity: 0.15, grain: 0.17)
+            return finish(y, clarity: 0.15, grain: 0.17, on: applyGrain)
 
-        case .cinestill:                               // CineStill 800T — moody tungsten
+        case .cinestill:                               // CineStill 800T — moody tungsten, teal shadows
             var x = temperature(ci, from: 6500, to: 6800)
             x = applyCube(x, data: cinestillCube)
             x = controls(x, sat: 0.97, con: 1.02)
-            x = splitTone(x, strength: 1.2)                   // teal shadows, warm highlights
+            x = splitTone(x, strength: 0.9)                   // teal shadows / warm highlights (no purple)
             x = bloom(x)                                      // subtle halation glow
             let y = curve(x, [p(0,0.0), p(0.25,0.23), p(0.5,0.5), p(0.78,0.79), p(1,0.95)])
-            return finish(y, clarity: 0.15, grain: 0.20)
+            return finish(y, clarity: 0.15, grain: 0.20, on: applyGrain)
 
         case .trix:                                    // Tri-X 400 — soft black & white
             let m = CIFilter.photoEffectMono(); m.inputImage = ci
             let base = controls(m.outputImage ?? ci, sat: 1, con: 1.02)
             let y = curve(base, [p(0,0.0), p(0.25,0.23), p(0.5,0.5), p(0.78,0.79), p(1,0.95)])
-            return finish(y, clarity: 0.2, grain: 0.28)
+            return finish(y, clarity: 0.2, grain: 0.28, on: applyGrain)
         }
     }
 
     /// Final touches: a little clarity (crisp edges) and real film grain.
-    private static func finish(_ ci: CIImage, clarity c: Float, grain g: Float) -> CIImage {
+    /// Grain is skipped when `applyGrain` is false (live preview).
+    private static func finish(_ ci: CIImage, clarity c: Float, grain g: Float, on applyGrain: Bool = true) -> CIImage {
         var x = ci
         if c > 0 {
             let f = CIFilter.unsharpMask(); f.inputImage = x; f.radius = 2.4; f.intensity = c
             x = f.outputImage ?? x
         }
-        if g > 0 { x = grain(x, g) }
+        if g > 0 && applyGrain { x = grain(x, g) }
         return x
     }
 
-    /// Film grain: a FINITE noise bitmap scaled to cover the frame (constant grain
-    /// count → looks consistent across resolutions) and overlay-blended.
+    /// Film grain: the finite noise tile repeated at 1:1 (no upscaling) so the
+    /// grain stays fine and photographic at any resolution, then overlay-blended.
     private static func grain(_ ci: CIImage, _ amount: Float) -> CIImage {
         let e = ci.extent
-        let t = grainTile.extent
-        let s = max(e.width / t.width, e.height / t.height)
-        let n = grainTile
-            .transformed(by: CGAffineTransform(scaleX: s, y: s))
+        let tile = CIFilter.affineTile()
+        tile.inputImage = grainTile
+        tile.transform = .identity                        // repeat 1:1 — fine grain
+        let n = (tile.outputImage ?? grainTile)
             .cropped(to: e)
             .applyingFilter("CIColorMatrix", parameters: ["inputAVector": CIVector(x: 0, y: 0, z: 0, w: CGFloat(amount))])
         let b = CIFilter.overlayBlendMode(); b.backgroundImage = ci; b.inputImage = n
@@ -162,12 +177,14 @@ enum CameraProcessing {
     }
 
     /// Teal in the shadows, warmth in the highlights — the cinematic balance,
-    /// scaled by `strength` (≈1 gentle, ≈2 pronounced).
+    /// scaled by `strength` (≈1 gentle, ≈2 pronounced). Green is lifted in the
+    /// shadows alongside blue so they read TEAL/cyan, not blue-magenta — lifting
+    /// blue alone (with red still present) is what made shadows go purple.
     private static func splitTone(_ ci: CIImage, strength s: Float) -> CIImage {
         let f = CIFilter.colorPolynomial(); f.inputImage = ci
-        f.redCoefficients   = CIVector(x: CGFloat(-0.008 * s), y: CGFloat(1 + 0.028 * s), z: 0, w: 0)
-        f.greenCoefficients = CIVector(x: 0, y: 1, z: 0, w: 0)
-        f.blueCoefficients  = CIVector(x: CGFloat(0.022 * s), y: CGFloat(1 - 0.01 * s), z: CGFloat(-0.018 * s), w: 0)
+        f.redCoefficients   = CIVector(x: CGFloat(-0.010 * s), y: CGFloat(1 + 0.030 * s), z: 0, w: 0)
+        f.greenCoefficients = CIVector(x: CGFloat(0.004 * s), y: 1, z: 0, w: 0)
+        f.blueCoefficients  = CIVector(x: CGFloat(0.012 * s), y: CGFloat(1 - 0.012 * s), z: CGFloat(-0.010 * s), w: 0)
         return f.outputImage ?? ci
     }
 
@@ -227,6 +244,18 @@ enum CameraProcessing {
         let h = hsv.x
         if h > 75 && h < 160 { hsv.x = h - 6; hsv.y *= 0.95 }         // greens → gold (subtle)
         else if h >= 38 && h <= 70 { hsv.y = min(hsv.y * 1.04, 1) }  // yellows
+        return hsv2rgb(hsv)
+    }
+
+    // Superia: Fuji summer — greens drift to fresher yellow-green, yellows fuller
+    // (sun), teals/cyans kept clean, reds eased toward orange. Warm but not garish.
+    private static let superiaCube = makeCube { rgb in
+        var hsv = rgb2hsv(rgb)
+        let h = hsv.x
+        if h > 80 && h < 160 { hsv.x = h - 8; hsv.y = min(hsv.y * 1.04, 1) }      // greens → yellow-green
+        else if h >= 38 && h <= 65 { hsv.y = min(hsv.y * 1.05, 1) }               // yellows fuller (sun)
+        else if h > 165 && h < 205 { hsv.y = min(hsv.y * 1.03, 1) }               // teal / cyan kept clean
+        else if h <= 22 { hsv.x = h + 4; hsv.y *= 0.98 }                          // reds → faint orange
         return hsv2rgb(hsv)
     }
 
