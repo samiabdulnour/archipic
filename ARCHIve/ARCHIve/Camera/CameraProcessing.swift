@@ -130,12 +130,15 @@ enum CameraProcessing {
 
         // ---- SUNNY · warm — reds→ORANGE, soft, olive greens; teal/amber split ----
         d[.portra] = Recipe(
-            wbTo: 7000, wbTint: 0,
-            bands: [Band(lo: 0, hi: 25, rot: 10, sat: 0.93), Band(lo: 25, hi: 38, rot: 4, sat: 0.92),
-                    Band(lo: 38, hi: 70, rot: 3, sat: 1.02), Band(lo: 80, hi: 160, rot: -11, sat: 0.84),
-                    Band(lo: 165, hi: 195, rot: 4, sat: 0.85), Band(lo: 195, hi: 240, rot: -10, sat: 0.82)],
-            shadow: SIMD3(-0.03, 0.012, 0.05), highlight: SIMD3(0.05, 0.018, -0.045), split: 0.8,
-            sat: 0.94, con: 0.99, curveY: [0, 0.20, 0.52, 0.82, 0.96], clarity: 0.15, grain: 0.17)
+            wbTo: 6600, wbTint: 0,                                  // near-neutral — no global orange cast
+            bands: [Band(lo: 0, hi: 18, rot: 7, sat: 1.05),        // reds → orange, a touch fuller
+                    Band(lo: 18, hi: 42, rot: 2, sat: 1.14),       // ORANGES punchy
+                    Band(lo: 42, hi: 70, rot: 1, sat: 1.20),       // YELLOWS punchy
+                    Band(lo: 80, hi: 160, rot: -9, sat: 0.86),     // greens → muted olive (Portra tell)
+                    Band(lo: 165, hi: 200, rot: 3, sat: 0.88),     // cyans muted
+                    Band(lo: 200, hi: 250, rot: -6, sat: 0.85)],   // skies soft, not punchy
+            shadow: SIMD3(-0.03, 0.012, 0.05), highlight: SIMD3(0.028, 0.01, -0.028), split: 0.7,
+            sat: 0.96, con: 0.99, curveY: [0, 0.20, 0.52, 0.82, 0.96], clarity: 0.15, grain: 0.17)
 
         // ---- SUNNY · airy-white — reds→CRIMSON, Fuji emerald greens, punchy ----
         d[.superia] = Recipe(
