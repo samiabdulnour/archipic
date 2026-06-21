@@ -1,6 +1,8 @@
 import AVFoundation
 import UIKit
 import Observation
+import CoreImage
+import Metal
 
 /// Aspect ratios offered in the camera, expressed as the *portrait* ratio
 /// (width / height). Capture crops the full sensor frame to this.
@@ -291,15 +293,31 @@ final class CameraController: NSObject {
         return r.image { _ in image.draw(in: CGRect(origin: .zero, size: image.size)) }
     }
 
-    @ObservationIgnored private let stillContext = CIContext()
+    // Metal-backed (GPU) — far more memory-efficient than the default software
+    // context, part of avoiding the jetsam OOM on the heavy looks.
+    @ObservationIgnored private let stillContext: CIContext = {
+        if let dev = MTLCreateSystemDefaultDevice() { return CIContext(mtlDevice: dev) }
+        return CIContext(options: [.useSoftwareRenderer: false])
+    }()
 
     /// Apply the same keystone + colour look as the live preview to a still.
     private func processedStill(_ image: UIImage, keystone: Double, look: CameraLook) -> UIImage {
         let upright = CameraController.normalized(image)
         guard let cg = upright.cgImage else { return image }
-        let ci = CameraProcessing.apply(to: CIImage(cgImage: cg), keystone: keystone, look: look, grain: Settings.grainEnabled)
-        guard let out = stillContext.createCGImage(ci, from: ci.extent) else { return upright }
-        return UIImage(cgImage: out, scale: upright.scale, orientation: .up)
+        var ci = CIImage(cgImage: cg)
+        // Cap processing resolution. Running grain/bloom on a full 24–48 MP frame
+        // spikes memory and the OS jetsam-kills the app (signal 9) — and only on the
+        // heavy looks, which is the reported symptom. 4096 px longest side (~12 MP)
+        // is plenty for the journal/poster and renders safely.
+        let longest = max(ci.extent.width, ci.extent.height)
+        let maxDim: CGFloat = 4096
+        if longest > maxDim {
+            let f = maxDim / longest
+            ci = ci.transformed(by: CGAffineTransform(scaleX: f, y: f))
+        }
+        let processed = CameraProcessing.apply(to: ci, keystone: keystone, look: look, grain: Settings.grainEnabled)
+        guard let out = stillContext.createCGImage(processed, from: processed.extent) else { return upright }
+        return UIImage(cgImage: out, scale: 1, orientation: .up)
     }
 
     /// Call on the main thread. `completion` is delivered on the main thread.
