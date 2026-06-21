@@ -33,6 +33,22 @@ struct WelcomeView: View {
                     }
                 }
 
+                Text("TAG, BROWSE & MAKE").font(.caption.weight(.semibold)).tracking(1.2)
+                    .foregroundStyle(Palette.coral).padding(.top, 8)
+
+                ForEach(AppGuide.features) { f in
+                    HStack(alignment: .top, spacing: 14) {
+                        Image(systemName: f.icon)
+                            .font(.system(size: 14, weight: .semibold)).foregroundStyle(.black)
+                            .frame(width: 28, height: 28)
+                            .background(RoundedRectangle(cornerRadius: 7).fill(f.tint))
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(f.title).font(.subheadline.weight(.semibold))
+                            Text(f.body).font(.caption).foregroundStyle(Palette.ink3)
+                        }
+                    }
+                }
+
                 Button(action: onGetStarted) {
                     Text("Get started").font(.headline)
                         .frame(maxWidth: .infinity).padding(.vertical, 14)
