@@ -29,6 +29,23 @@ struct AboutView: View {
                         .font(.callout).foregroundStyle(Palette.ink2)
                 }
 
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("WHAT YOU CAN DO").font(.caption.weight(.semibold)).tracking(1.2)
+                        .foregroundStyle(Palette.coral)
+                    ForEach(AppGuide.features) { f in
+                        HStack(alignment: .top, spacing: 14) {
+                            Image(systemName: f.icon)
+                                .font(.system(size: 15, weight: .semibold)).foregroundStyle(.black)
+                                .frame(width: 30, height: 30)
+                                .background(RoundedRectangle(cornerRadius: 7).fill(f.tint))
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(f.title).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.ink)
+                                Text(f.body).font(.caption).foregroundStyle(Palette.ink3)
+                            }
+                        }
+                    }
+                }
+
                 Divider()
 
                 VStack(alignment: .leading, spacing: 4) {

@@ -82,3 +82,26 @@ enum CameraGuide {
               body: "Bottom-right — switch between the rear and front cameras."),
     ]
 }
+
+/// What the app does beyond capture — shown in About and on the first-run welcome.
+enum AppGuide {
+    struct Feature: Identifiable {
+        let id = UUID(); let icon: String; let title: String; let tint: Color; let body: String
+    }
+    static let features: [Feature] = [
+        .init(icon: "tag.fill", title: "Tag in two taps", tint: Palette.coral,
+              body: "After a shot, pick the Kind, then the details. Tap any photo in the gallery to retag it anytime, and add a Place (city) or Project."),
+        .init(icon: "square.grid.2x2.fill", title: "Browse the archive", tint: Palette.mint,
+              body: "Filter by Time, Reference (what's in the photo), Project, or Place on a map. Search across every tag, and pinch the grid to resize it."),
+        .init(icon: "camera.filters", title: "Film looks", tint: Palette.lemon,
+              body: "In the camera, Effect applies film simulations — Portra, Superia, CineStill and more — each with a best-for time-of-day / weather hint."),
+        .init(icon: "crop.rotate", title: "Edit, non-destructively", tint: Palette.coral,
+              body: "Open a photo and Edit to crop, straighten (tilt), rotate, and change the look. Your original is never altered — edits are reversible."),
+        .init(icon: "photo.on.rectangle.angled", title: "Tag from Photos", tint: Palette.mint,
+              body: "Bring in shots already in your library and tag them — one by one, or many at once. Drag across thumbnails to paint a selection."),
+        .init(icon: "doc.richtext.fill", title: "Boards & Journals", tint: Palette.lemon,
+              body: "Select photos in the gallery, tap Board, and lay them out as a printable catalogue poster (B1) or a chronological journal (A4). Export a PDF to print, save, or share."),
+        .init(icon: "lock.icloud.fill", title: "Private & synced", tint: Palette.coral,
+              body: "Everything stays on your device and syncs through your own iCloud — no account, no ads, no tracking. Export a full backup to Files any time."),
+    ]
+}
