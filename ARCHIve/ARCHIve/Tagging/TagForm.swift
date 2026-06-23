@@ -88,8 +88,8 @@ struct TagForm: View {
                     }
                     .frame(maxWidth: .infinity).frame(height: 44)
                     .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(on ? Color.primary.opacity(0.12) : .clear))
-                    .foregroundStyle(on ? Palette.ink : Palette.ink2)
+                        .fill(on ? Palette.tagYellow.opacity(0.18) : .clear))
+                    .foregroundStyle(on ? Palette.tagYellow : Palette.ink)
                     .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
                 .buttonStyle(.plain)

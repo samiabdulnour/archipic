@@ -108,8 +108,8 @@ struct TagSheetView: View {
         .buttonStyle(.plain)
     }
 
-    /// Save — the primary action: a light-glass pill with dark text (neutral, no
-    /// accent colour while tagging). Frosted + dimmed until a Kind is chosen.
+    /// Save — the primary action: a lemon pill with dark text. Frosted + dimmed
+    /// until a Kind is chosen.
     private var saveButton: some View {
         let enabled = tags.type != nil
         return Button { commit() } label: {
@@ -117,14 +117,14 @@ struct TagSheetView: View {
                 Image(systemName: "checkmark").font(.system(size: 15, weight: .bold))
                 Text("Save").font(.system(size: 15, weight: .semibold))
             }
-            .foregroundStyle(enabled ? Color(white: 0.12) : .white)
+            .foregroundStyle(enabled ? Color(white: 0.13) : .white)
             .padding(.horizontal, 20).padding(.vertical, 12)
             .background {
-                if enabled { Capsule().fill(Color.white.opacity(0.92)) }
+                if enabled { Capsule().fill(Palette.lemon) }
                 else { Capsule().fill(.ultraThinMaterial) }
             }
             .overlay(Capsule().strokeBorder(.white.opacity(enabled ? 0 : 0.14), lineWidth: 0.5))
-            .shadow(color: .black.opacity(enabled ? 0.28 : 0.2), radius: 10, y: 4)
+            .shadow(color: .black.opacity(enabled ? 0.3 : 0.2), radius: 10, y: 4)
         }
         .buttonStyle(.plain)
         .disabled(!enabled)

@@ -15,6 +15,8 @@ enum Palette {
     static let coral = Color(hex: "F44E48")   // accent / save / danger
     static let mint  = Color(hex: "7CE3A0")   // Reference mode
     static let lemon = Color(hex: "E8E373")   // Project mode
+    // Tagging accent — readable on both themes: lemon on dark, deeper gold on light.
+    static let tagYellow = dyn(light: 0x8A6B00, dark: 0xE8E373)
 
     private static func dyn(light: Int, dark: Int, alpha: CGFloat = 1) -> Color {
         Color(UIColor { tc in
