@@ -267,7 +267,8 @@ struct TagForm: View {
 
     private func symbolArt(_ group: String, _ id: String) -> some View {
         Image(systemName: TagVocab.symbol(group, id))
-            .font(.system(size: 20, weight: .regular))
+            .font(.system(size: 21, weight: .regular))
+            .symbolVariant(.fill)   // filled SF Symbols — more graphic, App Store-like
     }
 
     private func tileSection<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
