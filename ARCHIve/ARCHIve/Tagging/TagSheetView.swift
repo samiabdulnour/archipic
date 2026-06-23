@@ -92,39 +92,42 @@ struct TagSheetView: View {
             }
     }
 
-    /// Skip — a frosted-glass circle that picks up the photo behind it.
+    /// Skip — a frosted-glass pill that picks up the photo behind it.
     private var skipButton: some View {
         Button { finish() } label: {
-            Image(systemName: "xmark")
-                .font(.system(size: 19, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 54, height: 54)
-                .background(.ultraThinMaterial, in: Circle())
-                .overlay(Circle().strokeBorder(.white.opacity(0.18), lineWidth: 0.5))
-                .shadow(color: .black.opacity(0.22), radius: 8, y: 3)
+            HStack(spacing: 7) {
+                Image(systemName: "xmark").font(.system(size: 15, weight: .semibold))
+                Text("Skip").font(.system(size: 15, weight: .semibold))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 18).padding(.vertical, 11)
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.22), radius: 8, y: 3)
         }
         .buttonStyle(.plain)
     }
 
-    /// Save — the primary action: larger, solid coral, with a soft coral lift.
+    /// Save — the primary action: a solid-coral pill with a soft coral lift.
     private var saveButton: some View {
         let enabled = tags.type != nil
         return Button { commit() } label: {
-            Image(systemName: "checkmark")
-                .font(.system(size: 24, weight: .bold))
-                .foregroundStyle(.white)
-                .frame(width: 64, height: 64)
-                .background {
-                    if enabled { Circle().fill(Palette.coral) }
-                    else { Circle().fill(.ultraThinMaterial) }
-                }
-                .overlay(Circle().strokeBorder(.white.opacity(0.22), lineWidth: 0.5))
-                .shadow(color: (enabled ? Palette.coral : .black).opacity(enabled ? 0.4 : 0.2),
-                        radius: 11, y: 4)
+            HStack(spacing: 7) {
+                Image(systemName: "checkmark").font(.system(size: 15, weight: .bold))
+                Text("Save").font(.system(size: 15, weight: .semibold))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 20).padding(.vertical, 12)
+            .background {
+                if enabled { Capsule().fill(Palette.coral) }
+                else { Capsule().fill(.ultraThinMaterial) }
+            }
+            .overlay(Capsule().strokeBorder(.white.opacity(enabled ? 0.22 : 0.14), lineWidth: 0.5))
+            .shadow(color: (enabled ? Palette.coral : .black).opacity(enabled ? 0.4 : 0.2), radius: 11, y: 4)
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
-        .opacity(enabled ? 1 : 0.7)
+        .opacity(enabled ? 1 : 0.75)
     }
 
     /// Tap the photo (anywhere but the buttons) to inspect it fullscreen.
