@@ -75,14 +75,27 @@ struct TagForm: View {
         return out.sorted()
     }
 
-    /// Building / Element / Graphic as a single segmented toggle.
+    /// Building / Element / Graphic — custom toggle matching the tag buttons:
+    /// boxless, filled icon + label, with a coral squircle highlight on the active one.
     private var typePicker: some View {
-        Picker("Category", selection: Binding(
-            get: { tags.type ?? "" },
-            set: { tags.type = $0.isEmpty ? nil : $0 })) {
-            ForEach(TagVocab.types) { Text($0.label).tag($0.id) }
+        HStack(spacing: 4) {
+            ForEach(TagVocab.types) { t in
+                let on = tags.type == t.id
+                Button { tags.type = t.id } label: {
+                    HStack(spacing: 7) {
+                        Image(systemName: t.symbol).font(.system(size: 15)).symbolVariant(.fill)
+                        Text(t.label).font(.system(size: 14, weight: on ? .semibold : .medium))
+                    }
+                    .frame(maxWidth: .infinity).frame(height: 44)
+                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(on ? Palette.coral.opacity(0.16) : .clear))
+                    .foregroundStyle(on ? Palette.coral : Palette.ink)
+                    .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
         }
-        .pickerStyle(.segmented)
+        .animation(.easeOut(duration: 0.15), value: tags.type)
     }
 
     // MARK: Building
