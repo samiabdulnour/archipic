@@ -189,23 +189,22 @@ struct CompactTile<Art: View>: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 5) {
-                art.frame(width: 26, height: 26)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)   // centre in the space above the label
+            VStack(spacing: 6) {
+                art.frame(width: 27, height: 27)
                 Text(label)
                     .font(.system(size: 10.5, weight: selected ? .semibold : .medium))
-                    .lineLimit(2).multilineTextAlignment(.center).minimumScaleFactor(0.85)
-                    .frame(height: 24, alignment: .top)
+                    .lineLimit(1).minimumScaleFactor(0.7)
             }
-            .padding(.top, 9).padding(.bottom, 6).padding(.horizontal, 3)
+            // Tight icon+label group, centred in the tile (no top-bias).
+            .padding(.horizontal, 3)
             .frame(maxWidth: .infinity)
-            .frame(height: 66)
-            // App Store-style: no box on unselected (icon + label only); the selected
-            // tile gets a soft coral highlight + tinted content. No hard border.
-            .background(RoundedRectangle(cornerRadius: 13)
+            .frame(height: 68)
+            // App Store-style: no box on unselected; selected gets a soft coral
+            // highlight with a rounder continuous-corner (squircle) shape.
+            .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(selected ? Palette.coral.opacity(0.16) : .clear))
             .foregroundStyle(selected ? Palette.coral : Palette.ink)
-            .contentShape(RoundedRectangle(cornerRadius: 13))
+            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             .animation(.easeOut(duration: 0.15), value: selected)
         }
         .buttonStyle(.plain)

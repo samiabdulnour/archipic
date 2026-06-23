@@ -85,15 +85,46 @@ struct TagSheetView: View {
     private var header: some View {
         photoCard
             .overlay(alignment: .bottomLeading) {
-                overlayAction(symbol: "xmark", fill: .black.opacity(0.42), iconTint: .white) { finish() }
-                    .padding(.leading, 26).padding(.bottom, 18)
+                skipButton.padding(.leading, 24).padding(.bottom, 18)
             }
             .overlay(alignment: .bottomTrailing) {
-                overlayAction(symbol: "checkmark",
-                              fill: tags.type == nil ? .black.opacity(0.42) : Palette.coral,
-                              iconTint: .white, disabled: tags.type == nil) { commit() }
-                    .padding(.trailing, 26).padding(.bottom, 18)
+                saveButton.padding(.trailing, 24).padding(.bottom, 18)
             }
+    }
+
+    /// Skip — a frosted-glass circle that picks up the photo behind it.
+    private var skipButton: some View {
+        Button { finish() } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 19, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 54, height: 54)
+                .background(.ultraThinMaterial, in: Circle())
+                .overlay(Circle().strokeBorder(.white.opacity(0.18), lineWidth: 0.5))
+                .shadow(color: .black.opacity(0.22), radius: 8, y: 3)
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Save — the primary action: larger, solid coral, with a soft coral lift.
+    private var saveButton: some View {
+        let enabled = tags.type != nil
+        return Button { commit() } label: {
+            Image(systemName: "checkmark")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 64, height: 64)
+                .background {
+                    if enabled { Circle().fill(Palette.coral) }
+                    else { Circle().fill(.ultraThinMaterial) }
+                }
+                .overlay(Circle().strokeBorder(.white.opacity(0.22), lineWidth: 0.5))
+                .shadow(color: (enabled ? Palette.coral : .black).opacity(enabled ? 0.4 : 0.2),
+                        radius: 11, y: 4)
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.7)
     }
 
     /// Tap the photo (anywhere but the buttons) to inspect it fullscreen.
@@ -135,21 +166,6 @@ struct TagSheetView: View {
         .buttonStyle(.plain)
     }
 
-    private func overlayAction(symbol: String, fill: Color, iconTint: Color,
-                               disabled: Bool = false, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 27, weight: .bold))
-                .foregroundStyle(iconTint)
-                .frame(width: 66, height: 66)
-                .background(Circle().fill(fill))
-                .overlay(Circle().strokeBorder(.white.opacity(0.35), lineWidth: 1))
-                .shadow(color: .black.opacity(0.28), radius: 7, y: 2)
-        }
-        .buttonStyle(.plain)
-        .disabled(disabled)
-        .opacity(disabled ? 0.5 : 1)
-    }
 
     // MARK: Persist
 
