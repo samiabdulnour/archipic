@@ -202,8 +202,8 @@ struct CompactTile<Art: View>: View {
             // App Store-style: no box on unselected; selected gets a soft coral
             // highlight with a rounder continuous-corner (squircle) shape.
             .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(selected ? Palette.coral.opacity(0.16) : .clear))
-            .foregroundStyle(selected ? Palette.coral : Palette.ink)
+                .fill(selected ? Color.primary.opacity(0.12) : .clear))
+            .foregroundStyle(selected ? Palette.ink : Palette.ink2)
             .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             .animation(.easeOut(duration: 0.15), value: selected)
         }
