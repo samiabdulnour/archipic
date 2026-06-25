@@ -12,6 +12,7 @@ struct SettingsView: View {
     @AppStorage("appearance") private var appearance = "auto"
     @AppStorage("launchScreen") private var launchScreen = "camera"
     @AppStorage("customProjects") private var customProjectsRaw = ""
+    @AppStorage("autoSuggestTags") private var autoSuggestTags = true
 
     @State private var newProject = ""
     @State private var sync = SyncMonitor()
@@ -41,6 +42,11 @@ struct SettingsView: View {
                 Section { projectsBody } header: { header("Projects") }
                 Section { appearanceBody } header: { header("Appearance") }
                 Section { captureStepsBody } header: { header("Capture flow steps") }
+                Section {
+                    Toggle("Suggest tags from the photo", isOn: $autoSuggestTags)
+                } header: { header("Smart tagging") } footer: {
+                    Text("Uses on-device image recognition (Apple Vision) to suggest a Kind when you tag. Nothing leaves your device; you always confirm.")
+                }
                 Section { iCloudBody } header: { header("iCloud sync") } footer: {
                     Text("Your archive syncs to your private iCloud and appears on your other devices signed in with the same Apple ID.")
                 }

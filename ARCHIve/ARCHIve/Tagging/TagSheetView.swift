@@ -24,6 +24,8 @@ struct TagSheetView: View {
     @State private var showFullscreen = false
     @State private var headerImage: UIImage?
     @State private var labelImage: UIImage?
+    @AppStorage("autoSuggestTags") private var autoSuggestTags = true
+    @State private var suggestion: HumanTags?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -32,6 +34,7 @@ struct TagSheetView: View {
             Divider().overlay(Palette.hairline)
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
+                    if let s = suggestion, tags.type == nil { suggestionBanner(s) }
                     if let prev = previousTags, prev.type != nil { usePreviousButton(prev) }
                     TagForm(tags: $tags, project: $project, labelImage: $labelImage,
                             isLibraryPhoto: photo.isReference && !photo.isCameraShot)
@@ -44,11 +47,52 @@ struct TagSheetView: View {
             tags = photo.humanTags; project = photo.project ?? ""
             if let d = photo.labelImageData { labelImage = UIImage(data: d) }
         }
-        .task(id: photo.id) { headerImage = await PhotoImage.full(for: photo) }
+        .task(id: photo.id) {
+            let img = await PhotoImage.full(for: photo)
+            headerImage = img
+            // On-device suggestion for an untagged photo (opt-in). Stored separately
+            // in machineTagsData; surfaced as a banner the owner confirms.
+            if autoSuggestTags, tags.type == nil, let img, let s = await TagSuggester.suggest(for: img) {
+                suggestion = s
+                photo.machineTagsData = (try? JSONEncoder().encode(s)) ?? Data()
+            }
+        }
         .interactiveDismissDisabled(false)
         .fullScreenCover(isPresented: $showFullscreen) {
             IntrospectionView(image: headerImage) { showFullscreen = false }
         }
+    }
+
+    /// On-device tag suggestion — a tappable banner above the form. Lemon, to match
+    /// the tagging accent; the raw guess already lives in `machineTagsData`.
+    private func suggestionBanner(_ s: HumanTags) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "sparkles").foregroundStyle(Palette.lemon)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Suggested").font(.caption2.weight(.semibold)).foregroundStyle(Palette.ink3)
+                Text(TagSuggester.summary(s)).font(.subheadline.weight(.medium)).foregroundStyle(Palette.ink)
+            }
+            Spacer()
+            Button("Apply") { applySuggestion(s) }
+                .font(.subheadline.weight(.semibold)).foregroundStyle(Color(white: 0.13))
+                .padding(.horizontal, 14).padding(.vertical, 7)
+                .background(Capsule().fill(Palette.lemon))
+                .buttonStyle(.plain)
+            Button { withAnimation { suggestion = nil } } label: {
+                Image(systemName: "xmark").font(.caption.weight(.semibold)).foregroundStyle(Palette.ink3)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12).padding(.vertical, 10)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.lemon.opacity(0.14)))
+    }
+
+    private func applySuggestion(_ s: HumanTags) {
+        tags.type = s.type
+        if tags.typology == nil { tags.typology = s.typology }
+        if tags.elementCategory == nil { tags.elementCategory = s.elementCategory }
+        if tags.graphicKind == nil { tags.graphicKind = s.graphicKind }
+        withAnimation { suggestion = nil }
     }
 
     /// "One by one" session header: progress + an exit out of the whole run.

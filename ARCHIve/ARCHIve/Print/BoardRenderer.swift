@@ -60,6 +60,12 @@ enum BoardRenderer {
     @MainActor static func makePDF(photos: [Photo], layout: BoardLayout, title: String? = nil) async -> URL? {
         var plates: [BoardPlate] = []
         for p in photos {
+            // Auto-fill the city from GPS for captions, when it's missing (sequential
+            // so CLGeocoder is happy; cached; never overwrites a hand-typed place).
+            if (p.humanTags.place ?? "").isEmpty, let lat = p.latitude, let lon = p.longitude,
+               let city = await Geocoder.city(latitude: lat, longitude: lon) {
+                var t = p.humanTags; t.place = city; p.humanTags = t
+            }
             if let img = await PhotoImage.full(for: p) { plates.append(plate(for: p, image: img)) }
         }
         guard !plates.isEmpty else { return nil }
