@@ -37,10 +37,9 @@ struct GalleryView: View {
     @State private var confirmDelete = false
     @State private var shareItems: [UIImage] = []
     @State private var showShare = false
-    @State private var boardURL: URL?
-    @State private var showBoardShare = false
-    @State private var showBoardFormat = false
-    @State private var makingBoard = false
+    @State private var composerPhotos: [Photo] = []   // selection to compose into a board
+    @State private var showComposer = false
+    @State private var showBoards = false             // saved-boards shelf
     // drag-to-paint selection
     @State private var gridWidth: CGFloat = 0
     @State private var dragMode: Bool? = nil          // true = selecting, false = deselecting
@@ -125,20 +124,8 @@ struct GalleryView: View {
             Button("Cancel", role: .cancel) {}
         } message: { Text("This can't be undone.") }
         .sheet(isPresented: $showShare) { ActivityView(items: shareItems) }
-        .sheet(isPresented: $showBoardShare) { if let boardURL { ActivityView(items: [boardURL]) } }
-        .confirmationDialog("Make from \(selected.count) photo\(selected.count == 1 ? "" : "s")",
-                            isPresented: $showBoardFormat, titleVisibility: .visible) {
-            Button("Catalogue poster · B1") { Task { await makeBoard(.poster) } }
-            Button("Journal · A4 landscape (2× A5)") { Task { await makeBoard(.journal) } }
-            Button("Cancel", role: .cancel) {}
-        }
-        .overlay { if makingBoard {
-            ZStack { Color.black.opacity(0.35).ignoresSafeArea()
-                VStack(spacing: 12) { ProgressView().tint(.white)
-                    Text("Composing board…").font(.subheadline).foregroundStyle(.white) }
-                .padding(24).background(RoundedRectangle(cornerRadius: 14).fill(.black.opacity(0.6)))
-            }
-        } }
+        .sheet(isPresented: $showComposer) { BoardComposerView(photos: composerPhotos) }
+        .sheet(isPresented: $showBoards) { BoardsListView() }
         .sheet(isPresented: $showSettings) { SettingsView() }
         .fullScreenCover(item: $editTarget) { photo in
             TagSheetView(photo: photo) { editTarget = nil }
@@ -174,6 +161,7 @@ struct GalleryView: View {
                     Button { showLibrary = true } label: { Label("Tag from Photos…", systemImage: "photo.on.rectangle.angled") }
                     Button { showImporter = true } label: { Label("Import (copy)", systemImage: "square.and.arrow.down") }
                     Button { selecting = true } label: { Label("Select", systemImage: "checkmark.circle") }
+                    Button { showBoards = true } label: { Label("Boards", systemImage: "doc.richtext") }
                     Divider()
                     Button { showSettings = true } label: { Label("Settings", systemImage: "gearshape") }
                 } label: { Image(systemName: "ellipsis.circle") }
@@ -363,8 +351,8 @@ struct GalleryView: View {
             Button { shareSelected() } label: { Label("Share", systemImage: "square.and.arrow.up") }
                 .disabled(selected.isEmpty)
             Spacer()
-            Button { showBoardFormat = true } label: { Label("Board", systemImage: "doc.richtext") }
-                .disabled(selected.isEmpty || makingBoard)
+            Button { composeBoard() } label: { Label("Board", systemImage: "doc.richtext") }
+                .disabled(selected.isEmpty)
             Spacer()
             Button(role: .destructive) { confirmDelete = true } label: { Label("Delete", systemImage: "trash") }
                 .disabled(selected.isEmpty)
@@ -373,23 +361,12 @@ struct GalleryView: View {
         .background(.bar)
     }
 
-    /// Build the chosen artefact (B1 poster or A4-landscape journal) as a PDF from
-    /// the selected photos and open the share sheet (print / save to Files / send).
-    @MainActor private func makeBoard(_ format: BoardFormat) async {
-        let chosen = filtered.filter { selected.contains($0.id) }   // gallery order
-        guard !chosen.isEmpty else { return }
-        makingBoard = true
-        var plates: [BoardPlate] = []
-        for p in chosen {
-            if let img = await PhotoImage.full(for: p) { plates.append(BoardRenderer.plate(for: p, image: img)) }
-        }
-        let data = format == .poster ? BoardRenderer.posterPDF(plates) : BoardRenderer.journalPDF(plates)
-        let name = format == .poster ? "Archive Poster.pdf" : "Archive Journal.pdf"
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent(name)
-        try? data.write(to: url)
-        boardURL = url
-        makingBoard = false
-        showBoardShare = true
+    /// Open the board composer pre-loaded with the current selection (in gallery
+    /// order). The composer handles reorder / size / title / save / export.
+    private func composeBoard() {
+        composerPhotos = filtered.filter { selected.contains($0.id) }
+        guard !composerPhotos.isEmpty else { return }
+        showComposer = true
     }
 
     private func deleteSelected() {

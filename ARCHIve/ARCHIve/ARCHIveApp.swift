@@ -11,7 +11,7 @@ struct ARCHIveApp: App {
     init() {
         do {
             let config = ModelConfiguration(cloudKitDatabase: .automatic)
-            container = try ModelContainer(for: Photo.self, configurations: config)
+            container = try ModelContainer(for: Photo.self, Board.self, configurations: config)
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }

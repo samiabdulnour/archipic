@@ -1,7 +1,31 @@
 import UIKit
+import SwiftUI
 
-/// Which printed artefact to render from a selection.
-enum BoardFormat { case poster, journal }
+/// Which printed artefact to render from a selection (size + layout).
+enum BoardLayout: String, CaseIterable, Identifiable {
+    case posterB1, posterA2, journalA4
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .posterB1: return "Poster · B1"
+        case .posterA2: return "Poster · A2"
+        case .journalA4: return "Journal · A4"
+        }
+    }
+    var blurb: String {
+        switch self {
+        case .posterB1: return "Big masonry catalogue (700×1000 mm)"
+        case .posterA2: return "Masonry catalogue (420×594 mm)"
+        case .journalA4: return "Chronological diary, A4 landscape spreads"
+        }
+    }
+    var icon: String {
+        switch self {
+        case .posterB1, .posterA2: return "rectangle.portrait"
+        case .journalA4: return "book"
+        }
+    }
+}
 
 /// One plate on a board: the image plus the caption fields (mapped from a Photo).
 struct BoardPlate {
@@ -29,6 +53,29 @@ enum BoardRenderer {
     private static func reg(_ p: CGFloat) -> UIFont { .systemFont(ofSize: p, weight: .regular) }
     private static func semi(_ p: CGFloat) -> UIFont { .systemFont(ofSize: p, weight: .semibold) }
 
+    // MARK: One-call render — load full-res images, lay out, write a PDF to /tmp
+
+    /// Loads each photo's pixels, builds plates, renders the chosen layout to a PDF
+    /// in the temporary directory, and returns its URL. Order is preserved.
+    @MainActor static func makePDF(photos: [Photo], layout: BoardLayout, title: String? = nil) async -> URL? {
+        var plates: [BoardPlate] = []
+        for p in photos {
+            if let img = await PhotoImage.full(for: p) { plates.append(plate(for: p, image: img)) }
+        }
+        guard !plates.isEmpty else { return nil }
+        let data: Data
+        switch layout {
+        case .posterB1:  data = posterPDF(plates, widthMM: 700, heightMM: 1000)
+        case .posterA2:  data = posterPDF(plates, widthMM: 420, heightMM: 594)
+        case .journalA4: data = journalPDF(plates)
+        }
+        let safe = (title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = (safe.isEmpty ? "Archive Board" : safe).replacingOccurrences(of: "/", with: "-")
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(name).pdf")
+        try? data.write(to: url)
+        return url
+    }
+
     // MARK: Caption (the shared .ccap language)
 
     private static func caption(_ p: BoardPlate) -> NSAttributedString {
@@ -52,11 +99,12 @@ enum BoardRenderer {
               options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).height)
     }
 
-    // MARK: Poster (B1, masonry)
+    // MARK: Poster (masonry) — B1 by default, any page size via widthMM/heightMM
 
-    static func posterPDF(_ plates: [BoardPlate]) -> Data {
-        let W = 700 * mm, H = 1000 * mm
-        let MT = 32 * mm, MS = 30 * mm, MB = 28 * mm, FOOT = 16 * mm
+    static func posterPDF(_ plates: [BoardPlate], widthMM: CGFloat = 700, heightMM: CGFloat = 1000) -> Data {
+        let W = widthMM * mm, H = heightMM * mm
+        let s = widthMM / 700                       // scale margins/footer with page size
+        let MT = 32 * s * mm, MS = 30 * s * mm, MB = 28 * s * mm, FOOT = 16 * s * mm
         let bodyX = MS, bodyY = MT, bodyW = W - 2 * MS, bodyH = H - MT - MB - FOOT
         let n = max(1, plates.count)
         let GUT = max(5, min(16, 16 - CGFloat(n - 6) * (11.0 / 34.0))) * mm
@@ -118,7 +166,7 @@ enum BoardRenderer {
                     y += imgH + capGap + ch + GUT
                 }
             }
-            drawFooter(plates: plates, x: bodyX, w: bodyW, y: H - MB - 15 * mm, cg: cg)
+            drawFooter(plates: plates, x: bodyX, w: bodyW, y: H - MB - 15 * s * mm, cg: cg)
         }
     }
 
