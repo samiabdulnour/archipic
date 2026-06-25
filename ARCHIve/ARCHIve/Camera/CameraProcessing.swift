@@ -147,7 +147,9 @@ enum CameraProcessing {
                     Band(lo: 40, hi: 70, rot: 5, sat: 0.95), Band(lo: 80, hi: 160, rot: 8, sat: 1.22),
                     Band(lo: 160, hi: 195, rot: 2, sat: 1.12), Band(lo: 195, hi: 250, rot: -7, sat: 1.15)],
             shadow: SIMD3(-0.035, 0.025, 0.04), highlight: SIMD3(0.03, 0.008, 0.01), split: 0.8,
-            sat: 1.12, con: 1.11, curveY: [0, 0.20, 0.52, 0.82, 0.99], clarity: 0.15, grain: 0)
+            // Softer contrast: gentle near-linear toe (light shadows keep detail), true
+            // black only at the very bottom; lower contrast. Colour/sat unchanged.
+            sat: 1.12, con: 1.03, curveY: [0, 0.245, 0.50, 0.78, 0.98], clarity: 0.15, grain: 0)
 
         // ---- VIVID — bold clean colour, deep skies, electric greens ----
         d[.ektar] = Recipe(
