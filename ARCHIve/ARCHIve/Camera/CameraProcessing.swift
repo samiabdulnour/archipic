@@ -187,14 +187,19 @@ enum CameraProcessing {
             shadow: SIMD3(-0.04, 0.02, 0.05), highlight: SIMD3(0.05, 0, -0.04), split: 0.9,
             sat: 0.97, con: 1.02, curveY: [0, 0.22, 0.50, 0.79, 0.95], clarity: 0.15, grain: 0.20, bloom: 0.18)
 
-        // ---- NIGHT · greenish — green-teal shadows / magenta-neon highlights ----
+        // ---- NIGHT · green (Matrix grade) — green cast everywhere, reds muted ----
         d[.eterna] = Recipe(
-            wbTo: 7000, wbTint: -12,
-            bands: [Band(lo: 90, hi: 165, rot: 12, sat: 1.18), Band(lo: 165, hi: 200, rot: 0, sat: 1.14),
-                    Band(lo: 0, hi: 30, rot: 1, sat: 1.08), Band(lo: 200, hi: 260, rot: 0, sat: 1.05),
-                    Band(lo: 300, hi: 335, rot: 0, sat: 1.10)],
-            shadow: SIMD3(-0.025, 0.04, 0.02), highlight: SIMD3(0.035, -0.01, 0.015), split: 1.0,
-            sat: 1.04, con: 1.05, curveY: [0, 0.21, 0.49, 0.78, 0.94], clarity: 0.18, grain: 0.14, bloom: 0.12)
+            wbTo: 7200, wbTint: -22,                                  // cold + strong green
+            bands: [Band(lo: 80, hi: 170, rot: 6, sat: 1.35),        // greens → lime, pushed hard
+                    Band(lo: 170, hi: 200, rot: -4, sat: 1.12),      // cyans pulled toward green
+                    Band(lo: 0, hi: 35, rot: 0, sat: 0.55),          // reds muted (no red lights dominating)
+                    Band(lo: 35, hi: 60, rot: 0, sat: 0.7),          // oranges muted
+                    Band(lo: 200, hi: 270, rot: 0, sat: 0.7),        // blues eased
+                    Band(lo: 290, hi: 345, rot: 0, sat: 0.55)],      // magenta/pink muted
+            // green shadows AND yellow-green highlights → a uniform green cast (not a
+            // complementary split — that's what was making highlights read red).
+            shadow: SIMD3(-0.035, 0.05, -0.015), highlight: SIMD3(0.0, 0.045, -0.04), split: 1.0,
+            sat: 0.92, con: 1.08, curveY: [0, 0.20, 0.49, 0.77, 0.92], clarity: 0.18, grain: 0.14, bloom: 0.12)
 
         // ---- B&W · soft — gritty grain, airy skies, faint warm tone ----
         d[.trix] = Recipe(

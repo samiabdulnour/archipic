@@ -47,8 +47,6 @@ struct GalleryView: View {
     @State private var dragAxis: Bool? = nil          // true = horizontal (paint), false = vertical (scroll)
 
     // Import
-    @State private var importItems: [PhotosPickerItem] = []
-    @State private var showImporter = false
 
     // Settings
     @State private var showSettings = false
@@ -131,8 +129,6 @@ struct GalleryView: View {
             TagSheetView(photo: photo) { editTarget = nil }
         }
         .fullScreenCover(isPresented: $showLibrary) { LibraryView() }
-        .photosPicker(isPresented: $showImporter, selection: $importItems, matching: .images)
-        .onChange(of: importItems) { _, items in Task { await importPhotos(items) } }
         .alert("Delete this photo?", isPresented: Binding(
             get: { photoToDelete != nil }, set: { if !$0 { photoToDelete = nil } })) {
             Button("Delete", role: .destructive) {
@@ -159,7 +155,6 @@ struct GalleryView: View {
                 Menu {
                     Button { showFilter = true } label: { Label("Filter", systemImage: "line.3.horizontal.decrease.circle") }
                     Button { showLibrary = true } label: { Label("Tag from Photos…", systemImage: "photo.on.rectangle.angled") }
-                    Button { showImporter = true } label: { Label("Import (copy)", systemImage: "square.and.arrow.down") }
                     Button { selecting = true } label: { Label("Select", systemImage: "checkmark.circle") }
                     Button { showBoards = true } label: { Label("Boards", systemImage: "doc.richtext") }
                     Divider()
@@ -380,64 +375,6 @@ struct GalleryView: View {
         guard !imgs.isEmpty else { return }
         shareItems = imgs; showShare = true
     }
-
-    // MARK: Import
-
-    private func importPhotos(_ items: [PhotosPickerItem]) async {
-        var count = 0
-        for item in items {
-            if let data = try? await item.loadTransferable(type: Data.self),
-               let ui = UIImage(data: data), let jpeg = ui.jpegData(compressionQuality: 0.9) {
-                // Carry over the original capture date + GPS from the photo's
-                // metadata so imported shots sort by Time and show on the Map.
-                let meta = Self.imageMetadata(from: data)
-                let photo = Photo(imageData: jpeg,
-                                  createdAt: meta.date ?? .now,
-                                  latitude: meta.latitude,
-                                  longitude: meta.longitude,
-                                  importedAt: .now)
-                modelContext.insert(photo); count += 1
-            }
-        }
-        if count > 0 { try? modelContext.save() }
-        importItems = []
-    }
-
-    /// Reads the original capture date and GPS from an image's EXIF/GPS
-    /// metadata (no Photos-library permission needed — it's in the file data).
-    private static func imageMetadata(from data: Data) -> (date: Date?, latitude: Double?, longitude: Double?) {
-        guard let src = CGImageSourceCreateWithData(data as CFData, nil),
-              let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any]
-        else { return (nil, nil, nil) }
-
-        var date: Date?
-        if let exif = props[kCGImagePropertyExifDictionary] as? [CFString: Any],
-           let s = exif[kCGImagePropertyExifDateTimeOriginal] as? String {
-            date = exifDateFormatter.date(from: s)
-        }
-        if date == nil, let tiff = props[kCGImagePropertyTIFFDictionary] as? [CFString: Any],
-           let s = tiff[kCGImagePropertyTIFFDateTime] as? String {
-            date = exifDateFormatter.date(from: s)
-        }
-
-        var lat: Double?, lon: Double?
-        if let gps = props[kCGImagePropertyGPSDictionary] as? [CFString: Any],
-           let latVal = gps[kCGImagePropertyGPSLatitude] as? Double,
-           let lonVal = gps[kCGImagePropertyGPSLongitude] as? Double {
-            let latRef = gps[kCGImagePropertyGPSLatitudeRef] as? String ?? "N"
-            let lonRef = gps[kCGImagePropertyGPSLongitudeRef] as? String ?? "E"
-            lat = latRef == "S" ? -latVal : latVal
-            lon = lonRef == "W" ? -lonVal : lonVal
-        }
-        return (date, lat, lon)
-    }
-
-    private static let exifDateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy:MM:dd HH:mm:ss"
-        f.locale = Locale(identifier: "en_US_POSIX")
-        return f
-    }()
 
     // MARK: Chrome
 
