@@ -152,27 +152,21 @@ struct TagSheetView: View {
         .buttonStyle(.plain)
     }
 
-    /// Save — the primary action: a lemon pill with dark text. Frosted + dimmed
-    /// until a Kind is chosen.
+    /// Save — the primary action: always a lemon pill with dark text. Tagging is
+    /// optional; with no Kind chosen, Save simply keeps the photo untagged so the
+    /// owner can tag it later from the gallery.
     private var saveButton: some View {
-        let enabled = tags.type != nil
-        return Button { commit() } label: {
+        Button { commit() } label: {
             HStack(spacing: 7) {
                 Image(systemName: "checkmark").font(.system(size: 15, weight: .bold))
                 Text("Save").font(.system(size: 15, weight: .semibold))
             }
-            .foregroundStyle(enabled ? Color(white: 0.13) : .white)
+            .foregroundStyle(Color(white: 0.13))
             .padding(.horizontal, 20).padding(.vertical, 12)
-            .background {
-                if enabled { Capsule().fill(Palette.lemon) }
-                else { Capsule().fill(.ultraThinMaterial) }
-            }
-            .overlay(Capsule().strokeBorder(.white.opacity(enabled ? 0 : 0.14), lineWidth: 0.5))
-            .shadow(color: .black.opacity(enabled ? 0.3 : 0.2), radius: 10, y: 4)
+            .background(Capsule().fill(Palette.lemon))
+            .shadow(color: .black.opacity(0.3), radius: 10, y: 4)
         }
         .buttonStyle(.plain)
-        .disabled(!enabled)
-        .opacity(enabled ? 1 : 0.75)
     }
 
     /// Tap the photo (anywhere but the buttons) to inspect it fullscreen.
@@ -223,6 +217,9 @@ struct TagSheetView: View {
         for p in (batchPhotos ?? [photo]) {
             p.humanTags = tags
             p.project = proj
+            // Hitting Save means "keep this photo" — even with no Kind chosen. For a
+            // library reference, mark it kept so the untagged-skip cleanup spares it.
+            if p.isReference && !p.isCameraShot && p.importedAt == nil { p.importedAt = Date() }
         }
         photo.labelImageData = labelImage?.jpegData(compressionQuality: 0.85)
         try? modelContext.save()
