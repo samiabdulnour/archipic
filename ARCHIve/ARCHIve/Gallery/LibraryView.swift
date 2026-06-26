@@ -98,33 +98,34 @@ struct LibraryView: View {
     }
 
     private var selectionBar: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 7) {
             Button("Clear") { selected.removeAll() }
                 .font(.subheadline)
                 .disabled(selected.isEmpty)
-                .foregroundStyle(selected.isEmpty ? Palette.ink3 : Palette.coral)
-            Spacer()
+                .foregroundStyle(selected.isEmpty ? Palette.ink3 : Palette.ink2)
+            Spacer(minLength: 6)
+            // Add to the archive without tagging now (tag later from the gallery).
+            actionButton("Add") { addUntagged() }
             // One by one: step through each, with "use previous" for fast cleaning.
-            Button { startSequential() } label: {
-                Text("One by one")
-                    .font(.subheadline.weight(.semibold))
-                    .padding(.horizontal, 14).padding(.vertical, 10)
-                    .background(Capsule().fill(Palette.tile))
-                    .foregroundStyle(selected.isEmpty ? Palette.ink3 : Palette.ink)
-            }
-            .disabled(selected.isEmpty)
+            actionButton("One by one") { startSequential() }
             // Same tag applied to all selected at once.
-            Button { startBatchTagging() } label: {
-                Text("Same tag")
-                    .font(.subheadline.weight(.semibold))
-                    .padding(.horizontal, 14).padding(.vertical, 10)
-                    .background(Capsule().fill(selected.isEmpty ? Palette.tile : Palette.coral))
-                    .foregroundStyle(selected.isEmpty ? Palette.ink3 : .white)
-            }
-            .disabled(selected.isEmpty)
+            actionButton("Same tag") { startBatchTagging() }
         }
-        .padding(.horizontal, 16).padding(.vertical, 10)
+        .padding(.horizontal, 14).padding(.vertical, 10)
         .background(.ultraThinMaterial)
+    }
+
+    /// The selection actions, all one consistent style (no odd red/white mismatch).
+    private func actionButton(_ title: String, _ act: @escaping () -> Void) -> some View {
+        Button(action: act) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, 13).padding(.vertical, 9)
+                .background(Capsule().fill(Palette.tile))
+                .foregroundStyle(selected.isEmpty ? Palette.ink3 : Palette.ink)
+        }
+        .buttonStyle(.plain)
+        .disabled(selected.isEmpty)
     }
 
     private var deniedView: some View {
@@ -186,6 +187,16 @@ struct LibraryView: View {
         return targets
     }
 
+    /// Add the selected photos to the archive *untagged* (tag later from the
+    /// gallery). Marked with `importedAt` so the skip-cleanup spares them.
+    private func addUntagged() {
+        let targets = buildTargets()
+        for p in targets where p.importedAt == nil { p.importedAt = Date() }
+        try? modelContext.save()
+        selected.removeAll()
+        dismiss()
+    }
+
     /// Same tag → all selected at once.
     private func startBatchTagging() {
         let targets = buildTargets()
@@ -215,10 +226,11 @@ struct LibraryView: View {
         if selecting { withAnimation { selecting = false; selected.removeAll() } }
     }
 
-    /// A *library* reference left untagged means the user skipped — drop it.
-    /// Camera shots (also references) are intentional and never auto-removed.
+    /// A *library* reference left untagged in a tagging session means the user
+    /// skipped it — drop it. Camera shots and photos explicitly "Added" (importedAt
+    /// set) are intentional and never auto-removed.
     private func cleanupIfSkipped() {
-        for p in allPhotos where p.isReference && p.isUntagged && !p.isCameraShot {
+        for p in allPhotos where p.isReference && p.isUntagged && !p.isCameraShot && p.importedAt == nil {
             modelContext.delete(p)
         }
         try? modelContext.save()
