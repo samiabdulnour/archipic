@@ -50,7 +50,13 @@ struct LibraryView: View {
                         }
                     }
                 }
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                // "Done" closes the picker — only show it while *browsing*. During
+                // multi-select it read as "save my selection" (it doesn't — it just
+                // discards and closes), so hide it. The bottom bar holds the real
+                // actions (Add / One by one / Same tag); "Cancel" backs out.
+                if !selecting {
+                    ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                }
             }
             .safeAreaInset(edge: .bottom) { if selecting { selectionBar } }
             .background(Palette.paper.ignoresSafeArea())
