@@ -340,13 +340,17 @@ struct PhotoEditorView: View {
         let seq = renderSeq
         let src = source, rot = rotation, ks = keystone, lk = look
         Self.renderQueue.async {
+            guard seq == renderSeq else { return }      // superseded (a newer look tapped) — skip entirely
             guard let src, let cg = src.cgImage else { return }
             var ci = CIImage(cgImage: cg)
             if rot % 360 != 0 {
                 ci = ci.transformed(by: CGAffineTransform(rotationAngle: -CGFloat(rot) * .pi / 180))
                 ci = ci.transformed(by: CGAffineTransform(translationX: -ci.extent.minX, y: -ci.extent.minY))
             }
-            ci = CameraProcessing.apply(to: ci, keystone: ks, look: lk, grain: Settings.grainEnabled)
+            // Grain OFF in the live preview — it's the heavy bit (a big noise tile per
+            // render, what was OOM-ing the editor). The saved/displayed render
+            // (PhotoEdits) still bakes grain in, so captured photos are unaffected.
+            ci = CameraProcessing.apply(to: ci, keystone: ks, look: lk, grain: false)
             guard let out = Self.ciContext.createCGImage(ci, from: ci.extent) else { return }
             let img = UIImage(cgImage: out)
             Self.ciContext.clearCaches()   // don't let rapid re-renders accumulate
