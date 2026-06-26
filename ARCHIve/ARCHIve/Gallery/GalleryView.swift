@@ -27,6 +27,9 @@ struct GalleryView: View {
     // Filters
     @State private var showFilter = false
     @State private var filterType: String?     // nil | "untagged" | building | element | graphic
+    @State private var filterTypology: String? // e.g. "Civic" (building typology)
+    @State private var filterMaterial: String? // e.g. "Brick"
+    @State private var filterYear = 0          // 0 = any (capture year)
     @State private var filterProject: String?
     @State private var filterFavorites = false
     @State private var filterMinRating = 0     // 0 = any
@@ -66,10 +69,14 @@ struct GalleryView: View {
 
     // MARK: Derived
 
-    private var filtersActive: Bool { filterType != nil || filterProject != nil || filterFavorites || filterMinRating > 0 }
+    private var filtersActive: Bool {
+        filterType != nil || filterTypology != nil || filterMaterial != nil || filterYear > 0
+            || filterProject != nil || filterFavorites || filterMinRating > 0
+    }
 
     private var filtered: [Photo] {
         let words = search.lowercased().split(separator: " ").map(String.init)
+        let cal = Calendar.current
         return photos.filter { p in
             if filterFavorites && !p.isFavorite { return false }
             if filterMinRating > 0 && (p.humanTags.rating ?? 0) < filterMinRating { return false }
@@ -81,6 +88,9 @@ struct GalleryView: View {
                 if ft == "untagged" { if !p.isUntagged { return false } }
                 else if p.humanTags.type != ft { return false }
             }
+            if let ty = filterTypology, p.humanTags.typology != ty { return false }
+            if let mat = filterMaterial, !p.humanTags.materials.contains(mat) { return false }
+            if filterYear > 0, cal.component(.year, from: p.createdAt) != filterYear { return false }
             if let fp = filterProject, p.project != fp { return false }
             return true
         }
@@ -90,6 +100,23 @@ struct GalleryView: View {
         var seen = Set<String>(); var out: [String] = []
         for p in photos { if let n = p.project, !n.isEmpty, seen.insert(n).inserted { out.append(n) } }
         return Set(out).union(Settings.customProjects).sorted()
+    }
+
+    /// Distinct typologies / materials / capture-years present in the archive, so
+    /// the filter only offers values that actually match something.
+    private var typologyNames: [String] {
+        var s = Set<String>()
+        for p in photos { if let t = p.humanTags.typology, !t.isEmpty { s.insert(t) } }
+        return s.sorted()
+    }
+    private var materialNames: [String] {
+        var s = Set<String>()
+        for p in photos { for m in p.humanTags.materials where !m.isEmpty { s.insert(m) } }
+        return s.sorted()
+    }
+    private var years: [Int] {
+        let cal = Calendar.current
+        return Set(photos.map { cal.component(.year, from: $0.createdAt) }).sorted(by: >)
     }
 
     var body: some View {
@@ -114,9 +141,11 @@ struct GalleryView: View {
         .toolbar { galleryToolbar }
         .safeAreaInset(edge: .bottom) { if selecting { selectionBar } }
         .sheet(isPresented: $showFilter) {
-            FilterSheet(type: $filterType, project: $filterProject,
+            FilterSheet(type: $filterType, typology: $filterTypology, material: $filterMaterial,
+                        year: $filterYear, project: $filterProject,
                         favorites: $filterFavorites, minRating: $filterMinRating,
-                        projects: projectNames)
+                        projects: projectNames, typologies: typologyNames,
+                        materials: materialNames, years: years)
         }
         .confirmationDialog("Delete \(selected.count) photo\(selected.count == 1 ? "" : "s")?",
                             isPresented: $confirmDelete, titleVisibility: .visible) {
@@ -320,13 +349,20 @@ struct GalleryView: View {
 
     private var resultBar: some View {
         HStack(spacing: 8) {
-            if filterFavorites { filterPill(label: "♥ Favourites") { filterFavorites = false } }
-            if filterMinRating > 0 { filterPill(label: "★ \(filterMinRating)+") { filterMinRating = 0 } }
-            if let ft = filterType { filterPill(label: ft.capitalized) { filterType = nil } }
-            if let fp = filterProject { filterPill(label: fp) { filterProject = nil } }
-            Spacer()
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    if filterFavorites { filterPill(label: "♥ Favourites") { filterFavorites = false } }
+                    if filterMinRating > 0 { filterPill(label: "★ \(filterMinRating)+") { filterMinRating = 0 } }
+                    if let ft = filterType { filterPill(label: ft.capitalized) { filterType = nil } }
+                    if let ty = filterTypology { filterPill(label: ty) { filterTypology = nil } }
+                    if let mt = filterMaterial { filterPill(label: mt) { filterMaterial = nil } }
+                    if filterYear > 0 { filterPill(label: String(filterYear)) { filterYear = 0 } }
+                    if let fp = filterProject { filterPill(label: fp) { filterProject = nil } }
+                }
+            }
             Text("\(filtered.count) of \(photos.count)")
                 .font(.caption).foregroundStyle(Palette.ink3)
+                .fixedSize()
         }
         .padding(.horizontal, 12).padding(.bottom, 6)
     }
@@ -442,10 +478,16 @@ struct TileBadges: View {
 
 private struct FilterSheet: View {
     @Binding var type: String?
+    @Binding var typology: String?
+    @Binding var material: String?
+    @Binding var year: Int
     @Binding var project: String?
     @Binding var favorites: Bool
     @Binding var minRating: Int
     let projects: [String]
+    let typologies: [String]
+    let materials: [String]
+    let years: [Int]
     @Environment(\.dismiss) private var dismiss
 
     private let types: [(String, String)] = [("untagged", "Untagged"), ("building", "Building"),
@@ -473,6 +515,30 @@ private struct FilterSheet: View {
                         ForEach(types, id: \.0) { Text($0.1).tag($0.0) }
                     }.pickerStyle(.inline).labelsHidden()
                 }
+                if !typologies.isEmpty || !materials.isEmpty || !years.isEmpty {
+                    Section("Details") {
+                        if !typologies.isEmpty {
+                            Picker("Typology", selection: Binding(get: { typology ?? "" },
+                                                                  set: { typology = $0.isEmpty ? nil : $0 })) {
+                                Text("Any").tag("")
+                                ForEach(typologies, id: \.self) { Text($0).tag($0) }
+                            }.pickerStyle(.menu)
+                        }
+                        if !materials.isEmpty {
+                            Picker("Material", selection: Binding(get: { material ?? "" },
+                                                                  set: { material = $0.isEmpty ? nil : $0 })) {
+                                Text("Any").tag("")
+                                ForEach(materials, id: \.self) { Text($0).tag($0) }
+                            }.pickerStyle(.menu)
+                        }
+                        if !years.isEmpty {
+                            Picker("Year", selection: $year) {
+                                Text("Any").tag(0)
+                                ForEach(years, id: \.self) { Text(String($0)).tag($0) }
+                            }.pickerStyle(.menu)
+                        }
+                    }
+                }
                 if !projects.isEmpty {
                     Section("Project") {
                         Picker("Project", selection: Binding(get: { project ?? "" },
@@ -486,11 +552,16 @@ private struct FilterSheet: View {
             .navigationTitle("Filter")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Clear") { type = nil; project = nil; favorites = false; minRating = 0 } }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Clear") {
+                        type = nil; typology = nil; material = nil; year = 0
+                        project = nil; favorites = false; minRating = 0
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
         .tint(Palette.coral)
     }
 }
