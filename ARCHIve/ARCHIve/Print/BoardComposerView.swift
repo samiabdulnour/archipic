@@ -16,6 +16,7 @@ struct BoardComposerView: View {
     @State private var shareURL: URL?
     @State private var showShare = false
     @State private var showAddPhotos = false
+    @State private var confirmDelete = false
 
     /// New board from a gallery selection.
     init(photos: [Photo]) {
@@ -82,6 +83,12 @@ struct BoardComposerView: View {
                             .disabled(order.isEmpty)
                         Button { Task { await export() } } label: { Label("Export PDF", systemImage: "square.and.arrow.up") }
                             .disabled(order.isEmpty)
+                        if existing != nil {
+                            Divider()
+                            Button(role: .destructive) { confirmDelete = true } label: {
+                                Label("Delete board", systemImage: "trash")
+                            }
+                        }
                     } label: { Image(systemName: "ellipsis.circle") }
                 }
             }
@@ -97,6 +104,10 @@ struct BoardComposerView: View {
                     for id in ids where !order.contains(id) { order.append(id) }
                 }
             }
+            .confirmationDialog("Delete this board?", isPresented: $confirmDelete, titleVisibility: .visible) {
+                Button("Delete board", role: .destructive) { deleteBoard() }
+                Button("Cancel", role: .cancel) {}
+            } message: { Text("This removes the board only — your photos stay in the archive.") }
         }
     }
 
@@ -116,6 +127,13 @@ struct BoardComposerView: View {
             ctx.insert(Board(title: title, layout: layout, photoIDs: order))
         }
         try? ctx.save()
+        dismiss()
+    }
+
+    /// Delete the board record. Photos are untouched — a board only stores a list
+    /// of photo ids, never the images themselves.
+    private func deleteBoard() {
+        if let b = existing { ctx.delete(b); try? ctx.save() }
         dismiss()
     }
 
