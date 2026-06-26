@@ -101,7 +101,9 @@ struct GalleryView: View {
                 if filtersActive || !search.isEmpty { resultBar }
                 switch lens {
                 case .time:      grid(filtered)
-                case .reference: referenceLens
+                // Reference is a browse-only row index; in Select mode show a flat
+                // selectable grid instead (the row browser has no selection).
+                case .reference: if selecting { grid(filtered) } else { referenceLens }
                 case .project:   projectLens
                 case .map:       MapLens(photos: filtered.filter { $0.latitude != nil }, selecting: false)
                 }
@@ -384,7 +386,8 @@ struct GalleryView: View {
         }
         .pickerStyle(.segmented)
         .padding(.horizontal, 12).padding(.top, 12).padding(.bottom, 8)
-        .disabled(selecting)
+        // Stays enabled during Select, so you can move between lenses while
+        // picking — being locked to Time is what made selection feel Time-only.
     }
 
     private var emptyState: some View {

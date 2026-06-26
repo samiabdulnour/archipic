@@ -194,56 +194,96 @@ struct BoardsListView: View {
 }
 
 /// Pick photos from the archive to add to a board. Shows everything not already
-/// on the board; tap to select (selection order preserved), then Add.
+/// on the board; search narrows by tag/typology/material (e.g. "civic", "brick")
+/// or a 4-digit year against the capture date (e.g. "2025"). "Select all" grabs
+/// every photo currently matching — so a whole scoped board is two taps.
 private struct BoardPhotoPicker: View {
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Photo.createdAt, order: .reverse) private var allPhotos: [Photo]
     let excluding: Set<String>
     var onAdd: ([String]) -> Void
     @State private var picked: [String] = []
+    @State private var search = ""
 
     private let cols = Array(repeating: GridItem(.flexible(), spacing: 2), count: 3)
-    private var candidates: [Photo] { allPhotos.filter { !excluding.contains($0.id) } }
+
+    /// Not-already-on-the-board photos that match the search. Each word must hit
+    /// the photo's tag text OR (if it's 4 digits) the year it was taken.
+    private var candidates: [Photo] {
+        let base = allPhotos.filter { !excluding.contains($0.id) }
+        let words = search.lowercased().split(separator: " ").map(String.init)
+        guard !words.isEmpty else { return base }
+        let cal = Calendar.current
+        return base.filter { p in
+            let txt = p.searchText
+            let year = String(cal.component(.year, from: p.createdAt))
+            return words.allSatisfy { w in txt.contains(w) || (w.count == 4 && year == w) }
+        }
+    }
+
+    private var allPicked: Bool { !candidates.isEmpty && candidates.allSatisfy { picked.contains($0.id) } }
+    private func toggleAll() {
+        if allPicked {
+            let vis = Set(candidates.map(\.id)); picked.removeAll { vis.contains($0) }
+        } else {
+            for p in candidates where !picked.contains(p.id) { picked.append(p.id) }
+        }
+    }
 
     var body: some View {
         NavigationStack {
             Group {
                 if candidates.isEmpty {
-                    ContentUnavailableView("No more photos", systemImage: "photo.on.rectangle",
-                        description: Text("Every photo in your archive is already on this board."))
+                    ContentUnavailableView(search.isEmpty ? "No more photos" : "No matches",
+                        systemImage: "photo.on.rectangle",
+                        description: Text(search.isEmpty
+                            ? "Every photo in your archive is already on this board."
+                            : "No photos match “\(search)”. Try a tag, material, or a year."))
                 } else {
-                    ScrollView {
-                        LazyVGrid(columns: cols, spacing: 2) {
-                            ForEach(candidates) { p in
-                                let sel = picked.contains(p.id)
-                                Button {
-                                    if sel { picked.removeAll { $0 == p.id } } else { picked.append(p.id) }
-                                } label: {
-                                    Color.clear
-                                        .aspectRatio(1, contentMode: .fit)
-                                        .overlay { PhotoThumbnail(photo: p) }
-                                        .clipped()
-                                        .contentShape(Rectangle())
-                                        .overlay(alignment: .topTrailing) {
-                                            if sel {
-                                                Image(systemName: "checkmark.circle.fill")
-                                                    .foregroundStyle(.white, Palette.coral)
-                                                    .padding(4).shadow(radius: 1)
-                                            }
-                                        }
-                                        .overlay {
-                                            if sel { Rectangle().strokeBorder(Palette.coral, lineWidth: 2) }
-                                        }
-                                }
-                                .buttonStyle(.plain)
-                            }
+                    VStack(spacing: 0) {
+                        HStack {
+                            Text("\(candidates.count) photo\(candidates.count == 1 ? "" : "s")")
+                                .font(.caption).foregroundStyle(Palette.ink3)
+                            Spacer()
+                            Button(allPicked ? "Clear" : "Select all") { toggleAll() }
+                                .font(.caption.weight(.semibold)).foregroundStyle(Palette.coral)
                         }
-                        .padding(2)
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        ScrollView {
+                            LazyVGrid(columns: cols, spacing: 2) {
+                                ForEach(candidates) { p in
+                                    let sel = picked.contains(p.id)
+                                    Button {
+                                        if sel { picked.removeAll { $0 == p.id } } else { picked.append(p.id) }
+                                    } label: {
+                                        Color.clear
+                                            .aspectRatio(1, contentMode: .fit)
+                                            .overlay { PhotoThumbnail(photo: p) }
+                                            .clipped()
+                                            .contentShape(Rectangle())
+                                            .overlay(alignment: .topTrailing) {
+                                                if sel {
+                                                    Image(systemName: "checkmark.circle.fill")
+                                                        .foregroundStyle(.white, Palette.coral)
+                                                        .padding(4).shadow(radius: 1)
+                                                }
+                                            }
+                                            .overlay {
+                                                if sel { Rectangle().strokeBorder(Palette.coral, lineWidth: 2) }
+                                            }
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(2)
+                        }
                     }
                 }
             }
             .navigationTitle(picked.isEmpty ? "Add photos" : "\(picked.count) selected")
             .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always),
+                        prompt: "Tag, material, or year")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
