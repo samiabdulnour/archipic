@@ -199,7 +199,9 @@ enum CameraProcessing {
             // green shadows AND yellow-green highlights → a uniform green cast (not a
             // complementary split — that's what was making highlights read red).
             shadow: SIMD3(-0.035, 0.05, -0.015), highlight: SIMD3(0.0, 0.045, -0.04), split: 1.0,
-            sat: 0.92, con: 1.08, curveY: [0, 0.20, 0.49, 0.77, 0.92], clarity: 0.18, grain: 0.14, bloom: 0.12)
+            // Open the shadows: near-linear toe + lower contrast, so shade keeps detail
+            // and reads dark-GREEN (the tint shows) instead of crushing to black.
+            sat: 0.92, con: 1.0, curveY: [0, 0.245, 0.50, 0.78, 0.93], clarity: 0.18, grain: 0.14, bloom: 0.12)
 
         // ---- B&W · soft — gritty grain, airy skies, faint warm tone ----
         d[.trix] = Recipe(
