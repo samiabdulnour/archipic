@@ -28,10 +28,12 @@ struct PhotoEditorView: View {
     enum Tool: String, CaseIterable { case crop = "Crop", tilt = "Tilt", color = "Color" }
     private enum Corner { case tl, tr, bl, br }
 
-    // Metal-backed (matches the live camera path, which renders these looks fine).
+    // Metal-backed (matches the live camera path). `cacheIntermediates: false` stops
+    // memory creeping up across rapid re-renders as the look is changed.
     private static let ciContext: CIContext = {
-        if let dev = MTLCreateSystemDefaultDevice() { return CIContext(mtlDevice: dev) }
-        return CIContext()
+        let opts: [CIContextOption: Any] = [.cacheIntermediates: false]
+        if let dev = MTLCreateSystemDefaultDevice() { return CIContext(mtlDevice: dev, options: opts) }
+        return CIContext(options: opts)
     }()
     // Serial queue so renders never overlap on the shared context.
     private static let renderQueue = DispatchQueue(label: "archive.editor.render")
@@ -347,9 +349,13 @@ struct PhotoEditorView: View {
                 ci = ci.transformed(by: CGAffineTransform(rotationAngle: -CGFloat(rot) * .pi / 180))
                 ci = ci.transformed(by: CGAffineTransform(translationX: -ci.extent.minX, y: -ci.extent.minY))
             }
-            // Grain OFF in the live preview — it's the heavy bit (a big noise tile per
-            // render, what was OOM-ing the editor). The saved/displayed render
-            // (PhotoEdits) still bakes grain in, so captured photos are unaffected.
+            // Hard-cap the preview size: a non-upright source can balloon when redrawn,
+            // and a full-res look render jetsam-kills the editor (signal 9). 1600 px is
+            // plenty for the preview.
+            let longest = max(ci.extent.width, ci.extent.height)
+            if longest > 1600 { let f = 1600 / longest; ci = ci.transformed(by: CGAffineTransform(scaleX: f, y: f)) }
+            // Grain OFF in the live preview — it's heavy and unneeded here. The
+            // saved/displayed render (PhotoEdits) still bakes grain in.
             ci = CameraProcessing.apply(to: ci, keystone: ks, look: lk, grain: false)
             guard let out = Self.ciContext.createCGImage(ci, from: ci.extent) else { return }
             let img = UIImage(cgImage: out)
@@ -360,7 +366,8 @@ struct PhotoEditorView: View {
 
     private func normalizedUp(_ image: UIImage) -> UIImage {
         guard image.imageOrientation != .up else { return image }
-        let r = UIGraphicsImageRenderer(size: image.size)
+        let fmt = UIGraphicsImageRendererFormat.default(); fmt.scale = image.scale  // don't 3× the pixels
+        let r = UIGraphicsImageRenderer(size: image.size, format: fmt)
         return r.image { _ in image.draw(in: CGRect(origin: .zero, size: image.size)) }
     }
 

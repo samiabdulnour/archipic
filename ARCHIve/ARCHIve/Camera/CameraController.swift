@@ -289,7 +289,8 @@ final class CameraController: NSObject {
     /// Redraw to `.up` orientation so Core Image works in display space.
     private static func normalized(_ image: UIImage) -> UIImage {
         guard image.imageOrientation != .up else { return image }
-        let r = UIGraphicsImageRenderer(size: image.size)
+        let fmt = UIGraphicsImageRendererFormat.default(); fmt.scale = image.scale  // don't 3× the pixels
+        let r = UIGraphicsImageRenderer(size: image.size, format: fmt)
         return r.image { _ in image.draw(in: CGRect(origin: .zero, size: image.size)) }
     }
 

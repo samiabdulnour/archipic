@@ -46,7 +46,8 @@ enum PhotoEdits {
     /// Redraw to `.up` so pixel-space crop/rotate behave predictably.
     private static func normalizedUp(_ image: UIImage) -> UIImage {
         guard image.imageOrientation != .up else { return image }
-        let r = UIGraphicsImageRenderer(size: image.size)
+        let fmt = UIGraphicsImageRendererFormat.default(); fmt.scale = image.scale  // don't 3× the pixels
+        let r = UIGraphicsImageRenderer(size: image.size, format: fmt)
         return r.image { _ in image.draw(in: CGRect(origin: .zero, size: image.size)) }
     }
 }
