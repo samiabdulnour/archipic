@@ -15,6 +15,7 @@ struct BoardComposerView: View {
     @State private var working = false
     @State private var shareURL: URL?
     @State private var showShare = false
+    @State private var showAddPhotos = false
 
     /// New board from a gallery selection.
     init(photos: [Photo]) {
@@ -46,6 +47,12 @@ struct BoardComposerView: View {
                         }
                     }
                     Text(layout.blurb).font(.caption).foregroundStyle(.secondary)
+                }
+                Section {
+                    Button { showAddPhotos = true } label: {
+                        Label("Add photos", systemImage: "plus.circle.fill")
+                            .foregroundStyle(Palette.coral)
+                    }
                 }
                 Section(order.isEmpty ? "No photos" : "\(order.count) photos · drag to reorder") {
                     ForEach(orderedPhotos) { photo in
@@ -85,6 +92,11 @@ struct BoardComposerView: View {
                 }
             }
             .sheet(isPresented: $showShare) { if let shareURL { ActivityView(items: [shareURL]) } }
+            .sheet(isPresented: $showAddPhotos) {
+                BoardPhotoPicker(excluding: Set(order)) { ids in
+                    for id in ids where !order.contains(id) { order.append(id) }
+                }
+            }
         }
     }
 
@@ -115,22 +127,35 @@ struct BoardComposerView: View {
     }
 }
 
-/// The shelf of saved boards — tap to reopen in the composer.
+/// The shelf of saved boards — tap to reopen, or "+" to start a new one.
 struct BoardsListView: View {
     @Environment(\.modelContext) private var ctx
     @Query(sort: \Board.updatedAt, order: .reverse) private var boards: [Board]
-    @State private var editing: Board?
+    @State private var route: Route?
+
+    /// One composer sheet, opened either fresh ("New board") or on a saved board.
+    private enum Route: Identifiable {
+        case new
+        case edit(Board)
+        var id: String { switch self { case .new: "new"; case .edit(let b): b.id } }
+    }
 
     var body: some View {
         NavigationStack {
             Group {
                 if boards.isEmpty {
-                    ContentUnavailableView("No boards yet", systemImage: "doc.richtext",
-                        description: Text("Select photos in the gallery and tap Board to compose one."))
+                    ContentUnavailableView {
+                        Label("No boards yet", systemImage: "doc.richtext")
+                    } description: {
+                        Text("Create a board here, or select photos in the gallery and tap Board.")
+                    } actions: {
+                        Button { route = .new } label: { Label("New board", systemImage: "plus") }
+                            .buttonStyle(.borderedProminent).tint(Palette.coral)
+                    }
                 } else {
                     List {
                         ForEach(boards) { b in
-                            Button { editing = b } label: {
+                            Button { route = .edit(b) } label: {
                                 HStack(spacing: 12) {
                                     Image(systemName: b.layout.icon)
                                         .font(.system(size: 18)).foregroundStyle(Palette.coral)
@@ -153,7 +178,80 @@ struct BoardsListView: View {
             }
             .navigationTitle("Boards")
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(item: $editing) { BoardComposerView(board: $0) }
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { route = .new } label: { Label("New board", systemImage: "plus") }
+                }
+            }
+            .sheet(item: $route) { r in
+                switch r {
+                case .new: BoardComposerView(photos: [])
+                case .edit(let b): BoardComposerView(board: b)
+                }
+            }
+        }
+    }
+}
+
+/// Pick photos from the archive to add to a board. Shows everything not already
+/// on the board; tap to select (selection order preserved), then Add.
+private struct BoardPhotoPicker: View {
+    @Environment(\.dismiss) private var dismiss
+    @Query(sort: \Photo.createdAt, order: .reverse) private var allPhotos: [Photo]
+    let excluding: Set<String>
+    var onAdd: ([String]) -> Void
+    @State private var picked: [String] = []
+
+    private let cols = Array(repeating: GridItem(.flexible(), spacing: 2), count: 3)
+    private var candidates: [Photo] { allPhotos.filter { !excluding.contains($0.id) } }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if candidates.isEmpty {
+                    ContentUnavailableView("No more photos", systemImage: "photo.on.rectangle",
+                        description: Text("Every photo in your archive is already on this board."))
+                } else {
+                    ScrollView {
+                        LazyVGrid(columns: cols, spacing: 2) {
+                            ForEach(candidates) { p in
+                                let sel = picked.contains(p.id)
+                                Button {
+                                    if sel { picked.removeAll { $0 == p.id } } else { picked.append(p.id) }
+                                } label: {
+                                    Color.clear
+                                        .aspectRatio(1, contentMode: .fit)
+                                        .overlay { PhotoThumbnail(photo: p) }
+                                        .clipped()
+                                        .contentShape(Rectangle())
+                                        .overlay(alignment: .topTrailing) {
+                                            if sel {
+                                                Image(systemName: "checkmark.circle.fill")
+                                                    .foregroundStyle(.white, Palette.coral)
+                                                    .padding(4).shadow(radius: 1)
+                                            }
+                                        }
+                                        .overlay {
+                                            if sel { Rectangle().strokeBorder(Palette.coral, lineWidth: 2) }
+                                        }
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(2)
+                    }
+                }
+            }
+            .navigationTitle(picked.isEmpty ? "Add photos" : "\(picked.count) selected")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") { onAdd(picked); dismiss() }
+                        .fontWeight(.semibold).disabled(picked.isEmpty)
+                }
+            }
+            .background(Palette.paper.ignoresSafeArea())
         }
     }
 }
