@@ -60,6 +60,8 @@ struct GalleryView: View {
     // Single-photo context-menu actions
     @State private var editTarget: Photo?
     @State private var photoToDelete: Photo?
+    /// Shared tag clipboard (same key as the detail view) for copy/paste tags.
+    @AppStorage(TagClipboard.key) private var copiedTagsJSON = ""
 
     private let cols = Array(repeating: GridItem(.flexible(), spacing: 2), count: 3)
 
@@ -308,9 +310,30 @@ struct GalleryView: View {
                   systemImage: photo.isFavorite ? "heart.slash" : "heart")
         }
         Button { editTarget = photo } label: { Label("Edit tags", systemImage: "tag") }
+        Divider()
+        Button { copyTags(photo) } label: { Label("Copy tags", systemImage: "doc.on.doc") }
+            .disabled(photo.humanTags.isEmpty)
+        if let copied = TagClipboard.decode(copiedTagsJSON) {
+            let s = TagSuggester.summary(copied)
+            Button { pasteTags(photo) } label: {
+                Label(s.isEmpty ? "Paste tags" : "Paste tags · \(s)", systemImage: "doc.on.clipboard")
+            }
+        }
+        Divider()
         Button { shareOne(photo) } label: { Label("Share", systemImage: "square.and.arrow.up") }
         Divider()
         Button(role: .destructive) { photoToDelete = photo } label: { Label("Delete", systemImage: "trash") }
+    }
+
+    private func copyTags(_ photo: Photo) {
+        copiedTagsJSON = TagClipboard.encode(photo.humanTags)
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+    private func pasteTags(_ photo: Photo) {
+        guard let tags = TagClipboard.decode(copiedTagsJSON) else { return }
+        photo.humanTags = tags
+        try? modelContext.save()
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 
     private func tile(_ photo: Photo, selected sel: Bool) -> some View {

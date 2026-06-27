@@ -20,17 +20,14 @@ struct PhotoDetailView: View {
     @State private var currentImage: UIImage?
     /// A copied set of human tags, ready to paste onto another photo. Stored as
     /// JSON so it survives paging between photos and app relaunches.
-    @AppStorage("copiedTagsJSON") private var copiedTagsJSON = ""
+    @AppStorage(TagClipboard.key) private var copiedTagsJSON = ""
 
     init(photoID: String) { _selection = State(initialValue: photoID) }
 
     private var current: Photo? { photos.first { $0.id == selection } }
 
     /// The tags currently on the clipboard, if any decode.
-    private var copiedTags: HumanTags? {
-        guard !copiedTagsJSON.isEmpty, let data = copiedTagsJSON.data(using: .utf8) else { return nil }
-        return try? JSONDecoder().decode(HumanTags.self, from: data)
-    }
+    private var copiedTags: HumanTags? { TagClipboard.decode(copiedTagsJSON) }
 
     var body: some View {
         TabView(selection: $selection) {
@@ -101,10 +98,8 @@ struct PhotoDetailView: View {
     /// Copy the current photo's human tags to the clipboard (machine tags and the
     /// project are intentionally left out — those stay per-photo).
     private func copyTags() {
-        guard let current,
-              let data = try? JSONEncoder().encode(current.humanTags),
-              let str = String(data: data, encoding: .utf8) else { return }
-        copiedTagsJSON = str
+        guard let current else { return }
+        copiedTagsJSON = TagClipboard.encode(current.humanTags)
         UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 

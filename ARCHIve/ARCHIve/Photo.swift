@@ -180,3 +180,19 @@ struct HumanTags: Codable, Equatable {
             && (authorYear?.isEmpty ?? true) && (note?.isEmpty ?? true)
     }
 }
+
+/// A tiny clipboard for human tags — copy one photo's tags, paste onto another.
+/// Backed by a single UserDefaults string (JSON) under `TagClipboard.key`, so an
+/// `@AppStorage(TagClipboard.key)` in any view shares the same value (and it
+/// survives relaunch). Machine tags and the project are never carried.
+enum TagClipboard {
+    static let key = "copiedTagsJSON"
+    static func encode(_ t: HumanTags) -> String {
+        guard let d = try? JSONEncoder().encode(t) else { return "" }
+        return String(data: d, encoding: .utf8) ?? ""
+    }
+    static func decode(_ s: String) -> HumanTags? {
+        guard !s.isEmpty, let d = s.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(HumanTags.self, from: d)
+    }
+}
