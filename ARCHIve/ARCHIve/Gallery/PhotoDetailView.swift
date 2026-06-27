@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 /// Swipeable detail: pages horizontally through the archive (newest first),
 /// starting at the tapped photo. Each page shows the image (tap to pinch-zoom
@@ -17,10 +18,19 @@ struct PhotoDetailView: View {
     @State private var editing = false
     @State private var refresh = 0          // bump to reload images after an edit
     @State private var currentImage: UIImage?
+    /// A copied set of human tags, ready to paste onto another photo. Stored as
+    /// JSON so it survives paging between photos and app relaunches.
+    @AppStorage("copiedTagsJSON") private var copiedTagsJSON = ""
 
     init(photoID: String) { _selection = State(initialValue: photoID) }
 
     private var current: Photo? { photos.first { $0.id == selection } }
+
+    /// The tags currently on the clipboard, if any decode.
+    private var copiedTags: HumanTags? {
+        guard !copiedTagsJSON.isEmpty, let data = copiedTagsJSON.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(HumanTags.self, from: data)
+    }
 
     var body: some View {
         TabView(selection: $selection) {
@@ -48,6 +58,17 @@ struct PhotoDetailView: View {
                                   systemImage: current.isFavorite ? "heart.slash" : "heart")
                         }
                     }
+                    Divider()
+                    Button { copyTags() } label: { Label("Copy tags", systemImage: "doc.on.doc") }
+                        .disabled(current?.humanTags.isEmpty ?? true)
+                    if let copied = copiedTags {
+                        let s = TagSuggester.summary(copied)
+                        Button { pasteTags() } label: {
+                            Label(s.isEmpty ? "Paste tags" : "Paste tags · \(s)", systemImage: "doc.on.clipboard")
+                        }
+                        .disabled(current == nil)
+                    }
+                    Divider()
                     Button { showShare = true } label: { Label("Share", systemImage: "square.and.arrow.up") }
                     Button(role: .destructive) { confirmDelete = true } label: {
                         Label("Delete", systemImage: "trash")
@@ -75,6 +96,24 @@ struct PhotoDetailView: View {
         } message: {
             Text("This permanently removes the photo from your archive.")
         }
+    }
+
+    /// Copy the current photo's human tags to the clipboard (machine tags and the
+    /// project are intentionally left out — those stay per-photo).
+    private func copyTags() {
+        guard let current,
+              let data = try? JSONEncoder().encode(current.humanTags),
+              let str = String(data: data, encoding: .utf8) else { return }
+        copiedTagsJSON = str
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+
+    /// Apply the clipboard tags to the current photo (replaces its human tags).
+    private func pasteTags() {
+        guard let current, let tags = copiedTags else { return }
+        current.humanTags = tags
+        try? modelContext.save()
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 
     /// Delete the current page, then move to a neighbour or leave if it was the
