@@ -18,11 +18,10 @@ struct ReferenceLens: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("Type", selection: $outer) {
-                Text("All").tag("all")
-                ForEach(TagVocab.types) { Text($0.label).tag($0.id) }
-            }
-            .pickerStyle(.segmented).padding(.horizontal, 12).padding(.bottom, 8)
+            PillToggle(selection: $outer,
+                       options: [PillOption(value: "all", label: "All")]
+                            + TagVocab.types.map { PillOption(value: $0.id, label: $0.label) })
+                .padding(.horizontal, 12).padding(.bottom, 8)
 
             switch outer {
             case "building":
@@ -45,10 +44,8 @@ struct ReferenceLens: View {
     // MARK: Inner picker
 
     private func innerPicker(_ sel: Binding<String>, _ labels: [String: String], order: [String]) -> some View {
-        Picker("Dimension", selection: sel) {
-            ForEach(order, id: \.self) { Text(labels[$0] ?? $0).tag($0) }
-        }
-        .pickerStyle(.segmented).padding(.horizontal, 12).padding(.bottom, 8)
+        PillToggle(selection: sel, options: order.map { PillOption(value: $0, label: labels[$0] ?? $0) })
+            .padding(.horizontal, 12).padding(.bottom, 8)
     }
 
     // MARK: Groupings  (label, photos) sorted by count desc

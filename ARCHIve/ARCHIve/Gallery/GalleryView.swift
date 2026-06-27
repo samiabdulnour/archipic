@@ -440,13 +440,12 @@ struct GalleryView: View {
     // MARK: Chrome
 
     private var lensPicker: some View {
-        Picker("Lens", selection: $lens) {
-            ForEach(GalleryLens.allCases) { l in Label(l.rawValue, systemImage: l.symbol).tag(l) }
-        }
-        .pickerStyle(.segmented)
-        .padding(.horizontal, 12).padding(.top, 12).padding(.bottom, 8)
-        // Stays enabled during Select, so you can move between lenses while
-        // picking — being locked to Time is what made selection feel Time-only.
+        // App-unified pill toggle (same lemon language as tagging), not a native
+        // segmented control. Stays enabled during Select so you can move between
+        // lenses while picking.
+        PillToggle(selection: $lens,
+                   options: GalleryLens.allCases.map { PillOption(value: $0, label: $0.rawValue) })
+            .padding(.horizontal, 12).padding(.top, 12).padding(.bottom, 8)
     }
 
     private var emptyState: some View {
