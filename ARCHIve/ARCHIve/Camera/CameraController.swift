@@ -81,6 +81,11 @@ final class CameraController: NSObject {
     @ObservationIgnored private let sessionQueue = DispatchQueue(label: "archive.camera.session")
     @ObservationIgnored private var configured = false
     @ObservationIgnored private var captureHandler: ((Data?) -> Void)?
+    /// True from the moment a capture is requested until its completion fires.
+    /// Set/read only on the main thread (capture() and deliver()), so a rapid
+    /// second shutter tap can't overwrite the in-flight handler + pending* and
+    /// silently drop the first photo.
+    @ObservationIgnored private var captureInFlight = false
     /// Portrait crop ratio (width/height) the saved photo is cropped to. Set by
     /// the view from the live framing geometry so the save matches the preview.
     @ObservationIgnored private var pendingCropRatio: CGFloat = 3.0 / 4.0
@@ -326,6 +331,10 @@ final class CameraController: NSObject {
     /// showing, so the saved photo matches the frame.
     func capture(cropRatio: CGFloat, completion: @escaping (Data?) -> Void) {
         guard configured else { completion(nil); return }
+        // One capture at a time: ignore a second tap while one is outstanding,
+        // rather than overwriting the handler and dropping the first frame.
+        guard !captureInFlight else { completion(nil); return }
+        captureInFlight = true
         captureHandler = completion
         let flash = self.flashMode
         let keystone: Double? = keystoneOn ? keystoneStrength : nil
@@ -358,6 +367,7 @@ final class CameraController: NSObject {
     private func deliver(_ data: Data?) {
         let handler = captureHandler
         captureHandler = nil
+        captureInFlight = false
         handler?(data)
     }
 

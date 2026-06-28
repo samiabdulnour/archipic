@@ -63,10 +63,17 @@ enum BoardRenderer {
             // Auto-fill the city from GPS for captions, when it's missing (sequential
             // so CLGeocoder is happy; cached; never overwrites a hand-typed place).
             if (p.humanTags.place ?? "").isEmpty, let lat = p.latitude, let lon = p.longitude,
-               let city = await Geocoder.city(latitude: lat, longitude: lon) {
+               let city = await Geocoder.shared.city(latitude: lat, longitude: lon) {
                 var t = p.humanTags; t.place = city; p.humanTags = t
             }
-            if let img = await PhotoImage.full(for: p) { plates.append(plate(for: p, image: img)) }
+            // Downsample each plate to print size and drain the source bitmap
+            // immediately — holding every selected photo at full resolution at once
+            // jetsam-kills a large board export. Aspect ratio is preserved, so the
+            // layout is identical.
+            if let img = await PhotoImage.full(for: p) {
+                let small = autoreleasepool { downsampled(img, maxPixel: 1600) }
+                plates.append(plate(for: p, image: small))
+            }
         }
         guard !plates.isEmpty else { return nil }
         let data: Data
@@ -80,6 +87,22 @@ enum BoardRenderer {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(name).pdf")
         try? data.write(to: url)
         return url
+    }
+
+    /// Scale an image's long side down to `maxPixel` (no-op if already smaller),
+    /// rendered at scale 1 so the pixel count is exactly print size. Keeps the
+    /// aspect ratio, so plate layout is unchanged.
+    static func downsampled(_ image: UIImage, maxPixel: CGFloat = 1600) -> UIImage {
+        let longest = max(image.size.width, image.size.height)
+        guard longest > maxPixel, longest > 0 else { return image }
+        let f = maxPixel / longest
+        let size = CGSize(width: image.size.width * f, height: image.size.height * f)
+        let fmt = UIGraphicsImageRendererFormat.default()
+        fmt.scale = 1
+        fmt.opaque = true
+        return UIGraphicsImageRenderer(size: size, format: fmt).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: size))
+        }
     }
 
     // MARK: Caption (the shared .ccap language)

@@ -197,9 +197,22 @@ struct GalleryView: View {
         }
     }
 
-    private var allSelected: Bool { !filtered.isEmpty && selected.count == filtered.count }
+    /// Photos actually shown in the current lens. Select-All must use this, not
+    /// `filtered`, so it never selects (and then deletes) photos the lens hides —
+    /// Map shows only located photos, Project only filed ones.
+    private var visiblePhotos: [Photo] {
+        switch lens {
+        case .map:     return filtered.filter { $0.latitude != nil }
+        case .project: return filtered.filter { !($0.project ?? "").isEmpty }
+        default:       return filtered
+        }
+    }
+    private var allSelected: Bool {
+        !visiblePhotos.isEmpty && visiblePhotos.allSatisfy { selected.contains($0.id) }
+    }
     private func toggleSelectAll() {
-        if allSelected { selected.removeAll() } else { selected = Set(filtered.map(\.id)) }
+        let vis = visiblePhotos.map(\.id)
+        if allSelected { vis.forEach { selected.remove($0) } } else { selected.formUnion(vis) }
     }
 
     // MARK: Lenses
@@ -331,7 +344,7 @@ struct GalleryView: View {
     }
     private func pasteTags(_ photo: Photo) {
         guard let tags = TagClipboard.decode(copiedTagsJSON) else { return }
-        photo.humanTags = tags
+        photo.humanTags = photo.humanTags.mergingTaxonomy(from: tags)
         try? modelContext.save()
         UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
@@ -361,7 +374,11 @@ struct GalleryView: View {
     }
 
     private func shareOne(_ photo: Photo) {
-        if let img = UIImage(data: photo.imageData) { shareItems = [img]; showShare = true }
+        // Via PhotoImage.full so references (camera shots) and edits are included
+        // — `imageData` is empty for references, so the old path shared nothing.
+        Task {
+            if let img = await PhotoImage.full(for: photo) { shareItems = [img]; showShare = true }
+        }
     }
 
     private func toggleSelect(_ p: Photo) {
@@ -432,9 +449,19 @@ struct GalleryView: View {
     }
 
     private func shareSelected() {
-        let imgs = photos.filter { selected.contains($0.id) }.compactMap { UIImage(data: $0.imageData) }
-        guard !imgs.isEmpty else { return }
-        shareItems = imgs; showShare = true
+        // Load via PhotoImage.full (references + edits), sequentially so only a
+        // couple of bitmaps live at once, and cap the batch so Select-All over a
+        // huge library can't decode thousands of full-size images into memory.
+        let targets = Array(photos.filter { selected.contains($0.id) }.prefix(40))
+        guard !targets.isEmpty else { return }
+        Task {
+            var imgs: [UIImage] = []
+            for p in targets {
+                if let img = await PhotoImage.full(for: p) { imgs.append(img) }
+            }
+            guard !imgs.isEmpty else { return }
+            shareItems = imgs; showShare = true
+        }
     }
 
     // MARK: Chrome

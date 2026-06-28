@@ -7,8 +7,9 @@ import Metal
 /// pay nothing. The original pixels are never modified.
 enum PhotoEdits {
     private static let ctx: CIContext = {
-        if let dev = MTLCreateSystemDefaultDevice() { return CIContext(mtlDevice: dev) }
-        return CIContext()
+        let opts: [CIContextOption: Any] = [.cacheIntermediates: false]
+        if let dev = MTLCreateSystemDefaultDevice() { return CIContext(mtlDevice: dev, options: opts) }
+        return CIContext(options: opts)
     }()
 
     static func render(_ base: UIImage, _ photo: Photo) -> UIImage {
@@ -16,6 +17,14 @@ enum PhotoEdits {
         let up = normalizedUp(base)
         guard let cg = up.cgImage else { return base }
         var ci = CIImage(cgImage: cg)
+
+        // Cap resolution before the memory-heavy look/grain pipeline — an uncapped
+        // full-res frame OOMs createCGImage exactly as the editor did.
+        let longest = max(ci.extent.width, ci.extent.height)
+        if longest > 2048 {
+            let f = 2048 / longest
+            ci = ci.transformed(by: CGAffineTransform(scaleX: f, y: f))
+        }
 
         // 1) Rotation (clockwise on screen → negative angle in CI's y-up space).
         if photo.editRotation % 360 != 0 {
@@ -40,6 +49,7 @@ enum PhotoEdits {
         ci = CameraProcessing.apply(to: ci, keystone: photo.editKeystone, look: look, grain: Settings.grainEnabled)
 
         guard let outCG = ctx.createCGImage(ci, from: ci.extent) else { return up }
+        ctx.clearCaches()
         return UIImage(cgImage: outCG)
     }
 

@@ -342,7 +342,10 @@ struct PhotoEditorView: View {
         let seq = renderSeq
         let src = source, rot = rotation, ks = keystone, lk = look
         Self.renderQueue.async {
-            guard seq == renderSeq else { return }      // superseded (a newer look tapped) — skip entirely
+            // No off-main read of `renderSeq` here (that was a data race). The serial
+            // queue runs renders in order and the main-thread guard below applies
+            // only the latest result, so a superseded render is at worst a little
+            // wasted work — never a wrong preview.
             guard let src, let cg = src.cgImage else { return }
             var ci = CIImage(cgImage: cg)
             if rot % 360 != 0 {

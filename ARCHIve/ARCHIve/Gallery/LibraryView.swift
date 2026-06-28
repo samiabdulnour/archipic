@@ -18,6 +18,11 @@ struct LibraryView: View {
     @State private var columns = 3                  // grid density; pinch to change
     @State private var selecting = false
     @State private var selected: Set<String> = []   // asset localIdentifiers
+    /// Ids of references this presentation just CREATED — the only ones the
+    /// skip-cleanup may remove. Pre-existing untagged references (left by an
+    /// interrupted earlier session, or arriving from another device via CloudKit)
+    /// must never be auto-deleted.
+    @State private var sessionRefs: Set<String> = []
 
     private var authorized: Bool { status == .authorized || status == .limited }
 
@@ -174,6 +179,7 @@ struct LibraryView: View {
         if let existing { tagTarget = existing; return }
         let photo = makeReference(for: asset)
         modelContext.insert(photo)
+        sessionRefs.insert(photo.id)
         tagTarget = photo
     }
 
@@ -187,6 +193,7 @@ struct LibraryView: View {
             } else {
                 let p = makeReference(for: asset)
                 modelContext.insert(p)
+                sessionRefs.insert(p.id)
                 targets.append(p)
             }
         }
@@ -228,15 +235,19 @@ struct LibraryView: View {
 
     private func endTagging() {
         cleanupIfSkipped()
+        sessionRefs.removeAll()
         batchTargets = []
         if selecting { withAnimation { selecting = false; selected.removeAll() } }
     }
 
-    /// A *library* reference left untagged in a tagging session means the user
-    /// skipped it — drop it. Camera shots and photos explicitly "Added" (importedAt
-    /// set) are intentional and never auto-removed.
+    /// A reference THIS session just created and the user then skipped (left
+    /// untagged, not "Added") means it was unwanted — drop it. Scoped to
+    /// `sessionRefs` so it can only ever remove a reference created in this
+    /// presentation; pre-existing untagged references, camera shots, and photos
+    /// explicitly "Added" (importedAt set) are never auto-removed.
     private func cleanupIfSkipped() {
-        for p in allPhotos where p.isReference && p.isUntagged && !p.isCameraShot && p.importedAt == nil {
+        for p in allPhotos where sessionRefs.contains(p.id)
+            && p.isReference && p.isUntagged && !p.isCameraShot && p.importedAt == nil {
             modelContext.delete(p)
         }
         try? modelContext.save()

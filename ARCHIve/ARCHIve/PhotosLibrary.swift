@@ -16,7 +16,10 @@ enum PhotoImage {
         if let id = photo.assetLocalID, !id.isEmpty {
             base = await PhotosLibrary.image(localID: id, maxPixel: 2400)
         } else {
-            base = UIImage(data: photo.imageData)
+            // Downsample owned pixels too (off-main, via CGImageSource) — a
+            // full-res 48MP JPEG decoded uncapped here OOMs the detail/zoom/PDF
+            // paths just like the camera/editor did.
+            base = await PhotoThumbnail.thumbnail(from: photo.imageData, maxPixel: 2400)
         }
         guard let base else { return nil }
         return photo.hasEdits ? PhotoEdits.render(base, photo) : base

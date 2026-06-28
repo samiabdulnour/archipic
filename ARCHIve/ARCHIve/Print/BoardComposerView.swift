@@ -55,7 +55,7 @@ struct BoardComposerView: View {
                             .foregroundStyle(Palette.coral)
                     }
                 }
-                Section(order.isEmpty ? "No photos" : "\(order.count) photos · drag to reorder") {
+                Section(orderedPhotos.isEmpty ? "No photos" : "\(orderedPhotos.count) photos · drag to reorder") {
                     ForEach(orderedPhotos) { photo in
                         HStack(spacing: 12) {
                             PhotoThumbnail(photo: photo)
@@ -68,8 +68,21 @@ struct BoardComposerView: View {
                             }
                         }
                     }
-                    .onMove { order.move(fromOffsets: $0, toOffset: $1) }
-                    .onDelete { order.remove(atOffsets: $0) }
+                    // The list shows only RESOLVED photos, so move/delete offsets are
+                    // into that sublist — apply them there and keep any unresolved ids
+                    // (deleted-from-archive or not-yet-synced) so Save can't drop them.
+                    .onMove { from, to in
+                        var resolved = order.filter { byID[$0] != nil }
+                        let unresolved = order.filter { byID[$0] == nil }
+                        resolved.move(fromOffsets: from, toOffset: to)
+                        order = resolved + unresolved
+                    }
+                    .onDelete { offsets in
+                        var resolved = order.filter { byID[$0] != nil }
+                        let unresolved = order.filter { byID[$0] == nil }
+                        resolved.remove(atOffsets: offsets)
+                        order = resolved + unresolved
+                    }
                 }
             }
             .environment(\.editMode, .constant(.active))   // always-on drag handles + delete
@@ -82,7 +95,7 @@ struct BoardComposerView: View {
                         Button { save() } label: { Label(existing == nil ? "Save board" : "Save changes", systemImage: "tray.and.arrow.down") }
                             .disabled(order.isEmpty)
                         Button { Task { await export() } } label: { Label("Export PDF", systemImage: "square.and.arrow.up") }
-                            .disabled(order.isEmpty)
+                            .disabled(order.isEmpty || working)
                         if existing != nil {
                             Divider()
                             Button(role: .destructive) { confirmDelete = true } label: {
@@ -138,6 +151,7 @@ struct BoardComposerView: View {
     }
 
     private func export() async {
+        guard !working else { return }   // no overlapping exports (shared Geocoder, memory)
         working = true
         let url = await BoardRenderer.makePDF(photos: orderedPhotos, layout: layout, title: title)
         working = false

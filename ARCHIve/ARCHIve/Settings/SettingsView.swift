@@ -123,12 +123,14 @@ struct SettingsView: View {
     // MARK: Backup
     @ViewBuilder private var backupBody: some View {
         Button {
-            do {
-                exportURL = try BackupManager.makeBackup(photos)
-                showExportShare = true
-            } catch {
-                backupMessage = "Backup failed: \(error.localizedDescription)"
-                showBackupResult = true
+            Task {
+                do {
+                    exportURL = try await BackupManager.makeBackup(photos)
+                    showExportShare = true
+                } catch {
+                    backupMessage = "Backup failed: \(error.localizedDescription)"
+                    showBackupResult = true
+                }
             }
         } label: {
             Label("Back up all photos", systemImage: "square.and.arrow.up.on.square")
@@ -148,10 +150,18 @@ struct SettingsView: View {
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             do {
-                let n = try BackupManager.restore(from: url, into: modelContext,
-                                                  existingIDs: Set(photos.map(\.id)))
-                backupMessage = n == 0 ? "Nothing new to restore — everything in this backup is already here."
-                                       : "Restored \(n) photo\(n == 1 ? "" : "s")."
+                let res = try BackupManager.restore(from: url, into: modelContext,
+                                                    existingIDs: Set(photos.map(\.id)))
+                if res.added == 0 && res.missingReferences == 0 {
+                    backupMessage = "Nothing new to restore — everything in this backup is already here."
+                } else {
+                    var msg = res.added == 0 ? "No new photos restored."
+                                             : "Restored \(res.added) photo\(res.added == 1 ? "" : "s")."
+                    if res.missingReferences > 0 {
+                        msg += "\n\n\(res.missingReferences) couldn't be restored — their originals are no longer in Photos and this older backup didn't include a copy. Make a fresh backup to keep a self-contained copy."
+                    }
+                    backupMessage = msg
+                }
             } catch {
                 backupMessage = "Restore failed. Make sure you picked an Archi.vé backup folder.\n\n\(error.localizedDescription)"
             }

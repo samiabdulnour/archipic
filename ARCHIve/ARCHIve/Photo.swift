@@ -181,6 +181,28 @@ struct HumanTags: Codable, Equatable {
     }
 }
 
+extension HumanTags {
+    /// Copy only the structural taxonomy (Kind + Context) from `other`, keeping
+    /// THIS photo's personal fields — place, note, rating, keywords, and the
+    /// per-item graphic details (title/creator/year/source/brand/model/contacts).
+    /// Used by Paste tags so pasting a taxonomy onto a photo never wipes its
+    /// hand-typed place/note/rating.
+    func mergingTaxonomy(from other: HumanTags) -> HumanTags {
+        var t = self
+        t.type = other.type
+        t.typology = other.typology
+        t.room = other.room
+        t.concepts = other.concepts
+        t.elementCategory = other.elementCategory
+        t.element = other.element
+        t.materials = other.materials
+        t.colors = other.colors
+        t.graphicKind = other.graphicKind
+        t.visual = other.visual
+        return t
+    }
+}
+
 /// A tiny clipboard for human tags — copy one photo's tags, paste onto another.
 /// Backed by a single UserDefaults string (JSON) under `TagClipboard.key`, so an
 /// `@AppStorage(TagClipboard.key)` in any view shares the same value (and it

@@ -39,7 +39,14 @@ struct PhotoDetailView: View {
         .tabViewStyle(.page(indexDisplayMode: .never))
         .task(id: "\(selection)#\(refresh)") {
             currentImage = nil
-            if let c = current { currentImage = await PhotoImage.full(for: c) }
+            // Re-check identity after the await: a slow load for a photo the user
+            // has already paged away from must not poison currentImage (which Share
+            // and zoom read directly).
+            let target = selection
+            if let c = photos.first(where: { $0.id == target }) {
+                let img = await PhotoImage.full(for: c)
+                if selection == target { currentImage = img }
+            }
         }
         .background(Palette.paper.ignoresSafeArea())
         .navigationTitle(current.map { $0.createdAt.formatted(date: .abbreviated, time: .shortened) } ?? "")
@@ -106,7 +113,7 @@ struct PhotoDetailView: View {
     /// Apply the clipboard tags to the current photo (replaces its human tags).
     private func pasteTags() {
         guard let current, let tags = copiedTags else { return }
-        current.humanTags = tags
+        current.humanTags = current.humanTags.mergingTaxonomy(from: tags)
         try? modelContext.save()
         UINotificationFeedbackGenerator().notificationOccurred(.success)
     }

@@ -13,9 +13,18 @@ final class CameraMetalView: MTKView {
     let focusLayer = AVCaptureVideoPreviewLayer()
 
     init() {
-        let dev = MTLCreateSystemDefaultDevice() ?? MTLCreateSystemDefaultDevice()!
+        // The live viewfinder is an MTKView and fundamentally needs a Metal device
+        // and command queue; if either is genuinely unavailable the camera can't
+        // render at all. Guard with a clear message instead of the old bogus
+        // `?? MTLCreateSystemDefaultDevice()!` double-call / `makeCommandQueue()!`.
+        guard let dev = MTLCreateSystemDefaultDevice() else {
+            fatalError("Metal is required for the camera viewfinder but is unavailable on this device")
+        }
+        guard let q = dev.makeCommandQueue() else {
+            fatalError("Could not create a Metal command queue for the camera viewfinder")
+        }
         ciContext = CIContext(mtlDevice: dev)
-        queue = dev.makeCommandQueue()!
+        queue = q
         super.init(frame: .zero, device: dev)
         framebufferOnly = false
         isPaused = true
