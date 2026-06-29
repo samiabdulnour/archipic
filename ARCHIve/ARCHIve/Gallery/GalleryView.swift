@@ -647,7 +647,7 @@ struct PaintPanGesture: UIGestureRecognizerRepresentable {
         case .began, .changed:
             // Location in the grid's scrolling coordinate space, so the row index is
             // correct regardless of how far the grid has been scrolled.
-            let loc = context.converter.location(in: .named("galgrid")) ?? g.location(in: g.view)
+            let loc = context.converter.location(in: .named("galgrid"))
             let t = g.translation(in: g.view)
             onChange(loc, CGSize(width: t.x, height: t.y))
         case .ended, .cancelled, .failed:

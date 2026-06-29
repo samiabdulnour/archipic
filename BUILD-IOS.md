@@ -1,211 +1,74 @@
-# Building Archi.vé for iOS (App Store)
+# Building Archi.vé for the App Store (native SwiftUI)
 
-This is a step-by-step you run **once your Apple Developer Program enrolment is approved** and you're sitting at a Mac with Xcode installed. Until then, everything in this file is "later" — the repo prep (manifest, icons, Capacitor config) is already done.
-
-Why this exists: the app is plain HTML/CSS/JS. To put it on the App Store, we wrap that web app in a thin native iOS shell. **Capacitor** is the tool of choice — it's the smallest possible wrapper, doesn't change `index.html`, and lets us add native iOS APIs later (proper camera plugin, Photos write, etc.).
-
----
-
-## 0. What you need before you start
-
-- A Mac (Capacitor's iOS toolchain only runs on macOS).
-- **Xcode 15+** from the Mac App Store. ~15GB download. Open it once after install so it accepts the licence.
-- **Node.js 20+** from <https://nodejs.org> (pick the LTS installer). Capacitor's CLI is a Node package.
-- **Cocoapods**: `sudo gem install cocoapods` in Terminal. iOS dependencies are installed via Pods.
-- Apple Developer Program membership (approved).
-- This repo cloned locally.
+The app is a native SwiftUI / SwiftData project at `ARCHIve/ARCHIve.xcodeproj`.
+Bundle ID: `com.samiabdulnour.archive` · Team: `N6QDF49V2G`
 
 ---
 
-## 1. Add Capacitor to the repo (one-time)
+## Updating and uploading a new build
 
-From the repo root in Terminal:
+1. **Bump the version numbers** in `ARCHIve/ARCHIve.xcodeproj/project.pbxproj`
+   (or via Xcode → target General tab):
+   - `MARKETING_VERSION` — the user-visible version string (e.g. `1.1`).
+     Must be higher than the currently live App Store version to create a new
+     release.
+   - `CURRENT_PROJECT_VERSION` — the build number (integer, e.g. `4`).
+     Must be strictly higher than any build already uploaded to App Store
+     Connect (including rejected or expired builds).
+   - Set the **same** values on **both** targets: `ARCHIve` and
+     `ArchiveWidgetsExtension`. App Store Connect rejects uploads where the
+     extension build number doesn't match the app.
 
-```bash
-# Initialise a tiny package.json so npm has somewhere to record Capacitor.
-# This does NOT introduce a bundler or build step. The app is still served
-# from index.html as-is.
-npm init -y
+2. **Deploy the CloudKit schema** — *only if the SwiftData model changed since
+   the last release.*
+   CloudKit Console → the app's container → **Schema** → **Deploy Schema
+   Changes…** (Development → Production).
+   Adding new fields is safe and additive; the live app ignores fields it
+   doesn't know about. (New keys inside the `humanTagsData` JSON blob need
+   **no** deploy — that field already exists in Production.)
 
-# Install Capacitor core + CLI + iOS platform.
-npm install --save @capacitor/core @capacitor/ios
-npm install --save-dev @capacitor/cli
+3. **Archive (Release build).** In Xcode:
+   - Set the run destination to **Any iOS Device (arm64)**.
+   - **Product → Archive** and wait for the build to finish.
 
-# Stage the web assets into ./www/ — Capacitor copies that folder into
-# the iOS app bundle on every sync. ./www/ is git-ignored; rebuild any
-# time the web app changes.
-bash scripts/build-web.sh
-
-# Capacitor reads capacitor.config.json (already in this repo) for appId,
-# appName, and webDir. Init writes the config it doesn't already know.
-npx cap init "Archi.vé" "com.samiabdulnour.archive" --web-dir=www
-
-# Add the iOS platform. This creates an /ios folder with an Xcode project.
-npx cap add ios
-
-# Copy web assets + native config into the iOS project.
-npx cap sync ios
-```
-
-The `/ios` folder is git-friendly (commit it after the first add). `/node_modules/` and `/www/` are git-ignored (see `.gitignore`).
-
-**Each time you change `index.html` or any web asset and want to re-build the iOS app:**
-
-```bash
-bash scripts/build-web.sh && npx cap sync ios
-```
-
----
-
-## 2. App icon: drop the 1024 into the Xcode project
-
-The repo already contains generated icons in `/icons/icon-*.png`. For the iOS app bundle we need them placed into Xcode's Asset Catalog.
-
-```bash
-npx cap open ios
-```
-
-That opens Xcode on the generated project. In Xcode's left sidebar:
-
-1. Open **App → App → Assets.xcassets → AppIcon**.
-2. Drag `icons/icon-1024.png` from Finder onto the **App Store iOS 1024pt** slot.
-3. Xcode auto-generates the smaller sizes from the 1024.
-
-If Xcode doesn't auto-generate (older versions), drag each size into its matching slot using the file naming convention in `/icons/icon-*.png`.
-
----
-
-## 3. Signing & capabilities
-
-In Xcode, with the **App** target selected:
-
-1. **Signing & Capabilities** tab.
-2. Tick **Automatically manage signing**.
-3. **Team**: pick your Apple Developer team from the dropdown.
-4. **Bundle Identifier**: should read `com.samiabdulnour.archive` (set in `capacitor.config.json`). Capacitor doesn't allow dashes, so the wordmark "Archi.vé" lives in the display name, not the bundle ID.
-5. Click **+ Capability** and add:
-   - **Camera** — for live capture via getUserMedia in the WebView.
-   - Add an **Info.plist key** `NSCameraUsageDescription` = `"Archi.vé uses the camera to capture photos for your archive."`
-   - `NSPhotoLibraryAddUsageDescription` = `"Archi.vé saves photos to your Photos library on request."` (only if you wire up the share-to-Photos feature later).
-   - `NSLocationWhenInUseUsageDescription` = `"Archi.vé tags each photo with the place it was taken so you can browse the archive on a map."`
-
----
-
-## 4. First build to the simulator
-
-In Xcode, top toolbar:
-
-1. Pick **iPhone 15 Pro** (or any) from the device dropdown.
-2. Press **▶ Run** (Cmd+R).
-3. Wait. First build is slow (Xcode compiles Capacitor's Swift glue).
-4. The simulator boots and launches Archi.vé.
-
-If the app shows a white screen: `npx cap sync ios` and rebuild. The web assets didn't copy over.
-
----
-
-## 5. Run on your physical iPhone
-
-1. Plug the iPhone into the Mac with a USB cable.
-2. On the iPhone: **Settings → Privacy & Security → Developer Mode → On** (requires restart).
-3. In Xcode, pick the iPhone from the device dropdown.
-4. Press ▶ Run.
-5. First time only: on the iPhone, **Settings → General → VPN & Device Management → Apple Development: <your-email>** → trust.
-
-Now the app is on your phone, running as a real installed app — not a web page.
-
----
-
-## 6. .gitignore
-
-Add to `.gitignore`:
-
-```
-node_modules/
-ios/App/Pods/
-ios/App/Podfile.lock
-ios/App/build/
-ios/DerivedData/
-*.xcuserstate
-```
-
-Commit `ios/App/App.xcodeproj`, `ios/App/Podfile`, `capacitor.config.json`, `package.json`, `package-lock.json` — those are the build inputs.
-
----
-
-## 7. TestFlight (private beta with you + invited testers)
-
-1. In Xcode: **Product → Archive**. Wait for build.
-2. The Organizer window opens. Click **Distribute App → App Store Connect → Upload**.
-3. Go to <https://appstoreconnect.apple.com>, your app → **TestFlight** tab.
-4. The build appears after Apple processes it (~10–30 min).
-5. Fill in **Test Information** (what to test, contact email).
-6. Add yourself as an internal tester. Install **TestFlight** from the App Store on your iPhone, accept the invite, install Archi.vé.
-
-This is the path you should use for at least a week before submitting to the public App Store — to shake out crashes and iOS-specific bugs.
-
----
-
-## 8. App Store submission
-
-In App Store Connect:
-
-1. **App Information**: name, subtitle, category. See `APPSTORE.md` for the draft copy.
-2. **Pricing**: Free.
-3. **Privacy**: declare what data the app collects (none — everything is local). Link to a privacy policy URL.
-4. **Screenshots**: 6.7" (iPhone 15 Pro Max) and 6.5" required. Take with the iOS Simulator → File → New Screenshot.
-5. **Description / Keywords / Support URL**: from `APPSTORE.md`.
-6. **Build**: pick the TestFlight build.
-7. **Submit for Review**.
-
-Review takes 1–7 days. Common rejection reasons for this app:
-- Camera/photo permission strings missing → fixed in Step 3.
-- Crashes on launch on older iOS → test on iOS 16+ simulators.
-- Missing privacy policy URL → host the existing `PRIVACY.md` somewhere public.
-
----
-
-## 9. Updating the app after launch (native SwiftUI app)
-
-> ⚠️ Sections 1–8 above describe the **old Capacitor web-wrapper**. The app is now a
-> native SwiftUI / SwiftData app, so updates follow these steps instead.
-
-1. **Bump the version.** Xcode → target **ARCHIve** → General (or `project.pbxproj`):
-   - `MARKETING_VERSION` (e.g. 1.0 → 1.1) — must be higher than the live version to
-     create a new App Store version.
-   - `CURRENT_PROJECT_VERSION` (build) — must be higher than any build already uploaded.
-   - Set the **same** version + build on the **ArchiveWidgets** target — the widget's
-     numbers must match the app's or App Store Connect rejects the upload.
-
-2. **Deploy the CloudKit schema** — *only if the data model changed since the last
-   release.* CloudKit Console → the app's container → **Schema** → **Deploy Schema
-   Changes…** (Development → Production). SwiftData+CloudKit fields are additive and
-   optional, so it's safe, but the live app can't sync a new field until it exists in
-   Production. (New keys inside the `humanTagsData` JSON blob — e.g. the place/city —
-   need **no** deploy; that field already exists in the schema.)
-
-3. **Archive (Release).** Xcode → Product → **Archive**. Or CLI:
+   Or via the CLI:
    ```bash
    xcodebuild -project ARCHIve/ARCHIve.xcodeproj -scheme ARCHIve \
-     -configuration Release -destination 'generic/platform=iOS' \
-     -archivePath build/Archive.xcarchive -allowProvisioningUpdates archive
+     -configuration Release \
+     -destination 'generic/platform=iOS' \
+     -archivePath build/Archive.xcarchive \
+     -allowProvisioningUpdates archive
    ```
 
-4. **Upload.** In the Xcode **Organizer** (Window → Organizer → Archives) pick the
-   archive → **Distribute App → App Store Connect → Upload**. Wait ~10–30 min for
-   Apple to finish processing the build.
+4. **Upload.** Window → Organizer → pick the new archive →
+   **Distribute App → App Store Connect → Upload**.
+   Apple processes the build in ~10–30 minutes.
 
-5. **Submit.** App Store Connect → the app → **(+) version** with the string from
-   step 1 → write **What's New** → attach the processed build → **Add for Review** →
-   **Submit**.
+5. **Submit.** App Store Connect → your app → **(+) version** (the
+   `MARKETING_VERSION` string) → write **What's New** → attach the processed
+   build → **Add for Review → Submit for Review**.
 
-Review is usually ~1–3 days. SwiftData/CloudKit stores survive updates — the owner's
-photos and tags are preserved across the upgrade.
+Review usually takes 1–3 days. SwiftData / CloudKit stores survive updates —
+the owner's photos and tags are preserved across upgrades.
 
 ---
 
-## Notes
+## Screenshots
 
-- **The Leaflet CDN dependency** (`unpkg.com/leaflet@1.9.4`) currently requires internet at launch. The native app may want to bundle Leaflet locally — TODO before App Store submission, since Apple discourages mandatory network calls on launch.
-- **The `getUserMedia` camera** works inside the Capacitor WebView with the camera permission set in step 3. If we hit any iOS quirks (focus, orientation), we'll swap to the `@capacitor/camera` plugin which uses native AVFoundation.
-- **IndexedDB persists across app updates** by default in Capacitor's WKWebView. Photos survive.
+Five designed 1320×2868 px screenshots live in `AppStoreScreenshots/`.
+Regenerate any time:
+
+```bash
+python3 AppStoreScreenshots/gen_screenshots.py
+```
+
+Upload them under the **6.9" (iPhone 17 Pro Max)** slot in App Store Connect.
+Apple scales them down for older device sizes automatically.
+
+---
+
+## Privacy policy & support page
+
+`docs/privacy.html` and `docs/support.html` are served via GitHub Pages at
+`samiabdulnour.github.io/archi-ve/`. Those URLs are required by App Store
+Connect in the app's metadata.

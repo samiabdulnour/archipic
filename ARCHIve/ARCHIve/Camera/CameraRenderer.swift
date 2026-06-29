@@ -62,8 +62,8 @@ final class CameraMetalView: MTKView {
         let centered = scaled.transformed(by: CGAffineTransform(translationX: tx, y: ty))
         let dest = CIRenderDestination(mtlTexture: drawable.texture, commandBuffer: cb)
         dest.isFlipped = true
-        try? ciContext.startTask(toRender: centered, from: CGRect(origin: .zero, size: size),
-                                 to: dest, at: .zero)
+        _ = try? ciContext.startTask(toRender: centered, from: CGRect(origin: .zero, size: size),
+                                     to: dest, at: .zero)
         cb.present(drawable)
         cb.commit()
     }

@@ -17,7 +17,7 @@ enum TagSuggester {
             DispatchQueue.global(qos: .userInitiated).async {
                 let req = VNClassifyImageRequest()
                 try? VNImageRequestHandler(cgImage: cg, options: [:]).perform([req])
-                let obs = (req.results as? [VNClassificationObservation]) ?? []
+                let obs = req.results ?? []
                 let top = obs.filter { $0.confidence > 0.1 }.prefix(15).map { $0.identifier.lowercased() }
                 cont.resume(returning: Array(top))
             }
