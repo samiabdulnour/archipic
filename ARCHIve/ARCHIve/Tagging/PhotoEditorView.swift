@@ -15,6 +15,7 @@ struct PhotoEditorView: View {
 
     @State private var look: CameraLook = .original
     @State private var keystone: Double = 0
+    @State private var straighten: Double = 0
     @State private var rotation: Int = 0
     @State private var crop = CGRect(x: 0, y: 0, width: 1, height: 1)
     @State private var tool: Tool = .crop
@@ -22,6 +23,7 @@ struct PhotoEditorView: View {
     @State private var source: UIImage?     // raw (upright), preview resolution
     @State private var preview: UIImage?    // source + rotation + tilt + look (no crop)
     @State private var keystoneWasZero = true
+    @State private var straightenWasZero = true
     @State private var moveStart: CGRect?   // crop at the start of a move-drag
     @State private var renderSeq = 0        // drop stale async renders
 
@@ -56,14 +58,17 @@ struct PhotoEditorView: View {
         .task {
             look = CameraLook(rawValue: photo.editLookRaw ?? "") ?? .original
             keystone = photo.editKeystone
+            straighten = photo.editStraighten
             rotation = photo.editRotation
             crop = CGRect(x: photo.cropX, y: photo.cropY, width: photo.cropW, height: photo.cropH)
             keystoneWasZero = keystone == 0
+            straightenWasZero = straighten == 0
             await loadSource()
             recompute()
         }
         .onChange(of: look) { _, _ in recompute() }
         .onChange(of: keystone) { _, _ in recompute() }
+        .onChange(of: straighten) { _, _ in recompute() }
         .onChange(of: rotation) { _, _ in recompute() }
     }
 
@@ -74,7 +79,7 @@ struct PhotoEditorView: View {
             Button("Cancel") { onDone(); dismiss() }
             Spacer()
             Button("Reset") { resetEdits() }
-                .disabled(look == .original && keystone == 0 && rotation == 0 && crop == .init(x: 0, y: 0, width: 1, height: 1))
+                .disabled(look == .original && keystone == 0 && straighten == 0 && rotation == 0 && crop == .init(x: 0, y: 0, width: 1, height: 1))
             Spacer()
             Button("Save") { save() }.fontWeight(.semibold)
         }
@@ -259,17 +264,42 @@ struct PhotoEditorView: View {
     }
 
     private var tiltControls: some View {
-        Slider(value: Binding(
-            get: { keystone },
-            set: { raw in
-                let v = abs(raw) < 0.07 ? 0 : raw
-                if v == 0 && !keystoneWasZero { UIImpactFeedbackGenerator(style: .rigid).impactOccurred() }
-                keystoneWasZero = (v == 0)
-                keystone = v
-            }), in: -1...1)
-            .tint(Palette.coral)
-            .overlay(alignment: .center) { Rectangle().fill(.white.opacity(0.4)).frame(width: 1.5, height: 16) }
-            .frame(maxWidth: 320)
+        VStack(spacing: 10) {
+            // Fine rotation — fix a leaning horizon.
+            labeledSlider("Straighten", value: Binding(
+                get: { straighten },
+                set: { v in
+                    let s = abs(v) < 0.4 ? 0 : v
+                    if s == 0 && !straightenWasZero { UIImpactFeedbackGenerator(style: .rigid).impactOccurred() }
+                    straightenWasZero = (s == 0)
+                    straighten = s
+                }
+            ), range: -15...15)
+
+            // Perspective / keystone correction.
+            labeledSlider("Keystone", value: Binding(
+                get: { keystone },
+                set: { raw in
+                    let v = abs(raw) < 0.07 ? 0 : raw
+                    if v == 0 && !keystoneWasZero { UIImpactFeedbackGenerator(style: .rigid).impactOccurred() }
+                    keystoneWasZero = (v == 0)
+                    keystone = v
+                }
+            ), range: -1...1)
+        }
+    }
+
+    private func labeledSlider(_ label: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
+        HStack(spacing: 8) {
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .tracking(0.5)
+                .foregroundStyle(.white.opacity(0.55))
+                .frame(width: 68, alignment: .trailing)
+            Slider(value: value, in: range)
+                .tint(Palette.coral)
+                .overlay(alignment: .center) { Rectangle().fill(.white.opacity(0.4)).frame(width: 1.5, height: 16) }
+        }
     }
 
     private var colorControls: some View {
@@ -319,9 +349,9 @@ struct PhotoEditorView: View {
     }
 
     private func resetEdits() {
-        look = .original; keystone = 0; rotation = 0
+        look = .original; keystone = 0; straighten = 0; rotation = 0
         crop = CGRect(x: 0, y: 0, width: 1, height: 1)
-        keystoneWasZero = true
+        keystoneWasZero = true; straightenWasZero = true
     }
 
     private func loadSource() async {
@@ -340,7 +370,7 @@ struct PhotoEditorView: View {
     private func recompute() {
         renderSeq += 1
         let seq = renderSeq
-        let src = source, rot = rotation, ks = keystone, lk = look
+        let src = source, rot = rotation, st = straighten, ks = keystone, lk = look
         Self.renderQueue.async {
             // No off-main read of `renderSeq` here (that was a data race). The serial
             // queue runs renders in order and the main-thread guard below applies
@@ -350,6 +380,18 @@ struct PhotoEditorView: View {
             var ci = CIImage(cgImage: cg)
             if rot % 360 != 0 {
                 ci = ci.transformed(by: CGAffineTransform(rotationAngle: -CGFloat(rot) * .pi / 180))
+                ci = ci.transformed(by: CGAffineTransform(translationX: -ci.extent.minX, y: -ci.extent.minY))
+            }
+            if st != 0 {
+                let θ = abs(CGFloat(st)) * .pi / 180
+                let origW = ci.extent.width, origH = ci.extent.height
+                ci = ci.transformed(by: CGAffineTransform(rotationAngle: CGFloat(st) * .pi / 180))
+                ci = ci.transformed(by: CGAffineTransform(translationX: -ci.extent.minX, y: -ci.extent.minY))
+                let ar = max(origW, origH) / min(origW, origH)
+                let s = max(0.1, 1.0 / (ar * sin(θ) + cos(θ)))
+                let bw = ci.extent.width, bh = ci.extent.height
+                ci = ci.cropped(to: CGRect(x: (bw - origW * s) / 2, y: (bh - origH * s) / 2,
+                                           width: origW * s, height: origH * s))
                 ci = ci.transformed(by: CGAffineTransform(translationX: -ci.extent.minX, y: -ci.extent.minY))
             }
             // Hard-cap the preview size: a non-upright source can balloon when redrawn,
@@ -377,6 +419,7 @@ struct PhotoEditorView: View {
     private func save() {
         photo.editLookRaw = look == .original ? nil : look.rawValue
         photo.editKeystone = keystone
+        photo.editStraighten = straighten
         photo.editRotation = rotation
         photo.cropX = crop.minX; photo.cropY = crop.minY
         photo.cropW = crop.width; photo.cropH = crop.height

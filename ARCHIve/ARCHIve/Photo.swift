@@ -68,6 +68,9 @@ final class Photo: Identifiable {
     var editKeystone: Double = 0
     /// Rotation in clockwise degrees: 0 / 90 / 180 / 270.
     var editRotation: Int = 0
+    /// Fine horizon correction in degrees (−15…15). Applied after the 90° rotation
+    /// with inscribed-rect auto-crop so no black corners show.
+    var editStraighten: Double = 0
     /// Crop window in normalised coordinates of the (rotated) image, top-left
     /// origin. Defaults to the full frame (no crop).
     var cropX: Double = 0
@@ -108,7 +111,7 @@ final class Photo: Identifiable {
     /// True when any non-destructive edit is set (so display can skip the
     /// pipeline entirely for untouched photos).
     var hasEdits: Bool {
-        editLookRaw != nil || editKeystone != 0 || editRotation % 360 != 0
+        editLookRaw != nil || editKeystone != 0 || editRotation % 360 != 0 || editStraighten != 0
             || cropX > 0.0001 || cropY > 0.0001 || cropW < 0.9999 || cropH < 0.9999
     }
 

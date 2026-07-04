@@ -71,7 +71,7 @@ enum BoardRenderer {
             // jetsam-kills a large board export. Aspect ratio is preserved, so the
             // layout is identical.
             if let img = await PhotoImage.full(for: p) {
-                let small = autoreleasepool { downsampled(img, maxPixel: 1600) }
+                let small = autoreleasepool { jpegCompressed(downsampled(img, maxPixel: 1600)) }
                 plates.append(plate(for: p, image: small))
             }
         }
@@ -103,6 +103,15 @@ enum BoardRenderer {
         return UIGraphicsImageRenderer(size: size, format: fmt).image { _ in
             image.draw(in: CGRect(origin: .zero, size: size))
         }
+    }
+
+    /// JPEG-encode an image so UIGraphicsPDFRenderer embeds JPEG instead of a raw
+    /// uncompressed bitmap. Without this, a B1 poster with 20+ photos hits 150 MB+;
+    /// at quality 0.82 it lands around 8–15 MB with no visible difference at print size.
+    private static func jpegCompressed(_ image: UIImage, quality: CGFloat = 0.90) -> UIImage {
+        guard let data = image.jpegData(compressionQuality: quality),
+              let img = UIImage(data: data) else { return image }
+        return img
     }
 
     // MARK: Caption (the shared .ccap language)
@@ -145,7 +154,9 @@ enum BoardRenderer {
         // right side. Pick the fewest columns (largest photos) that still fit.
         func layout(_ c: Int) -> (cols: [[Int]], colW: CGFloat, maxH: CGFloat) {
             let w = (bodyW - GUT * CGFloat(c - 1)) / CGFloat(c)
-            let blocks = plates.map { w / max(0.2, $0.ar) + capGap + capHeight($0, w) }
+            // Use the tallest caption as a uniform slot so layout matches drawing.
+            let maxCHforLayout = plates.map { capHeight($0, w) }.max() ?? 0
+            let blocks = plates.map { w / max(0.2, $0.ar) + capGap + maxCHforLayout }
             // columns needed if no column may exceed height `cap` (order-preserving)
             func need(_ cap: CGFloat) -> Int {
                 var cols = 1, h: CGFloat = 0
@@ -180,7 +191,11 @@ enum BoardRenderer {
             let cg = ctx.cgContext
             UIColor.white.setFill(); cg.fill(CGRect(x: 0, y: 0, width: W, height: H))
 
-            for (ci, colIdx) in chosen.cols.enumerated() {
+            // Precompute the tallest caption across all plates so every image-to-image
+        // gap is identical regardless of how long any individual caption is.
+        let maxCH = plates.map { capHeight($0, colW) }.max() ?? 0
+
+        for (ci, colIdx) in chosen.cols.enumerated() {
                 let x = bodyX + CGFloat(ci) * (colW + GUT)
                 var y = bodyY
                 for i in colIdx {
@@ -190,9 +205,10 @@ enum BoardRenderer {
                     drawCover(p.image, in: imgRect, cg)
                     hair.setStroke()
                     let o = UIBezierPath(rect: imgRect.insetBy(dx: 0.15 * mm, dy: 0.15 * mm)); o.lineWidth = 0.3 * mm; o.stroke()
+                    // Draw at natural caption height; advance by the uniform slot.
                     caption(p).draw(with: CGRect(x: x, y: y + imgH + capGap, width: colW, height: ch + 4),
                                     options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
-                    y += imgH + capGap + ch + GUT
+                    y += imgH + capGap + maxCH + GUT
                 }
             }
             drawFooter(plates: plates, x: bodyX, w: bodyW, y: H - MB - 15 * s * mm, cg: cg)

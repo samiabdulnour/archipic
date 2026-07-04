@@ -33,6 +33,24 @@ enum PhotoEdits {
             ci = ci.transformed(by: CGAffineTransform(translationX: -ci.extent.minX, y: -ci.extent.minY))
         }
 
+        // 1.5) Fine straighten — small-angle rotation + inscribed-rect auto-crop so
+        //      the frame stays filled and no black corners appear.
+        if photo.editStraighten != 0 {
+            let θ = abs(CGFloat(photo.editStraighten)) * .pi / 180
+            let signedθ = CGFloat(photo.editStraighten) * .pi / 180
+            let origW = ci.extent.width, origH = ci.extent.height
+            ci = ci.transformed(by: CGAffineTransform(rotationAngle: signedθ))
+            ci = ci.transformed(by: CGAffineTransform(translationX: -ci.extent.minX, y: -ci.extent.minY))
+            // Largest inscribed rect of the same aspect ratio inside the rotated frame:
+            //   s = 1 / (ar * sin(θ) + cos(θ))   where ar = max/min dimension
+            let ar = max(origW, origH) / min(origW, origH)
+            let s = max(0.1, 1.0 / (ar * sin(θ) + cos(θ)))
+            let iW = origW * s, iH = origH * s
+            let bw = ci.extent.width, bh = ci.extent.height
+            ci = ci.cropped(to: CGRect(x: (bw - iW) / 2, y: (bh - iH) / 2, width: iW, height: iH))
+            ci = ci.transformed(by: CGAffineTransform(translationX: -ci.extent.minX, y: -ci.extent.minY))
+        }
+
         // 2) Crop — normalised rect with a top-left origin; CI is y-up so flip Y.
         let e = ci.extent
         if photo.cropX > 0.0001 || photo.cropY > 0.0001 || photo.cropW < 0.9999 || photo.cropH < 0.9999 {
