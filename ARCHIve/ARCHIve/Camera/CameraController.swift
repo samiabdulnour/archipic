@@ -315,14 +315,16 @@ final class CameraController: NSObject {
     /// in video mode (under `.high`), and removed for photo mode (so the `.photo`
     /// preset — best still quality — is never asked to host it). The live preview
     /// also stops being graded in video mode so it matches the straight recording.
-    func setMediaMode(_ m: CaptureMediaMode) {
-        guard m != mediaMode else { return }
+    /// `completion` fires on the main thread once the session has settled, so the
+    /// UI can mask the (unavoidable) reconfiguration blip behind a brief cover.
+    func setMediaMode(_ m: CaptureMediaMode, completion: @escaping () -> Void = {}) {
+        guard m != mediaMode else { completion(); return }
         mediaMode = m
         liveGrade = (m == .photo)
         let mirror = (position == .front)
-        guard configured else { return }
+        guard configured else { completion(); return }
         sessionQueue.async { [weak self] in
-            guard let self else { return }
+            guard let self else { DispatchQueue.main.async(execute: completion); return }
             self.session.beginConfiguration()
             if m == .video {
                 if self.session.canSetSessionPreset(.high) { self.session.sessionPreset = .high }
@@ -338,9 +340,13 @@ final class CameraController: NSObject {
                 if self.movieAdded { self.session.removeOutput(self.movieOutput); self.movieAdded = false }
                 if self.session.canSetSessionPreset(.photo) { self.session.sessionPreset = .photo }
             }
+            // Re-assert the preview connection's rotation — a preset change can
+            // reset it, which would leave the Metal viewfinder sideways.
+            if let vc = self.videoOutput.connection(with: .video),
+               vc.isVideoRotationAngleSupported(90) { vc.videoRotationAngle = 90 }
             self.session.commitConfiguration()
             let maxZ = min(self.videoDevice?.activeFormat.videoMaxZoomFactor ?? 1, 8.0)
-            self.onMain { self.maxZoom = maxZ }
+            self.onMain { self.maxZoom = maxZ; completion() }
         }
     }
 

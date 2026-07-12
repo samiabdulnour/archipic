@@ -27,6 +27,7 @@ struct CameraView: View {
     @State private var showProjectPicker = false
     @State private var tool: CameraTool = .none
     @State private var keystoneWasZero = true       // for the tilt slider's centre-snap haptic
+    @State private var mediaSwitching = false        // masks the photo↔video session reconfig
     /// Physical screen size (incl. safe areas) — used to crop full-bleed captures
     /// to the exact on-screen ratio.
     @State private var screenSize: CGSize = .zero
@@ -51,6 +52,13 @@ struct CameraView: View {
             }
             .overlay(alignment: .top) { savedToastView }
             .overlay { recordingFrame }
+            // Cover the feed while photo↔video reconfigures the session, so the
+            // preview freeze + layout shift read as one clean transition.
+            .overlay {
+                Color.black.ignoresSafeArea()
+                    .opacity(mediaSwitching ? 1 : 0)
+                    .allowsHitTesting(mediaSwitching)
+            }
             .onAppear { updateScreenSize(geo) }
             .onChange(of: geo.size) { _, _ in updateScreenSize(geo) }
         }
@@ -280,10 +288,12 @@ struct CameraView: View {
         .background(Capsule().fill(.ultraThinMaterial).environment(\.colorScheme, .dark))
     }
 
-    /// A thin red frame hugging the screen edges — the "recording" signal
-    /// (unobtrusive, always visible, fades in/out). Never blocks the controls.
+    /// A thin red frame following the screen's rounded corners — the "recording"
+    /// signal (unobtrusive, always visible, fades in/out). The continuous corner
+    /// radius keeps the border unbroken around the phone's fillets instead of a
+    /// square corner that clips into them. Never blocks the controls.
     private var recordingFrame: some View {
-        Rectangle()
+        RoundedRectangle(cornerRadius: 55, style: .continuous)
             .strokeBorder(Color.red, lineWidth: 3)
             .ignoresSafeArea()
             .allowsHitTesting(false)
@@ -348,10 +358,14 @@ struct CameraView: View {
     }
 
     private func switchMedia(_ m: CaptureMediaMode) {
-        guard m != camera.mediaMode else { return }
+        guard m != camera.mediaMode, !mediaSwitching else { return }
         tool = .none   // close any looks/tilt tray
-        withAnimation(.easeInOut(duration: 0.2)) { camera.setMediaMode(m) }
+        mediaSwitching = true   // drop the cover instantly (masks the reconfig)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        // Reconfigure under the cover; lift it once the session has settled.
+        camera.setMediaMode(m) {
+            withAnimation(.easeOut(duration: 0.22)) { mediaSwitching = false }
+        }
     }
 
     /// Record button (video mode): a red disc that morphs to a red square while
