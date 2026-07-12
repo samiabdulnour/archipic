@@ -18,6 +18,8 @@ struct PhotoDetailView: View {
     @State private var editing = false
     @State private var refresh = 0          // bump to reload images after an edit
     @State private var currentImage: UIImage?
+    @State private var exportingVideo = false   // cropping a video for share
+    @State private var shareVideoURL: URL?      // the cropped movie to share
     /// A copied set of human tags, ready to paste onto another photo. Stored as
     /// JSON so it survives paging between photos and app relaunches.
     @AppStorage(TagClipboard.key) private var copiedTagsJSON = ""
@@ -73,7 +75,8 @@ struct PhotoDetailView: View {
                         .disabled(current == nil)
                     }
                     Divider()
-                    Button { showShare = true } label: { Label("Share", systemImage: "square.and.arrow.up") }
+                    Button { shareCurrent() } label: { Label("Share", systemImage: "square.and.arrow.up") }
+                        .disabled(exportingVideo)
                     Button(role: .destructive) { confirmDelete = true } label: {
                         Label("Delete", systemImage: "trash")
                     }
@@ -92,13 +95,45 @@ struct PhotoDetailView: View {
             }
         }
         .sheet(isPresented: $showShare) {
-            if let img = currentImage { ActivityView(items: [img]) }
+            if current?.isVideo == true, let url = shareVideoURL {
+                ActivityView(items: [url])
+            } else if let img = currentImage {
+                ActivityView(items: [img])
+            }
+        }
+        .overlay {
+            if exportingVideo {
+                ProgressView("Preparing video…")
+                    .padding(20)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+            }
         }
         .alert("Delete this photo?", isPresented: $confirmDelete) {
             Button("Delete", role: .destructive) { deleteCurrent() }
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("This permanently removes the photo from your archive.")
+        }
+    }
+
+    /// Share the current photo's image, or — for a video — a file cropped to its
+    /// framing, exported first (takes a moment to encode).
+    private func shareCurrent() {
+        guard let current else { return }
+        if current.isVideo {
+            let aspect = currentImage.map { $0.size.width / max(1, $0.size.height) } ?? (3.0 / 4.0)
+            exportingVideo = true
+            shareVideoURL = nil
+            Task {
+                let url = await VideoExport.croppedFile(for: current, aspect: aspect)
+                await MainActor.run {
+                    exportingVideo = false
+                    shareVideoURL = url
+                    showShare = (url != nil)
+                }
+            }
+        } else {
+            showShare = true
         }
     }
 

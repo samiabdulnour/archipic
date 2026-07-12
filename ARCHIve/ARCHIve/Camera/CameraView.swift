@@ -51,7 +51,6 @@ struct CameraView: View {
                 }
             }
             .overlay(alignment: .top) { savedToastView }
-            .overlay { recordingFrame }
             // Cover the feed while photo↔video reconfigures the session, so the
             // preview freeze + layout shift read as one clean transition.
             .overlay {
@@ -215,6 +214,10 @@ struct CameraView: View {
                     .foregroundStyle(.white).shadow(radius: 8)
                     .position(x: frameCx, y: isFullBleed ? fullH / 2 : frameCy)
             }
+
+            // Recording signal: a thin red frame around the actual capture area —
+            // the phone's rounded edge in full-bleed, the crop rectangle otherwise.
+            recordingBorder(isFullBleed: isFullBleed, w: frameW, h: frameH, cx: frameCx, cy: frameCy)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()
@@ -289,17 +292,27 @@ struct CameraView: View {
         .background(Capsule().fill(.ultraThinMaterial).environment(\.colorScheme, .dark))
     }
 
-    /// A thin red frame following the screen's rounded corners — the "recording"
-    /// signal (unobtrusive, always visible, fades in/out). Uses the display's
-    /// real corner radius so the border stays flush in the phone's fillets
-    /// instead of a square corner that clips into them. Never blocks the controls.
-    private var recordingFrame: some View {
-        RoundedRectangle(cornerRadius: Self.displayCornerRadius, style: .continuous)
-            .strokeBorder(Color.red, lineWidth: 3)
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
-            .opacity(camera.isRecording ? 1 : 0)
-            .animation(.easeInOut(duration: 0.2), value: camera.isRecording)
+    /// A thin red frame around the capture area — the "recording" signal
+    /// (unobtrusive, fades in/out, never blocks the controls). In full-bleed
+    /// (16:9) it follows the phone's rounded fillets; in a framed ratio it
+    /// outlines the crop rectangle (square corners, like the crop guide).
+    @ViewBuilder
+    private func recordingBorder(isFullBleed: Bool, w: CGFloat, h: CGFloat, cx: CGFloat, cy: CGFloat) -> some View {
+        Group {
+            if isFullBleed {
+                RoundedRectangle(cornerRadius: Self.displayCornerRadius, style: .continuous)
+                    .strokeBorder(Color.red, lineWidth: 3)
+                    .ignoresSafeArea()
+            } else {
+                Rectangle()
+                    .stroke(Color.red, lineWidth: 3)
+                    .frame(width: w, height: h)
+                    .position(x: cx, y: cy)
+            }
+        }
+        .allowsHitTesting(false)
+        .opacity(camera.isRecording ? 1 : 0)
+        .animation(.easeInOut(duration: 0.2), value: camera.isRecording)
     }
 
     /// The screen's actual rounded-corner radius. No public API exposes it, so
