@@ -27,7 +27,6 @@ struct CameraView: View {
     @State private var showProjectPicker = false
     @State private var tool: CameraTool = .none
     @State private var keystoneWasZero = true       // for the tilt slider's centre-snap haptic
-    @State private var recordStartedAt: Date?       // drives the recording timer
     /// Physical screen size (incl. safe areas) — used to crop full-bleed captures
     /// to the exact on-screen ratio.
     @State private var screenSize: CGSize = .zero
@@ -51,6 +50,7 @@ struct CameraView: View {
                 }
             }
             .overlay(alignment: .top) { savedToastView }
+            .overlay { recordingFrame }
             .onAppear { updateScreenSize(geo) }
             .onChange(of: geo.size) { _, _ in updateScreenSize(geo) }
         }
@@ -217,7 +217,6 @@ struct CameraView: View {
             }
             .padding(.horizontal, 14)
             .padding(.top, 6)
-            .overlay(alignment: .top) { if camera.isRecording { recordingTimer } }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 16) {
@@ -281,25 +280,15 @@ struct CameraView: View {
         .background(Capsule().fill(.ultraThinMaterial).environment(\.colorScheme, .dark))
     }
 
-    /// A small red pill with an elapsed timer, shown centred at the top while
-    /// recording (like the native Camera).
-    private var recordingTimer: some View {
-        TimelineView(.periodic(from: recordStartedAt ?? .now, by: 0.5)) { _ in
-            let elapsed = recordStartedAt.map { max(0, Date().timeIntervalSince($0)) } ?? 0
-            HStack(spacing: 6) {
-                Circle().fill(.red).frame(width: 8, height: 8)
-                Text(timeString(elapsed))
-                    .font(.system(size: 14, weight: .semibold)).monospacedDigit()
-                    .foregroundStyle(.white)
-            }
-            .padding(.horizontal, 11).padding(.vertical, 5)
-            .background(Capsule().fill(.black.opacity(0.55)))
-        }
-    }
-
-    private func timeString(_ t: TimeInterval) -> String {
-        let s = Int(t)
-        return String(format: "%d:%02d", s / 60, s % 60)
+    /// A thin red frame hugging the screen edges — the "recording" signal
+    /// (unobtrusive, always visible, fades in/out). Never blocks the controls.
+    private var recordingFrame: some View {
+        Rectangle()
+            .strokeBorder(Color.red, lineWidth: 3)
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+            .opacity(camera.isRecording ? 1 : 0)
+            .animation(.easeInOut(duration: 0.2), value: camera.isRecording)
     }
 
     private func pillButton(_ symbol: String, active: Bool, _ action: @escaping () -> Void) -> some View {
@@ -673,10 +662,8 @@ struct CameraView: View {
         if camera.isRecording {
             camera.stopRecording()
         } else {
-            recordStartedAt = Date()
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             camera.startRecording { url in
-                recordStartedAt = nil
                 guard let url else { return }
                 saveVideo(from: url)
             }
