@@ -121,11 +121,11 @@ struct CameraView: View {
         // 16:9 is the full-bleed mode (like native): the feed fills the screen
         // edge-to-edge and the controls float over it. 4:3 / 1:1 use a framed
         // crop window with the area outside dimmed.
-        // Video records at the shared .photo (4:3) framing, so it previews framed
-        // 4:3 too — matching what's captured. Only 16:9 stills go full-bleed.
-        let effectiveAspect: CaptureAspect = camera.mediaMode == .video ? .fourThree : camera.aspect
-        let isFullBleed = effectiveAspect == .sixteenNine
-        let ratio = effectiveAspect.portraitRatio        // width / height (<1)
+        // Photo and video share the chosen aspect, so switching never reframes
+        // (seamless). Video records the full sensor and the aspect is applied as
+        // a framing crop (preview + poster + aspect-fill playback).
+        let isFullBleed = camera.aspect == .sixteenNine
+        let ratio = camera.aspect.portraitRatio          // width / height (<1)
         let topSafe = geo.safeAreaInsets.top
         let botSafe = geo.safeAreaInsets.bottom
         let fullW = geo.size.width
@@ -707,17 +707,23 @@ struct CameraView: View {
     private func saveVideo(from url: URL) {
         let coord = LocationProvider.shared.last
         let proj = camera.currentProject
+        let cropRatio = currentCropRatio()   // the framing to bake into the poster
         Task { @MainActor in
+            // Poster = first frame, cropped to the chosen framing, so the gallery,
+            // boards and thumbnail show the aspect you shot (the movie itself stays
+            // full-sensor; playback aspect-fills to match). Stored even for library
+            // references so the cropped still travels with the record.
+            let posterFull = await VideoTools.posterFrame(from: url)
+            let poster = posterFull.map { CameraController.crop($0, toRatio: cropRatio) }
+            let posterData = poster?.jpegData(compressionQuality: 0.9) ?? Data()
             let localID = await PhotosLibrary.saveVideo(fileURL: url, coordinate: coord)
             let photo: Photo
             if let localID {
-                photo = Photo(imageData: Data(),
+                photo = Photo(imageData: posterData,
                               latitude: coord?.latitude, longitude: coord?.longitude,
                               humanTags: prefilledTags(), project: proj,
                               assetLocalID: localID, isCameraShot: true, isVideo: true)
             } else {
-                let poster = await VideoTools.posterFrame(from: url)
-                let posterData = poster?.jpegData(compressionQuality: 0.9) ?? Data()
                 let movieData = try? Data(contentsOf: url)
                 photo = Photo(imageData: posterData,
                               latitude: coord?.latitude, longitude: coord?.longitude,
@@ -772,12 +778,13 @@ private struct CameraSettingsSheet: View {
         VStack(spacing: 0) {
             Capsule().fill(.white.opacity(0.3)).frame(width: 38, height: 5).padding(.vertical, 12)
             LazyVGrid(columns: cols, spacing: 22) {
-                // Stills-only controls (flash, timer, framing, film look, grain).
+                // Framing applies to both photo and video (shared aspect).
+                item("ASPECT", "aspectratio", active: camera.aspect != .fourThree, badge: camera.aspect.rawValue) { cycleAspect() }
+                // Stills-only controls (flash, timer, film look, grain).
                 if camera.mediaMode == .photo {
                     item("FLASH", flashIcon, active: camera.flashMode != .off) { cycleFlash() }
                     item("TIMER", "timer", active: camera.timerSeconds != 0,
                          badge: camera.timerSeconds == 0 ? nil : "\(camera.timerSeconds)") { cycleTimer() }
-                    item("ASPECT", "aspectratio", active: camera.aspect != .fourThree, badge: camera.aspect.rawValue) { cycleAspect() }
                     item("EFFECT", "camera.filters", active: camera.colorLook != .original) {
                         onSelectTool(.looks); dismiss()
                     }

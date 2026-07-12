@@ -706,12 +706,15 @@ struct PhotoThumbnail: View {
             .task(id: photo.id) {
                 if image != nil { return }
                 let base: UIImage?
-                if let id = photo.assetLocalID, !id.isEmpty {
+                // Videos carry their (framing-cropped) poster in imageData.
+                if photo.isVideo, !photo.imageData.isEmpty {
+                    base = await Self.thumbnail(from: photo.imageData, maxPixel: 400)
+                } else if let id = photo.assetLocalID, !id.isEmpty {
                     base = await PhotosLibrary.image(localID: id, maxPixel: 400)
                 } else {
                     base = await Self.thumbnail(from: photo.imageData, maxPixel: 400)
                 }
-                if let base { image = photo.hasEdits ? PhotoEdits.render(base, photo) : base }
+                if let base { image = (photo.hasEdits && !photo.isVideo) ? PhotoEdits.render(base, photo) : base }
             }
         }
     }

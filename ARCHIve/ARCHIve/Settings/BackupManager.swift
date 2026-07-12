@@ -123,7 +123,9 @@ enum BackupManager {
                                       isVideo: true, videoData: movie)
                     context.insert(photo); added += 1
                 } else if !aid.isEmpty, PhotosLibrary.asset(localID: aid) != nil {
-                    let photo = Photo(id: r.id, imageData: Data(), createdAt: r.createdAt,
+                    // Keep the bundled (framing-cropped) poster so the video shows
+                    // its aspect in the gallery; the movie relinks from Photos.
+                    let photo = Photo(id: r.id, imageData: poster, createdAt: r.createdAt,
                                       latitude: r.latitude, longitude: r.longitude,
                                       humanTags: r.humanTags, project: r.project,
                                       importedAt: r.importedAt, labelImageData: label,

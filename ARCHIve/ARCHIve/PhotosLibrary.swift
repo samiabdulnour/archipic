@@ -14,7 +14,11 @@ enum PhotoImage {
     /// under "Optimize iPhone Storage" — no slow iCloud download of the original.
     static func full(for photo: Photo) async -> UIImage? {
         let base: UIImage?
-        if let id = photo.assetLocalID, !id.isEmpty {
+        // A video's poster is stored (already cropped to its framing) in
+        // imageData, so use that rather than the full-frame Photos still.
+        if photo.isVideo, !photo.imageData.isEmpty {
+            base = await PhotoThumbnail.thumbnail(from: photo.imageData, maxPixel: 2400)
+        } else if let id = photo.assetLocalID, !id.isEmpty {
             base = await PhotosLibrary.image(localID: id, maxPixel: 2400)
         } else {
             // Downsample owned pixels too (off-main, via CGImageSource) — a
@@ -23,7 +27,7 @@ enum PhotoImage {
             base = await PhotoThumbnail.thumbnail(from: photo.imageData, maxPixel: 2400)
         }
         guard let base else { return nil }
-        return photo.hasEdits ? PhotoEdits.render(base, photo) : base
+        return (photo.hasEdits && !photo.isVideo) ? PhotoEdits.render(base, photo) : base
     }
 }
 
