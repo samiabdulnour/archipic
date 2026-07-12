@@ -289,17 +289,29 @@ struct CameraView: View {
     }
 
     /// A thin red frame following the screen's rounded corners — the "recording"
-    /// signal (unobtrusive, always visible, fades in/out). The continuous corner
-    /// radius keeps the border unbroken around the phone's fillets instead of a
-    /// square corner that clips into them. Never blocks the controls.
+    /// signal (unobtrusive, always visible, fades in/out). Uses the display's
+    /// real corner radius so the border stays flush in the phone's fillets
+    /// instead of a square corner that clips into them. Never blocks the controls.
     private var recordingFrame: some View {
-        RoundedRectangle(cornerRadius: 55, style: .continuous)
+        RoundedRectangle(cornerRadius: Self.displayCornerRadius, style: .continuous)
             .strokeBorder(Color.red, lineWidth: 3)
             .ignoresSafeArea()
             .allowsHitTesting(false)
             .opacity(camera.isRecording ? 1 : 0)
             .animation(.easeInOut(duration: 0.2), value: camera.isRecording)
     }
+
+    /// The screen's actual rounded-corner radius. No public API exposes it, so
+    /// read it via KVC (a stable, widely-used key) with a sensible fallback.
+    private static let displayCornerRadius: CGFloat = {
+        let screen = UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow?.screen }
+            .first
+        if let r = screen?.value(forKey: "_displayCornerRadius") as? CGFloat, r > 0 {
+            return r
+        }
+        return 60
+    }()
 
     private func pillButton(_ symbol: String, active: Bool, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {

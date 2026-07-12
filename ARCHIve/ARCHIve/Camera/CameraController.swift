@@ -161,9 +161,17 @@ final class CameraController: NSObject {
             if let vc = self.videoOutput.connection(with: .video),
                vc.isVideoRotationAngleSupported(90) { vc.videoRotationAngle = 90 }
 
-            // The movie output is attached only in video mode (under the `.high`
-            // preset), not here — a movie output under the `.photo` preset is
-            // refused on some devices, which would kill video everywhere.
+            // Attach the movie output up front when the `.photo` preset allows it,
+            // so switching photo↔video is just a fast preset swap — not a slow
+            // add/remove of the output every time (which froze the feed ~1s).
+            // Some devices refuse it under `.photo`; there it's attached lazily on
+            // the first switch to video instead.
+            if self.session.canAddOutput(self.movieOutput) {
+                self.session.addOutput(self.movieOutput)
+                self.movieAdded = true
+                if let mc = self.movieOutput.connection(with: .video),
+                   mc.isVideoRotationAngleSupported(90) { mc.videoRotationAngle = 90 }
+            }
 
             self.session.commitConfiguration()
 
@@ -337,8 +345,14 @@ final class CameraController: NSObject {
                     if mc.isVideoMirroringSupported { mc.isVideoMirrored = mirror }
                 }
             } else {
-                if self.movieAdded { self.session.removeOutput(self.movieOutput); self.movieAdded = false }
-                if self.session.canSetSessionPreset(.photo) { self.session.sessionPreset = .photo }
+                // Keep the movie output attached (fast future switches). Only pull
+                // it if this device won't accept the `.photo` preset alongside it.
+                if self.session.canSetSessionPreset(.photo) {
+                    self.session.sessionPreset = .photo
+                } else if self.movieAdded {
+                    self.session.removeOutput(self.movieOutput); self.movieAdded = false
+                    if self.session.canSetSessionPreset(.photo) { self.session.sessionPreset = .photo }
+                }
             }
             // Re-assert the preview connection's rotation — a preset change can
             // reset it, which would leave the Metal viewfinder sideways.
