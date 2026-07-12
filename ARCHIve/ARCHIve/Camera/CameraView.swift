@@ -21,12 +21,13 @@ struct CameraView: View {
 
     // Lite-mode "Saved" toast
     @State private var savedToast: Photo?
-    @State private var savedToastType = "building"
+    @State private var savedToastIsVideo = false
     @State private var toastHideItem: DispatchWorkItem?
     @State private var showSettings = false
     @State private var showProjectPicker = false
     @State private var tool: CameraTool = .none
     @State private var keystoneWasZero = true       // for the tilt slider's centre-snap haptic
+    @State private var recordStartedAt: Date?       // drives the recording timer
     /// Physical screen size (incl. safe areas) — used to crop full-bleed captures
     /// to the exact on-screen ratio.
     @State private var screenSize: CGSize = .zero
@@ -74,8 +75,7 @@ struct CameraView: View {
         }
         .sheet(isPresented: $showProjectPicker) {
             ProjectPickerSheet(projects: existingProjects, current: camera.currentProject) { name in
-                camera.currentProject = name
-                camera.mode = .project
+                camera.currentProject = name?.isEmpty == true ? nil : name
             }
         }
     }
@@ -113,7 +113,9 @@ struct CameraView: View {
         // 16:9 is the full-bleed mode (like native): the feed fills the screen
         // edge-to-edge and the controls float over it. 4:3 / 1:1 use a framed
         // crop window with the area outside dimmed.
-        let isFullBleed = camera.aspect == .sixteenNine
+        // Video always previews full-bleed (records HD 16:9); framed crops are a
+        // stills feature.
+        let isFullBleed = camera.aspect == .sixteenNine || camera.mediaMode == .video
         let ratio = camera.aspect.portraitRatio          // width / height (<1)
         let topSafe = geo.safeAreaInsets.top
         let botSafe = geo.safeAreaInsets.bottom
@@ -209,12 +211,13 @@ struct CameraView: View {
         .ignoresSafeArea()
         .safeAreaInset(edge: .top, spacing: 0) {
             HStack(alignment: .top) {
-                if camera.mode == .project { projectPill } else { typeSegment }
+                projectPill
                 Spacer()
                 actionPill
             }
             .padding(.horizontal, 14)
             .padding(.top, 6)
+            .overlay(alignment: .top) { if camera.isRecording { recordingTimer } }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 16) {
@@ -222,17 +225,20 @@ struct CameraView: View {
                 // in framed modes it rides the crop window's bottom edge instead.
                 if isFullBleed && camera.maxZoom > 1.5 { zoomBar }
                 toolTray
-                if tool == .none && camera.keystoneStrength != 0 {
+                if tool == .none && camera.keystoneStrength != 0 && camera.mediaMode == .photo {
                     activeEffectChips
                 }
-                shutterButton
+                if camera.mediaMode == .video { recordButton } else { shutterButton }
                 ZStack {
                     HStack {
-                        thumbnailButton
+                        thumbnailButton.opacity(camera.isRecording ? 0.35 : 1)
+                            .disabled(camera.isRecording)
                         Spacer()
-                        flipButton
+                        flipButton.opacity(camera.isRecording ? 0.35 : 1)
+                            .disabled(camera.isRecording)
                     }
-                    modeToggle
+                    // Hide the media toggle while recording (like the native Camera).
+                    if !camera.isRecording { mediaModeToggle }
                 }
             }
             .padding(.horizontal, 22)
@@ -248,28 +254,7 @@ struct CameraView: View {
         }
     }
 
-    // MARK: Top — Type segment + action pill
-
-    // Both top pills share the same height (36pt buttons + 4pt padding) and
-    // icon weight so left and right read as a matched pair, native-style.
-    private var typeSegment: some View {
-        HStack(spacing: 8) {
-            ForEach(TagVocab.types) { t in
-                let active = camera.captureType == t.id
-                Button { camera.captureType = t.id } label: {
-                    Image(systemName: t.symbol)
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(active ? .black : .white.opacity(0.85))
-                        .rotatingIcon(motion.iconAngle)
-                        .frame(width: 32, height: 32)
-                        .background(active ? Circle().fill(.white) : Circle().fill(.clear))
-                }
-                .accessibilityLabel(t.label)
-            }
-        }
-        .padding(.horizontal, 8).padding(.vertical, 3)
-        .background(Capsule().fill(.ultraThinMaterial).environment(\.colorScheme, .dark))
-    }
+    // MARK: Top — action pill (tag mode, reuse, tilt, more)
 
     private var actionPill: some View {
         HStack(spacing: 8) {
@@ -279,16 +264,42 @@ struct CameraView: View {
             pillButton("arrow.2.squarepath", active: reuseTags != nil) {
                 reuseTags = (reuseTags == nil) ? latest?.humanTags : nil
             }
-            // Effect (looks) + Tilt (keystone) now live inside this settings
-            // sheet to keep the top row uncluttered; the gear lights up when
-            // either is active.
-            pillButton("circle.grid.3x3.fill",
-                       active: camera.colorLook != .original || camera.keystoneStrength != 0) {
+            // Tilt (keystone) is a top-level control here in photo mode; it
+            // toggles the correction slider above the shutter. Hidden for video.
+            if camera.mediaMode == .photo {
+                pillButton("skew", active: camera.keystoneStrength != 0) {
+                    withAnimation(.easeInOut(duration: 0.2)) { tool = (tool == .keystone) ? .none : .keystone }
+                }
+            }
+            // The gear opens flash / timer / aspect / effect / grain / grid /
+            // level / settings; it lights up when a colour look is active.
+            pillButton("circle.grid.3x3.fill", active: camera.colorLook != .original) {
                 showSettings = true
             }
         }
         .padding(.horizontal, 10).padding(.vertical, 3)
         .background(Capsule().fill(.ultraThinMaterial).environment(\.colorScheme, .dark))
+    }
+
+    /// A small red pill with an elapsed timer, shown centred at the top while
+    /// recording (like the native Camera).
+    private var recordingTimer: some View {
+        TimelineView(.periodic(from: recordStartedAt ?? .now, by: 0.5)) { _ in
+            let elapsed = recordStartedAt.map { max(0, Date().timeIntervalSince($0)) } ?? 0
+            HStack(spacing: 6) {
+                Circle().fill(.red).frame(width: 8, height: 8)
+                Text(timeString(elapsed))
+                    .font(.system(size: 14, weight: .semibold)).monospacedDigit()
+                    .foregroundStyle(.white)
+            }
+            .padding(.horizontal, 11).padding(.vertical, 5)
+            .background(Capsule().fill(.black.opacity(0.55)))
+        }
+    }
+
+    private func timeString(_ t: TimeInterval) -> String {
+        let s = Int(t)
+        return String(format: "%d:%02d", s / 60, s % 60)
     }
 
     private func pillButton(_ symbol: String, active: Bool, _ action: @escaping () -> Void) -> some View {
@@ -332,15 +343,41 @@ struct CameraView: View {
         .disabled(countdown != nil)
     }
 
-    private var modeToggle: some View {
+    /// PHOTO / VIDEO — the native Camera-style capture toggle. VIDEO only shows
+    /// when the device allowed the movie output.
+    private var mediaModeToggle: some View {
         HStack(spacing: 18) {
-            modeSegment("REFERENCE", on: camera.mode == .reference, tint: Palette.mint) {
-                camera.mode = .reference
+            modeSegment("PHOTO", on: camera.mediaMode == .photo, tint: Palette.lemon) {
+                switchMedia(.photo)
             }
-            modeSegment("PROJECT", on: camera.mode == .project, tint: Palette.lemon) {
-                camera.mode = .project
+            if camera.canRecordVideo {
+                modeSegment("VIDEO", on: camera.mediaMode == .video, tint: Palette.lemon) {
+                    switchMedia(.video)
+                }
             }
         }
+    }
+
+    private func switchMedia(_ m: CaptureMediaMode) {
+        guard m != camera.mediaMode else { return }
+        tool = .none   // close any looks/tilt tray
+        withAnimation(.easeInOut(duration: 0.2)) { camera.setMediaMode(m) }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    /// Record button (video mode): a red disc that morphs to a red square while
+    /// recording, inside the same white ring as the shutter.
+    private var recordButton: some View {
+        Button(action: onRecordTap) {
+            ZStack {
+                Circle().stroke(.white, lineWidth: 2.5).frame(width: 72, height: 72)
+                RoundedRectangle(cornerRadius: camera.isRecording ? 8 : 31.5, style: .continuous)
+                    .fill(.red)
+                    .frame(width: camera.isRecording ? 32 : 63, height: camera.isRecording ? 32 : 63)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: camera.isRecording)
+            }
+        }
+        .buttonStyle(ShutterButtonStyle())
     }
 
     /// Native VIDEO/PHOTO-style label: uppercase, tracked, active highlighted.
@@ -431,19 +468,18 @@ struct CameraView: View {
         return stops
     }
 
-    /// Lite-mode confirmation toast: "Saved as <type> · Tag later in gallery"
-    /// with a one-tap "Tag now". Styled in the warm/mint palette of the old app.
+    /// Lite-mode confirmation toast: "Saved · Tag later in gallery" with a
+    /// one-tap "Tag now". Styled in the warm/mint palette of the old app.
     @ViewBuilder private var savedToastView: some View {
         if let photo = savedToast {
-            let type = TagVocab.types.first { $0.id == savedToastType }
             HStack(spacing: 12) {
-                Image(systemName: type?.symbol ?? "photo")
+                Image(systemName: savedToastIsVideo ? "video.fill" : "photo")
                     .font(.system(size: 20, weight: .medium))
                     .foregroundStyle(Color(hex: "16140F"))
                     .frame(width: 44, height: 44)
                     .background(RoundedRectangle(cornerRadius: 11).fill(.white))
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Saved as \(savedToastType)")
+                    Text(savedToastIsVideo ? "Video saved" : "Photo saved")
                         .font(.headline)
                         .foregroundStyle(Color(hex: "16140F"))
                     Text("Tag later in gallery")
@@ -600,7 +636,7 @@ struct CameraView: View {
         camera.capture(cropRatio: currentCropRatio()) { data in
             guard let data else { return }
             let coord = LocationProvider.shared.last
-            let proj = camera.mode == .project ? camera.currentProject : nil
+            let proj = camera.currentProject
             Task { @MainActor in
                 // Save the shot into Photos and keep only a reference — one copy,
                 // no duplicate. If saving isn't permitted, fall back to storing
@@ -632,8 +668,59 @@ struct CameraView: View {
         }
     }
 
+    /// Start/stop a video recording. On finish the movie is saved and archived.
+    private func onRecordTap() {
+        if camera.isRecording {
+            camera.stopRecording()
+        } else {
+            recordStartedAt = Date()
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            camera.startRecording { url in
+                recordStartedAt = nil
+                guard let url else { return }
+                saveVideo(from: url)
+            }
+        }
+    }
+
+    /// Save a finished recording: into Photos as a reference when permitted (the
+    /// poster still comes from the asset), otherwise keep the movie + poster
+    /// in-app so the clip is never lost. Mirrors the still capture path.
+    private func saveVideo(from url: URL) {
+        let coord = LocationProvider.shared.last
+        let proj = camera.currentProject
+        Task { @MainActor in
+            let localID = await PhotosLibrary.saveVideo(fileURL: url, coordinate: coord)
+            let photo: Photo
+            if let localID {
+                photo = Photo(imageData: Data(),
+                              latitude: coord?.latitude, longitude: coord?.longitude,
+                              humanTags: prefilledTags(), project: proj,
+                              assetLocalID: localID, isCameraShot: true, isVideo: true)
+            } else {
+                let poster = await VideoTools.posterFrame(from: url)
+                let posterData = poster?.jpegData(compressionQuality: 0.9) ?? Data()
+                let movieData = try? Data(contentsOf: url)
+                photo = Photo(imageData: posterData,
+                              latitude: coord?.latitude, longitude: coord?.longitude,
+                              humanTags: prefilledTags(), project: proj,
+                              isVideo: true, videoData: movieData)
+            }
+            modelContext.insert(photo)
+            try? modelContext.save()
+            savedCount += 1
+            try? FileManager.default.removeItem(at: url)   // temp recording no longer needed
+            if tagMode == .full {
+                camera.stop()
+                tagTarget = photo
+            } else {
+                showSavedToast(photo)
+            }
+        }
+    }
+
     private func showSavedToast(_ photo: Photo) {
-        savedToastType = camera.captureType
+        savedToastIsVideo = photo.isVideo
         withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) { savedToast = photo }
         toastHideItem?.cancel()
         let item = DispatchWorkItem {
@@ -643,12 +730,11 @@ struct CameraView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.5, execute: item)
     }
 
-    /// Seed the new photo's tags: the Type chosen on the camera, plus any tags
-    /// being reused from the last shot.
+    /// Seed the new capture's tags from any tags being reused from the last shot.
+    /// The Kind (building/element/graphic) is chosen later in tagging, not at
+    /// capture, so a fresh shot starts untagged unless tags are being reused.
     private func prefilledTags() -> HumanTags {
-        var t = reuseTags ?? HumanTags()
-        t.type = camera.captureType
-        return t
+        reuseTags ?? HumanTags()
     }
 }
 
@@ -668,17 +754,17 @@ private struct CameraSettingsSheet: View {
         VStack(spacing: 0) {
             Capsule().fill(.white.opacity(0.3)).frame(width: 38, height: 5).padding(.vertical, 12)
             LazyVGrid(columns: cols, spacing: 22) {
-                item("FLASH", flashIcon, active: camera.flashMode != .off) { cycleFlash() }
-                item("TIMER", "timer", active: camera.timerSeconds != 0,
-                     badge: camera.timerSeconds == 0 ? nil : "\(camera.timerSeconds)") { cycleTimer() }
-                item("ASPECT", "aspectratio", active: camera.aspect != .fourThree, badge: camera.aspect.rawValue) { cycleAspect() }
-                item("EFFECT", "camera.filters", active: camera.colorLook != .original) {
-                    onSelectTool(.looks); dismiss()
+                // Stills-only controls (flash, timer, framing, film look, grain).
+                if camera.mediaMode == .photo {
+                    item("FLASH", flashIcon, active: camera.flashMode != .off) { cycleFlash() }
+                    item("TIMER", "timer", active: camera.timerSeconds != 0,
+                         badge: camera.timerSeconds == 0 ? nil : "\(camera.timerSeconds)") { cycleTimer() }
+                    item("ASPECT", "aspectratio", active: camera.aspect != .fourThree, badge: camera.aspect.rawValue) { cycleAspect() }
+                    item("EFFECT", "camera.filters", active: camera.colorLook != .original) {
+                        onSelectTool(.looks); dismiss()
+                    }
+                    item("GRAIN", "circle.dotted", active: grainEnabled) { grainEnabled.toggle() }
                 }
-                item("TILT", "skew", active: camera.keystoneStrength != 0) {
-                    onSelectTool(.keystone); dismiss()
-                }
-                item("GRAIN", "circle.dotted", active: grainEnabled) { grainEnabled.toggle() }
                 item("GRID", "grid", active: camera.gridOn) { camera.gridOn.toggle() }
                 item("LEVEL", "level", active: camera.levelOn) { camera.levelOn.toggle() }
                 item("SETTINGS", "gearshape", active: false) { showAppSettings = true }
@@ -753,12 +839,13 @@ private struct CameraSettingsSheet: View {
     }
 }
 
-// MARK: - Project picker (Project mode)
+// MARK: - Project picker
 
 private struct ProjectPickerSheet: View {
     let projects: [String]
     let current: String?
-    var onPick: (String) -> Void
+    /// nil = shoot unfiled (no project).
+    var onPick: (String?) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var newName = ""
@@ -766,6 +853,14 @@ private struct ProjectPickerSheet: View {
     var body: some View {
         NavigationStack {
             List {
+                // Shoot without a project (the default for out-in-the-world finds).
+                Button { onPick(nil); dismiss() } label: {
+                    HStack {
+                        Text("Unfiled").foregroundStyle(Palette.ink)
+                        Spacer()
+                        if (current ?? "").isEmpty { Image(systemName: "checkmark").foregroundStyle(Palette.coral) }
+                    }
+                }
                 if !projects.isEmpty {
                     Section("Projects") {
                         ForEach(projects, id: \.self) { p in

@@ -22,6 +22,11 @@ enum BackupManager {
         // Optional so old backups still decode.
         var assetLocalID: String?
         var isCameraShot: Bool?
+        // Video: `isVideo` marks the record; `hasVideo` means a movie file is
+        // bundled at videos/<id>.mov (only for in-app fallback clips — library
+        // references relink from Photos instead of bloating the backup).
+        var isVideo: Bool? = nil
+        var hasVideo: Bool? = nil
     }
 
     struct RestoreResult { let added: Int; let missingReferences: Int }
@@ -37,8 +42,10 @@ enum BackupManager {
         try? fm.removeItem(at: root)
         let imagesDir = root.appendingPathComponent("images", isDirectory: true)
         let labelsDir = root.appendingPathComponent("labels", isDirectory: true)
+        let videosDir = root.appendingPathComponent("videos", isDirectory: true)
         try fm.createDirectory(at: imagesDir, withIntermediateDirectories: true)
         try fm.createDirectory(at: labelsDir, withIntermediateDirectories: true)
+        try fm.createDirectory(at: videosDir, withIntermediateDirectories: true)
 
         var records: [Record] = []
         for p in photos {
@@ -56,11 +63,20 @@ enum BackupManager {
                 try label.write(to: labelsDir.appendingPathComponent("\(p.id).jpg"))
                 hasLabel = true
             }
+            // Bundle the movie only for in-app fallback clips (no Photos home).
+            // Library-reference videos relink from Photos on restore — bundling
+            // every full movie would balloon the backup.
+            var hasVideo = false
+            if p.isVideo, let vdata = p.videoData, !vdata.isEmpty {
+                try vdata.write(to: videosDir.appendingPathComponent("\(p.id).mov"))
+                hasVideo = true
+            }
             records.append(Record(id: p.id, createdAt: p.createdAt,
                                   latitude: p.latitude, longitude: p.longitude,
                                   project: p.project, importedAt: p.importedAt,
                                   humanTags: p.humanTags, hasLabel: hasLabel,
-                                  assetLocalID: p.assetLocalID, isCameraShot: p.isCameraShot))
+                                  assetLocalID: p.assetLocalID, isCameraShot: p.isCameraShot,
+                                  isVideo: p.isVideo ? true : nil, hasVideo: hasVideo ? true : nil))
         }
 
         let enc = JSONEncoder()
@@ -90,6 +106,34 @@ enum BackupManager {
                 : nil
             let bundled = try? Data(contentsOf: folder.appendingPathComponent("images/\(r.id).jpg"))
             let aid = r.assetLocalID ?? ""
+
+            // Video records: own the clip when a movie is bundled (in-app
+            // fallback), else relink the Photos reference; skip if neither is
+            // available (the movie is gone and we can't play a poster).
+            if r.isVideo == true {
+                let poster = bundled ?? Data()
+                let movie = r.hasVideo == true
+                    ? (try? Data(contentsOf: folder.appendingPathComponent("videos/\(r.id).mov")))
+                    : nil
+                if let movie, !movie.isEmpty {
+                    let photo = Photo(id: r.id, imageData: poster, createdAt: r.createdAt,
+                                      latitude: r.latitude, longitude: r.longitude,
+                                      humanTags: r.humanTags, project: r.project,
+                                      importedAt: r.importedAt, labelImageData: label,
+                                      isVideo: true, videoData: movie)
+                    context.insert(photo); added += 1
+                } else if !aid.isEmpty, PhotosLibrary.asset(localID: aid) != nil {
+                    let photo = Photo(id: r.id, imageData: Data(), createdAt: r.createdAt,
+                                      latitude: r.latitude, longitude: r.longitude,
+                                      humanTags: r.humanTags, project: r.project,
+                                      importedAt: r.importedAt, labelImageData: label,
+                                      assetLocalID: aid, isCameraShot: r.isCameraShot ?? false, isVideo: true)
+                    context.insert(photo); added += 1
+                } else {
+                    missing += 1
+                }
+                continue
+            }
 
             let imageData: Data
             let assetID: String?

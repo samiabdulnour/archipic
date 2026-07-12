@@ -6,9 +6,10 @@ import Metal
 
 /// Aspect ratios offered in the camera, expressed as the *portrait* ratio
 /// (width / height). Capture crops the full sensor frame to this.
-/// Reference = photos found out in the world; Project = a site-specific shoot
-/// where a project is chosen once and a sequence is shot into it.
-enum CaptureMode { case reference, project }
+
+/// What the shutter captures: a still or a movie. The camera is one unified
+/// interface; a project is attached optionally (top-left pill) regardless.
+enum CaptureMediaMode { case photo, video }
 
 enum CaptureAspect: String, CaseIterable, Identifiable {
     case fourThree = "4:3"      // the full sensor
@@ -53,10 +54,11 @@ final class CameraController: NSObject {
     /// Manual keystone amount (−1…1), set by the slider. 0 = none.
     var keystoneStrength: Double = 0
 
-    // Capture context (mirrors the web app's camera modes).
-    var mode: CaptureMode = .reference
-    var currentProject: String?            // the project shots land in (Project mode)
-    var captureType: String = "building"   // Type segment: building | element | graphic
+    // Capture context.
+    var mediaMode: CaptureMediaMode = .photo
+    var currentProject: String?            // optional project shots are filed into (nil = unfiled)
+    var isRecording = false                // true while a movie is being recorded
+    var videoCapable = false               // set once the session is up; gates the VIDEO toggle
     var position: AVCaptureDevice.Position = .back
 
     /// Selected colour look (film-simulation style), applied live + on capture.
@@ -71,15 +73,22 @@ final class CameraController: NSObject {
     // Plain snapshots read on the video queue (avoid touching observable state off-main).
     @ObservationIgnored private var liveKeystone: Double = 0
     @ObservationIgnored private var liveLook: CameraLook = .original
+    /// Grade the live preview? Off in video mode so what you see (ungraded)
+    /// matches the straight movie that gets recorded.
+    @ObservationIgnored private var liveGrade = true
     @ObservationIgnored private var pendingKeystone: Double?   // strength to correct at capture
     @ObservationIgnored private var pendingLook: CameraLook = .original
 
     @ObservationIgnored private let photoOutput = AVCapturePhotoOutput()
     @ObservationIgnored private let videoOutput = AVCaptureVideoDataOutput()
+    @ObservationIgnored private let movieOutput = AVCaptureMovieFileOutput()
     @ObservationIgnored private let videoQueue = DispatchQueue(label: "archive.camera.video")
     @ObservationIgnored private var videoDevice: AVCaptureDevice?
     @ObservationIgnored private let sessionQueue = DispatchQueue(label: "archive.camera.session")
     @ObservationIgnored private var configured = false
+    @ObservationIgnored private var movieAdded = false            // movie output attached (video mode only)
+    @ObservationIgnored private var audioAdded = false            // mic input added lazily on first record
+    @ObservationIgnored private var recordHandler: ((URL?) -> Void)?
     @ObservationIgnored private var captureHandler: ((Data?) -> Void)?
     /// True from the moment a capture is requested until its completion fires.
     /// Set/read only on the main thread (capture() and deliver()), so a rapid
@@ -152,6 +161,10 @@ final class CameraController: NSObject {
             if let vc = self.videoOutput.connection(with: .video),
                vc.isVideoRotationAngleSupported(90) { vc.videoRotationAngle = 90 }
 
+            // The movie output is attached only in video mode (under the `.high`
+            // preset), not here — a movie output under the `.photo` preset is
+            // refused on some devices, which would kill video everywhere.
+
             self.session.commitConfiguration()
 
             let maxZ = min(device.activeFormat.videoMaxZoomFactor, 8.0)
@@ -159,6 +172,7 @@ final class CameraController: NSObject {
             self.onMain {
                 self.maxZoom = maxZ
                 self.isRunning = true
+                self.videoCapable = true
             }
         }
     }
@@ -205,6 +219,10 @@ final class CameraController: NSObject {
             if let vc = self.videoOutput.connection(with: .video) {
                 if vc.isVideoRotationAngleSupported(90) { vc.videoRotationAngle = 90 }
                 if vc.isVideoMirroringSupported { vc.isVideoMirrored = (newPos == .front) }
+            }
+            if let mc = self.movieOutput.connection(with: .video) {
+                if mc.isVideoRotationAngleSupported(90) { mc.videoRotationAngle = 90 }
+                if mc.isVideoMirroringSupported { mc.isVideoMirrored = (newPos == .front) }
             }
             self.session.commitConfiguration()
             let maxZ = min(self.videoDevice?.activeFormat.videoMaxZoomFactor ?? 1, 8.0)
@@ -290,6 +308,88 @@ final class CameraController: NSObject {
     }
 
     func setColorLook(_ look: CameraLook) { colorLook = look; liveLook = look }
+
+    // MARK: Photo / video mode
+
+    /// Switch between stills and movie capture. The movie output is attached only
+    /// in video mode (under `.high`), and removed for photo mode (so the `.photo`
+    /// preset — best still quality — is never asked to host it). The live preview
+    /// also stops being graded in video mode so it matches the straight recording.
+    func setMediaMode(_ m: CaptureMediaMode) {
+        guard m != mediaMode else { return }
+        mediaMode = m
+        liveGrade = (m == .photo)
+        let mirror = (position == .front)
+        guard configured else { return }
+        sessionQueue.async { [weak self] in
+            guard let self else { return }
+            self.session.beginConfiguration()
+            if m == .video {
+                if self.session.canSetSessionPreset(.high) { self.session.sessionPreset = .high }
+                if !self.movieAdded, self.session.canAddOutput(self.movieOutput) {
+                    self.session.addOutput(self.movieOutput)
+                    self.movieAdded = true
+                }
+                if let mc = self.movieOutput.connection(with: .video) {
+                    if mc.isVideoRotationAngleSupported(90) { mc.videoRotationAngle = 90 }
+                    if mc.isVideoMirroringSupported { mc.isVideoMirrored = mirror }
+                }
+            } else {
+                if self.movieAdded { self.session.removeOutput(self.movieOutput); self.movieAdded = false }
+                if self.session.canSetSessionPreset(.photo) { self.session.sessionPreset = .photo }
+            }
+            self.session.commitConfiguration()
+            let maxZ = min(self.videoDevice?.activeFormat.videoMaxZoomFactor ?? 1, 8.0)
+            self.onMain { self.maxZoom = maxZ }
+        }
+    }
+
+    /// Whether the VIDEO toggle should be offered (session is up on a real camera).
+    var canRecordVideo: Bool { videoCapable }
+
+    /// Start recording a movie to a temp file. `completion` fires on the main
+    /// thread with the finished file URL (or nil on failure) once recording ends.
+    func startRecording(completion: @escaping (URL?) -> Void) {
+        guard configured else { completion(nil); return }
+        recordHandler = completion
+        let mirror = (position == .front)
+        sessionQueue.async { [weak self] in
+            guard let self else { return }
+            guard self.movieAdded, !self.movieOutput.isRecording else {
+                self.onMain { let h = self.recordHandler; self.recordHandler = nil; h?(nil) }
+                return
+            }
+            self.ensureAudioInput()
+            if let mc = self.movieOutput.connection(with: .video) {
+                if mc.isVideoRotationAngleSupported(90) { mc.videoRotationAngle = 90 }
+                if mc.isVideoMirroringSupported { mc.isVideoMirrored = mirror }
+            }
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString).appendingPathExtension("mov")
+            self.movieOutput.startRecording(to: url, recordingDelegate: self)
+            self.onMain { self.isRecording = true }
+        }
+    }
+
+    func stopRecording() {
+        sessionQueue.async { [weak self] in
+            guard let self, self.movieOutput.isRecording else { return }
+            self.movieOutput.stopRecording()
+        }
+    }
+
+    /// Add the microphone input the first time it's needed, so photo-only users
+    /// are never prompted for mic access. Call on the session queue.
+    private func ensureAudioInput() {
+        guard !audioAdded,
+              let mic = AVCaptureDevice.default(for: .audio),
+              let input = try? AVCaptureDeviceInput(device: mic),
+              session.canAddInput(input) else { return }
+        session.beginConfiguration()
+        session.addInput(input)
+        session.commitConfiguration()
+        audioAdded = true
+    }
 
     /// Redraw to `.up` orientation so Core Image works in display space.
     private static func normalized(_ image: UIImage) -> UIImage {
@@ -403,13 +503,28 @@ extension CameraController: AVCapturePhotoCaptureDelegate {
     }
 }
 
+extension CameraController: AVCaptureFileOutputRecordingDelegate {
+    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL,
+                    from connections: [AVCaptureConnection], error: Error?) {
+        onMain {
+            self.isRecording = false
+            let handler = self.recordHandler
+            self.recordHandler = nil
+            handler?(error == nil ? outputFileURL : nil)
+        }
+    }
+}
+
 extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer,
                        from connection: AVCaptureConnection) {
         guard let pb = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         let raw = CIImage(cvPixelBuffer: pb)
         // Grain off for the live preview — it's baked into the captured photo only.
-        let processed = CameraProcessing.apply(to: raw, keystone: liveKeystone, look: liveLook, grain: false)
+        // In video mode grading is skipped so the preview matches the straight movie.
+        let look = liveGrade ? liveLook : .original
+        let ks = liveGrade ? liveKeystone : 0
+        let processed = CameraProcessing.apply(to: raw, keystone: ks, look: look, grain: false)
         DispatchQueue.main.async { [weak self] in
             self?.metalView?.update(processed)
             self?.latestFrame = raw

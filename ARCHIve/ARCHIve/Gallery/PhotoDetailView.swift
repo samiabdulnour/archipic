@@ -55,7 +55,7 @@ struct PhotoDetailView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button { editing = true } label: { Label("Edit photo", systemImage: "slider.horizontal.3") }
-                        .disabled(current == nil)
+                        .disabled(current == nil || current?.isVideo == true)   // editor is stills-only
                     if let current {
                         Button { current.isFavorite.toggle(); try? modelContext.save() } label: {
                             Label(current.isFavorite ? "Remove Favourite" : "Favourite",
@@ -142,7 +142,12 @@ private struct PhotoPage: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                if let image {
+                if photo.isVideo {
+                    ArchiveVideoView(photo: photo, poster: image)
+                        .aspectRatio(image.map { $0.size.width / max(1, $0.size.height) } ?? 16.0 / 9.0,
+                                     contentMode: .fit)
+                        .frame(maxWidth: .infinity)
+                } else if let image {
                     Button { onZoom(image) } label: {
                         Image(uiImage: image)
                             .resizable().scaledToFit()

@@ -80,8 +80,8 @@ struct CameraDiagram: View {
                 Circle().fill(Color.white.opacity(0.2))
                     .frame(width: w * 0.12, height: w * 0.12)
                     .position(x: w * 0.84, y: h * 0.78)
-                // Mode toggle
-                Text("REFERENCE · PROJECT")
+                // Media toggle
+                Text("PHOTO · VIDEO")
                     .font(.system(size: 7, weight: .semibold)).tracking(0.5)
                     .foregroundStyle(.white.opacity(0.7))
                     .position(x: w * 0.5, y: h * 0.89)

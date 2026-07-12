@@ -1,6 +1,7 @@
 import Photos
 import UIKit
 import CoreLocation
+import AVFoundation
 
 /// Thin wrapper over the Photos framework for the "tag your existing library"
 /// flow: authorisation, fetching assets, and loading images by local identifier
@@ -67,6 +68,44 @@ enum PhotosLibrary {
                 localID = req.placeholderForCreatedAsset?.localIdentifier
             } completionHandler: { success, _ in
                 cont.resume(returning: success ? localID : nil)
+            }
+        }
+    }
+
+    /// Save a movie file into the Photos library and return its local identifier
+    /// (so we store a reference, not a duplicate). Videos must be added from a
+    /// file URL, not in-memory Data. nil if not permitted/failed.
+    static func saveVideo(fileURL: URL, coordinate: CLLocationCoordinate2D? = nil) async -> String? {
+        let status = await requestAddAuthorization()
+        guard status == .authorized || status == .limited else { return nil }
+        return await withCheckedContinuation { cont in
+            var localID: String?
+            PHPhotoLibrary.shared().performChanges {
+                let req = PHAssetCreationRequest.forAsset()
+                req.addResource(with: .video, fileURL: fileURL, options: nil)
+                if let c = coordinate {
+                    req.location = CLLocation(coordinate: c, altitude: 0,
+                                              horizontalAccuracy: kCLLocationAccuracyHundredMeters,
+                                              verticalAccuracy: -1, timestamp: Date())
+                }
+                localID = req.placeholderForCreatedAsset?.localIdentifier
+            } completionHandler: { success, _ in
+                cont.resume(returning: success ? localID : nil)
+            }
+        }
+    }
+
+    /// Load the playable AVAsset for a video stored in Photos (downloads from
+    /// iCloud on demand). nil if the asset is gone or isn't a video.
+    static func avAsset(localID: String) async -> AVAsset? {
+        guard let asset = asset(localID: localID), asset.mediaType == .video else { return nil }
+        return await withCheckedContinuation { cont in
+            var resumed = false
+            let opts = PHVideoRequestOptions()
+            opts.isNetworkAccessAllowed = true
+            opts.deliveryMode = .automatic
+            PHImageManager.default().requestAVAsset(forVideo: asset, options: opts) { avAsset, _, _ in
+                if !resumed { resumed = true; cont.resume(returning: avAsset) }
             }
         }
     }

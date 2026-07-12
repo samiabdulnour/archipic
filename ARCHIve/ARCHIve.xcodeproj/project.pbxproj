@@ -434,9 +434,10 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Archi.vé";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSCameraUsageDescription = "ARCHI-ve uses the camera to capture photos for your archive.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "ARCHI-ve uses the camera to capture photos and videos for your archive.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ARCHI-ve tags each photo with the place it was taken.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Archi.vé saves the photos you take into your Photos library.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ARCHI-ve records sound with the videos you capture.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Archi.vé saves the photos and videos you capture into your Photos library.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Archi.vé reads your photo library so you can tag existing photos without making copies.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -471,9 +472,10 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Archi.vé";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSCameraUsageDescription = "ARCHI-ve uses the camera to capture photos for your archive.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "ARCHI-ve uses the camera to capture photos and videos for your archive.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ARCHI-ve tags each photo with the place it was taken.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Archi.vé saves the photos you take into your Photos library.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ARCHI-ve records sound with the videos you capture.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Archi.vé saves the photos and videos you capture into your Photos library.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Archi.vé reads your photo library so you can tag existing photos without making copies.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

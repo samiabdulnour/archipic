@@ -16,7 +16,21 @@ final class Photo: Identifiable {
     var id: String = ""
 
     /// The captured JPEG. Stored outside the main store file for size.
+    /// For a video this holds the poster frame (a still) so the whole
+    /// image-only display pipeline — grid, boards, share — keeps working; it's
+    /// empty when the pixels live in Photos (see `assetLocalID`).
     @Attribute(.externalStorage) var imageData: Data = Data()
+
+    /// True when this record is a video rather than a still. The moving pixels
+    /// come from Photos (via `assetLocalID`) or, when Photos isn't permitted,
+    /// from `videoData`; `imageData` still carries the poster frame either way.
+    var isVideo: Bool = false
+
+    /// The captured movie, stored in-app only as a fallback when saving to the
+    /// Photos library wasn't permitted (mirrors how `imageData` backs up a still
+    /// that couldn't be saved to Photos). nil for stills and for video that lives
+    /// in Photos as a reference.
+    @Attribute(.externalStorage) var videoData: Data?
 
     /// When the photo was taken (capture time, not import time).
     var createdAt: Date = Date()
@@ -89,10 +103,14 @@ final class Photo: Identifiable {
         importedAt: Date? = nil,
         labelImageData: Data? = nil,
         assetLocalID: String? = nil,
-        isCameraShot: Bool = false
+        isCameraShot: Bool = false,
+        isVideo: Bool = false,
+        videoData: Data? = nil
     ) {
         self.id = id
         self.imageData = imageData
+        self.isVideo = isVideo
+        self.videoData = videoData
         self.createdAt = createdAt
         self.latitude = latitude
         self.longitude = longitude

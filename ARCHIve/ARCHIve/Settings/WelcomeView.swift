@@ -68,16 +68,16 @@ enum CameraGuide {
         let id = UUID(); let n: Int; let title: String; let tint: Color; let body: String
     }
     static let steps: [Step] = [
-        .init(n: 1, title: "Type", tint: Palette.coral,
-              body: "Top-left: Building · Element · Graphic. Tap to set what you're capturing; it pre-fills the tag."),
-        .init(n: 2, title: "Tag · Reuse · More", tint: Palette.mint,
-              body: "Top-right. The tag icon toggles Lite ↔ Full; Reuse applies your last photo's tags; the dots open camera settings."),
+        .init(n: 1, title: "Project", tint: Palette.coral,
+              body: "Top-left: tap to file shots into a project — or leave it Unfiled for things found out in the world. Optional."),
+        .init(n: 2, title: "Tag · Reuse · Tilt · More", tint: Palette.mint,
+              body: "Top-right. The tag icon toggles Lite ↔ Full; Reuse applies your last photo's tags; Tilt straightens verticals; the dots open camera settings."),
         .init(n: 3, title: "Shutter", tint: Palette.lemon,
-              body: "Tap to capture. Full opens tagging right after; Lite saves instantly to tag later."),
+              body: "Tap to capture. Full opens tagging right after; Lite saves instantly to tag later. In Video it records."),
         .init(n: 4, title: "Gallery", tint: Palette.coral,
-              body: "Bottom-left shows your latest photo — tap to jump into the archive."),
-        .init(n: 5, title: "Reference vs Project", tint: Palette.mint,
-              body: "Reference for things found out there; Project for a site shoot — pick the project once, shoot a sequence."),
+              body: "Bottom-left shows your latest capture — tap to jump into the archive."),
+        .init(n: 5, title: "Photo vs Video", tint: Palette.mint,
+              body: "Switch the shutter between a still and a movie. Video records straight HD with sound; film looks apply to photos."),
         .init(n: 6, title: "Flip camera", tint: Palette.lemon,
               body: "Bottom-right — switch between the rear and front cameras."),
     ]

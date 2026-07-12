@@ -690,6 +690,19 @@ struct PhotoThumbnail: View {
                 if let image { Image(uiImage: image).resizable().scaledToFill() }
             }
             .frame(width: geo.size.width, height: geo.size.height)
+            .overlay(alignment: .bottomTrailing) {
+                if photo.isVideo {
+                    let d = max(9, min(geo.size.width, geo.size.height) * 0.2)
+                    Image(systemName: "play.fill")
+                        .font(.system(size: d * 0.62, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: d, height: d)
+                        .background(.black.opacity(0.4), in: Circle())
+                        .shadow(color: .black.opacity(0.3), radius: 1)
+                        .padding(d * 0.34)
+                        .allowsHitTesting(false)
+                }
+            }
             .task(id: photo.id) {
                 if image != nil { return }
                 let base: UIImage?
