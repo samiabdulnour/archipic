@@ -37,7 +37,7 @@ A single user (the owner) on their own iPhone. Not multi-user. Not public. No ac
 
 ## iOS app (in scope as of 2026-05-24)
 
-The app is also shipped to the App Store as a native iOS app via **Capacitor** — a thin wrapper around the same `index.html`, not a rewrite. Bundle ID: `com.archi-ve.app`. App name: Archi.vé. See `BUILD-IOS.md` for the step-by-step build, and `APPSTORE.md` for listing copy + screenshots. Web app at `samiabdulnour.github.io/archi-ve/` stays the canonical source; Capacitor syncs from it.
+The app is also shipped to the App Store as a native iOS app via **Capacitor** — a thin wrapper around the same `index.html`, not a rewrite. Bundle ID: `com.samiabdulnour.archive`. App name: Archi.vé. See `BUILD-IOS.md` for the step-by-step build, and `APPSTORE.md` for listing copy + screenshots. Web app at `samiabdulnour.github.io/archi-ve/` stays the canonical source; Capacitor syncs from it.
 
 Do not add native iOS Swift code, Cordova plugins, or fork the codebase. Anything iOS-specific lives in `capacitor.config.json`, `BUILD-IOS.md`, or — at submission time — the auto-generated `/ios` Xcode project (which is committed but never hand-edited).
 
