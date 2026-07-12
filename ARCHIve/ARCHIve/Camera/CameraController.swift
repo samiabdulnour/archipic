@@ -86,7 +86,8 @@ final class CameraController: NSObject {
     @ObservationIgnored private var videoDevice: AVCaptureDevice?
     @ObservationIgnored private let sessionQueue = DispatchQueue(label: "archive.camera.session")
     @ObservationIgnored private var configured = false
-    @ObservationIgnored private var movieAdded = false            // movie output attached (video mode only)
+    @ObservationIgnored private var movieAdded = false            // movie output attached to the session
+    @ObservationIgnored private var movieUnderPhoto = false       // movie shares the .photo preset → switch needs no reconfig
     @ObservationIgnored private var audioAdded = false            // mic input added lazily on first record
     @ObservationIgnored private var recordHandler: ((URL?) -> Void)?
     @ObservationIgnored private var captureHandler: ((Data?) -> Void)?
@@ -169,6 +170,7 @@ final class CameraController: NSObject {
             if self.session.canAddOutput(self.movieOutput) {
                 self.session.addOutput(self.movieOutput)
                 self.movieAdded = true
+                self.movieUnderPhoto = true   // recording coexists with .photo → no swap on switch
                 if let mc = self.movieOutput.connection(with: .video),
                    mc.isVideoRotationAngleSupported(90) { mc.videoRotationAngle = 90 }
             }
@@ -323,14 +325,22 @@ final class CameraController: NSObject {
     /// in video mode (under `.high`), and removed for photo mode (so the `.photo`
     /// preset — best still quality — is never asked to host it). The live preview
     /// also stops being graded in video mode so it matches the straight recording.
-    /// `completion` fires on the main thread once the session has settled, so the
-    /// UI can mask the (unavoidable) reconfiguration blip behind a brief cover.
+    /// True when photo↔video needs no session reconfiguration (the movie output
+    /// shares the `.photo` preset), so the UI can switch instantly with no cover.
+    var switchIsInstant: Bool { movieUnderPhoto }
+
+    /// `completion` fires on the main thread once the session has settled. In the
+    /// instant path it fires immediately (no reconfiguration at all).
     func setMediaMode(_ m: CaptureMediaMode, completion: @escaping () -> Void = {}) {
         guard m != mediaMode else { completion(); return }
         mediaMode = m
         liveGrade = (m == .photo)
+        // Instant path: no session change — immediate, like the native Camera.
+        // Video records at the shared `.photo` (4:3) framing.
+        guard configured, !movieUnderPhoto else { completion(); return }
+        // Fallback (devices that only allow the movie output under `.high`): swap
+        // the preset. Slower, so the UI covers this transition.
         let mirror = (position == .front)
-        guard configured else { completion(); return }
         sessionQueue.async { [weak self] in
             guard let self else { DispatchQueue.main.async(execute: completion); return }
             self.session.beginConfiguration()

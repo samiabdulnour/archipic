@@ -121,10 +121,11 @@ struct CameraView: View {
         // 16:9 is the full-bleed mode (like native): the feed fills the screen
         // edge-to-edge and the controls float over it. 4:3 / 1:1 use a framed
         // crop window with the area outside dimmed.
-        // Video always previews full-bleed (records HD 16:9); framed crops are a
-        // stills feature.
-        let isFullBleed = camera.aspect == .sixteenNine || camera.mediaMode == .video
-        let ratio = camera.aspect.portraitRatio          // width / height (<1)
+        // Video records at the shared .photo (4:3) framing, so it previews framed
+        // 4:3 too — matching what's captured. Only 16:9 stills go full-bleed.
+        let effectiveAspect: CaptureAspect = camera.mediaMode == .video ? .fourThree : camera.aspect
+        let isFullBleed = effectiveAspect == .sixteenNine
+        let ratio = effectiveAspect.portraitRatio        // width / height (<1)
         let topSafe = geo.safeAreaInsets.top
         let botSafe = geo.safeAreaInsets.bottom
         let fullW = geo.size.width
@@ -372,11 +373,15 @@ struct CameraView: View {
     private func switchMedia(_ m: CaptureMediaMode) {
         guard m != camera.mediaMode, !mediaSwitching else { return }
         tool = .none   // close any looks/tilt tray
-        mediaSwitching = true   // drop the cover instantly (masks the reconfig)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        // Reconfigure under the cover; lift it once the session has settled.
-        camera.setMediaMode(m) {
-            withAnimation(.easeOut(duration: 0.22)) { mediaSwitching = false }
+        if camera.switchIsInstant {
+            camera.setMediaMode(m)   // no reconfiguration → immediate, no cover
+        } else {
+            // Fallback devices reconfigure the session; mask it behind a cover.
+            mediaSwitching = true
+            camera.setMediaMode(m) {
+                withAnimation(.easeOut(duration: 0.22)) { mediaSwitching = false }
+            }
         }
     }
 
