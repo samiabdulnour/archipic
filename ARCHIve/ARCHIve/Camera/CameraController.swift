@@ -557,12 +557,17 @@ extension CameraController: AVCapturePhotoCaptureDelegate {
         // like its preview connection — claims the 90° rotation and then delivers
         // unrotated landscape pixels stamped as already-upright, so the saved
         // selfie came out sideways. Normalize EXIF first; if the still is somehow
-        // still landscape, stand it upright (90° CW — the same direction the
-        // viewfinder needed for this sensor). The back camera honours the
-        // rotation, arrives portrait, and skips this.
+        // still landscape, stand it upright ourselves.
+        //
+        // `.left` (not `.right`): the viewfinder needs the opposite constant for
+        // the same sensor because CoreImage's y-axis is flipped relative to
+        // UIKit's, so a rotation that reads clockwise in one reads anticlockwise
+        // in the other. Using `.right` here landed the photo upside down.
+        //
+        // The back camera honours the rotation, arrives portrait, and skips this.
         image = CameraController.normalized(image)
         if image.size.width > image.size.height, let cg = image.cgImage {
-            image = CameraController.normalized(UIImage(cgImage: cg, scale: 1, orientation: .right))
+            image = CameraController.normalized(UIImage(cgImage: cg, scale: 1, orientation: .left))
         }
         let processed = processedStill(image, keystone: pendingKeystone ?? 0, look: pendingLook)
         let cropped = CameraController.crop(processed, toRatio: ratio)
