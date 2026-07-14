@@ -72,7 +72,11 @@ enum CameraProcessing {
 
     private struct Recipe {
         var wbTo: CGFloat = 6500            // temperature target from 6500 (>cooler, <warmer)
-        var wbTint: CGFloat = 0             // green(−)/magenta(+)
+        // MEASURED (probe on grey, 2026-07-14): POSITIVE tint = GREEN, negative =
+        // magenta — the opposite of what this comment used to claim. Every old
+        // negative "green" tint was actually pushing magenta (Eterna's washed
+        // look, part of Superia's red skin).
+        var wbTint: CGFloat = 0             // green(+)/magenta(−)
         var bands: [Band] = []              // per-hue signature (the colour cube)
         var shadow = SIMD3<Float>(0, 0, 0)  // signed shadow tint per channel
         var highlight = SIMD3<Float>(0, 0, 0) // COMPLEMENTARY highlight tint
@@ -148,7 +152,7 @@ enum CameraProcessing {
         // global sat boost is mostly moved out of the way of skin. Landscape
         // character (emerald greens, teal-leaning skies) is untouched.
         d[.superia] = Recipe(
-            wbTo: 6360, wbTint: -4,
+            wbTo: 6360, wbTint: 4,
             bands: [Band(lo: 0, hi: 20, rot: -5, sat: 1.06, val: 0.97), Band(lo: 20, hi: 42, rot: 3, sat: 0.95),
                     Band(lo: 42, hi: 70, rot: 5, sat: 0.95), Band(lo: 80, hi: 160, rot: 8, sat: 1.22),
                     Band(lo: 160, hi: 195, rot: 2, sat: 1.12), Band(lo: 195, hi: 250, rot: -7, sat: 1.15)],
@@ -171,7 +175,7 @@ enum CameraProcessing {
 
         // ---- OVERCAST · cold-airy — cyan-greens, pastel, cool/clean split ----
         d[.pro400h] = Recipe(
-            wbTo: 6900, wbTint: -6,
+            wbTo: 6900, wbTint: 6,
             // Skin stays pastel-desaturated but no longer drifts toward red (rot ≈ 0).
             bands: [Band(lo: 80, hi: 165, rot: 15, sat: 0.80), Band(lo: 165, hi: 200, rot: -4, sat: 0.95),
                     Band(lo: 200, hi: 250, rot: 4, sat: 0.88), Band(lo: 0, hi: 20, rot: -1, sat: 0.78),
@@ -190,27 +194,33 @@ enum CameraProcessing {
 
         // ---- NIGHT · red — teal shadows / red-orange highlights + halation ----
         d[.cinestill] = Recipe(
-            wbTo: 6800, wbTint: -3,
+            wbTo: 6800, wbTint: 3,
             bands: [Band(lo: 0, hi: 30, rot: 1, sat: 1.07), Band(lo: 30, hi: 50, rot: 0, sat: 1.04),
                     Band(lo: 80, hi: 175, rot: 10, sat: 0.90), Band(lo: 195, hi: 255, rot: 0, sat: 1.0)],
             shadow: SIMD3(-0.04, 0.02, 0.05), highlight: SIMD3(0.05, 0, -0.04), split: 0.9,
             sat: 0.97, con: 1.02, curveY: [0, 0.22, 0.50, 0.79, 0.95], clarity: 0.15, grain: 0.20, bloom: 0.18)
 
-        // ---- NIGHT · green (Matrix grade) — green cast everywhere, reds muted ----
+        // ---- NIGHT · green (Matrix grade) — phosphor-green cast, punchy, glowing ----
+        // Reworked 2026-07-14 (owner: "should be like the Matrix — greenish night
+        // vision, saturated" — the old version read yellowish + desaturated).
+        // Three causes fixed: the highlight tint was green MINUS blue (green−blue
+        // = yellow); everything was desaturated (0.55–0.9 bands, 0.92 global) so
+        // no colour survived to read green; and the WB green tint was too weak to
+        // overpower neon scenes. Now: cold base + a strong green tint, green in
+        // BOTH split ends with blue never negative (emerald, not yellow), greens
+        // pushed hard, competing hues rotated toward green or crushed, saturation
+        // UP, deeper toe, more bloom (phosphor glow).
         d[.eterna] = Recipe(
-            wbTo: 7200, wbTint: -22,                                  // cold + strong green
-            bands: [Band(lo: 80, hi: 170, rot: 6, sat: 1.35),        // greens → lime, pushed hard
-                    Band(lo: 170, hi: 200, rot: -4, sat: 1.12),      // cyans pulled toward green
-                    Band(lo: 0, hi: 35, rot: 0, sat: 0.55),          // reds muted (no red lights dominating)
-                    Band(lo: 35, hi: 60, rot: 0, sat: 0.7),          // oranges muted
-                    Band(lo: 200, hi: 270, rot: 0, sat: 0.7),        // blues eased
-                    Band(lo: 290, hi: 345, rot: 0, sat: 0.55)],      // magenta/pink muted
-            // green shadows AND yellow-green highlights → a uniform green cast (not a
-            // complementary split — that's what was making highlights read red).
-            shadow: SIMD3(-0.035, 0.05, -0.015), highlight: SIMD3(0.0, 0.045, -0.04), split: 1.0,
-            // Middle ground (matches CineStill's exposure): a moderate toe — shadows
-            // keep detail and read dark-green, without going flat. Deep, not crushed.
-            sat: 0.92, con: 1.03, curveY: [0, 0.22, 0.50, 0.78, 0.93], clarity: 0.18, grain: 0.14, bloom: 0.12)
+            wbTo: 7600, wbTint: 70,
+            bands: [Band(lo: 80, hi: 170, rot: 10, sat: 1.50),             // greens GLOW
+                    Band(lo: 170, hi: 200, rot: -15, sat: 1.20),           // cyans → green
+                    Band(lo: 200, hi: 260, rot: -28, sat: 0.80),           // blues → teal-green
+                    Band(lo: 0, hi: 30, rot: 12, sat: 0.30, val: 0.88),    // reds CRUSHED + dimmed
+                    Band(lo: 30, hi: 60, rot: 20, sat: 0.55),              // warm lights toward green
+                    Band(lo: 60, hi: 80, rot: 15, sat: 0.90),              // yellows into green
+                    Band(lo: 280, hi: 350, rot: -25, sat: 0.30, val: 0.88)], // magenta/pink neon crushed
+            shadow: SIMD3(-0.06, 0.055, 0.01), highlight: SIMD3(-0.035, 0.06, 0.01), split: 1.0,
+            sat: 1.05, con: 1.06, curveY: [0, 0.20, 0.48, 0.78, 0.94], clarity: 0.2, grain: 0.14, bloom: 0.18)
 
         // ---- B&W · soft — gritty grain, airy skies, faint warm tone ----
         d[.trix] = Recipe(
