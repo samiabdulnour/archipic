@@ -211,16 +211,21 @@ enum CameraProcessing {
         // pushed hard, competing hues rotated toward green or crushed, saturation
         // UP, deeper toe, more bloom (phosphor glow).
         d[.eterna] = Recipe(
-            wbTo: 7600, wbTint: 70,
-            bands: [Band(lo: 80, hi: 170, rot: 10, sat: 1.50),             // greens GLOW
-                    Band(lo: 170, hi: 200, rot: -15, sat: 1.20),           // cyans → green
-                    Band(lo: 200, hi: 260, rot: -28, sat: 0.80),           // blues → teal-green
-                    Band(lo: 0, hi: 30, rot: 12, sat: 0.30, val: 0.88),    // reds CRUSHED + dimmed
-                    Band(lo: 30, hi: 60, rot: 20, sat: 0.55),              // warm lights toward green
-                    Band(lo: 60, hi: 80, rot: 15, sat: 0.90),              // yellows into green
-                    Band(lo: 280, hi: 350, rot: -25, sat: 0.30, val: 0.88)], // magenta/pink neon crushed
-            shadow: SIMD3(-0.06, 0.055, 0.01), highlight: SIMD3(-0.035, 0.06, 0.01), split: 1.0,
-            sat: 1.05, con: 1.06, curveY: [0, 0.20, 0.48, 0.78, 0.94], clarity: 0.2, grain: 0.14, bloom: 0.18)
+            wbTo: 7200, wbTint: 30,                                    // cool + a moderate green cast
+            bands: [Band(lo: 80, hi: 170, rot: 4, sat: 1.18),          // greens lifted, not neon
+                    Band(lo: 170, hi: 200, rot: -6, sat: 0.90),        // cyans eased toward green
+                    Band(lo: 200, hi: 260, rot: -10, sat: 0.70),       // blues → teal, pulled back
+                    Band(lo: 0, hi: 30, rot: 5, sat: 0.52),            // reds: an accent, not the subject
+                    Band(lo: 30, hi: 60, rot: 6, sat: 0.72),           // sodium/tungsten survive — the accent
+                    Band(lo: 285, hi: 350, rot: -15, sat: 0.40)],      // magenta/pink neon pulled well back
+            // A moderate global green (wbTint) is the Matrix cast; the shadow split
+            // adds a little more green down low so it's SHAPED (stronger in the
+            // shadows/mids, gentler in the highlights) rather than a flat wash.
+            // Blue never below green (green−blue would read yellow).
+            shadow: SIMD3(-0.05, 0.05, 0.006), highlight: SIMD3(-0.012, 0.014, 0.004), split: 0.9,
+            // DESATURATE hard, then cast green: a muted, contrasty frame lets the
+            // green read cinematic; a saturated one turns it neon. Deep blacks.
+            sat: 0.72, con: 1.10, curveY: [0, 0.17, 0.45, 0.80, 0.96], clarity: 0.2, grain: 0.16, bloom: 0.14)
 
         // ---- B&W · soft — gritty grain, airy skies, faint warm tone ----
         d[.trix] = Recipe(
