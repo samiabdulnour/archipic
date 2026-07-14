@@ -89,6 +89,10 @@ final class CameraController: NSObject {
     @ObservationIgnored private var movieAdded = false            // movie output attached to the session
     @ObservationIgnored private var movieUnderPhoto = false       // movie shares the .photo preset → switch needs no reconfig
     @ObservationIgnored private var audioAdded = false            // mic input added lazily on first record
+    /// While a flip settles, the new camera's pipeline briefly delivers frames
+    /// that don't match its steady-state geometry (a visible upside-down flash).
+    /// Hold the viewfinder on its last good frame until this deadline passes.
+    @ObservationIgnored private var previewResumeAt: CFAbsoluteTime = 0
     @ObservationIgnored private var recordHandler: ((URL?) -> Void)?
     @ObservationIgnored private var captureHandler: ((Data?) -> Void)?
     /// True from the moment a capture is requested until its completion fires.
@@ -112,10 +116,13 @@ final class CameraController: NSObject {
     /// `isVideoMirrored` also requires the automatic adjustment to be off first.
     /// Call on the session queue.
     private func applyConnectionGeometry(front: Bool) {
-        let connections = [photoOutput.connection(with: .video),
-                           videoOutput.connection(with: .video),
-                           movieOutput.connection(with: .video)].compactMap { $0 }
-        for conn in connections {
+        let named: [(String, AVCaptureConnection?)] = [
+            ("photo",   photoOutput.connection(with: .video)),
+            ("preview", videoOutput.connection(with: .video)),
+            ("movie",   movieOutput.connection(with: .video)),
+        ]
+        for (_, conn) in named {
+            guard let conn else { continue }
             if conn.isVideoRotationAngleSupported(90) { conn.videoRotationAngle = 90 }
             if conn.isVideoMirroringSupported {
                 conn.automaticallyAdjustsVideoMirroring = false
@@ -218,6 +225,9 @@ final class CameraController: NSObject {
 
     func flipCamera() {
         let newPos: AVCaptureDevice.Position = (position == .back) ? .front : .back
+        // Freeze the viewfinder on its last good frame across the swap — the new
+        // camera's first ~second of frames don't match its settled geometry.
+        previewResumeAt = CFAbsoluteTimeGetCurrent() + 1.1
         sessionQueue.async { [weak self] in
             guard let self else { return }
             self.session.beginConfiguration()
@@ -539,7 +549,23 @@ extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer,
                        from connection: AVCaptureConnection) {
         guard let pb = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
-        let raw = CIImage(cvPixelBuffer: pb)
+        // Hold the last good frame while a flip settles — the incoming camera's
+        // pipeline briefly delivers frames whose geometry doesn't match its
+        // steady state, which showed up as an upside-down flash.
+        guard CFAbsoluteTimeGetCurrent() >= previewResumeAt else { return }
+
+        var raw = CIImage(cvPixelBuffer: pb)
+        // The front camera *accepts* the connection's portrait rotation (it reports
+        // back 90°) but doesn't apply it to this output — measured: its buffers
+        // arrive landscape while the back camera's arrive portrait. Stills and
+        // movies still come out upright (they carry the connection's stated
+        // rotation as EXIF / a track transform), but the viewfinder draws raw
+        // pixels, so orient them here or the front camera shows up on its side.
+        if raw.extent.width > raw.extent.height {
+            raw = raw.oriented(.right)
+            raw = raw.transformed(by: CGAffineTransform(translationX: -raw.extent.minX,
+                                                        y: -raw.extent.minY))
+        }
         // Grain off for the live preview — it's baked into the captured photo only.
         // In video mode grading is skipped so the preview matches the straight movie.
         let look = liveGrade ? liveLook : .original

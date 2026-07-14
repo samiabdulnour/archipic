@@ -345,26 +345,31 @@ struct CameraView: View {
 
     /// Project mode replaces the Type segment with a Pick-project pill
     /// (matches the old app); tap to choose / change the project.
-    /// The pill's label — the project name, or the placeholder when unfiled.
-    /// Treats an empty/whitespace name as unfiled too, so the placeholder can
-    /// never be replaced by a blank label.
-    private var projectLabel: String {
+    /// The project a shot is filed into; nil = unfiled (blank names count as
+    /// unfiled, so the pill can never show an empty label).
+    private var filedProject: String? {
         let name = (camera.currentProject ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        return name.isEmpty ? "Pick project" : name
+        return name.isEmpty ? nil : name
     }
 
+    /// Unfiled shows just the lemon dot (a quiet, minimal target); once a project
+    /// is chosen the pill grows to carry its name.
     private var projectPill: some View {
         Button { showProjectPicker = true } label: {
             HStack(spacing: 7) {
                 Circle().fill(Palette.lemon).frame(width: 7, height: 7)
-                Text(projectLabel)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white)
+                if let filedProject {
+                    Text(filedProject)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
             }
-            .padding(.horizontal, 12)
-            .frame(height: 35)
+            .padding(.horizontal, filedProject == nil ? 0 : 12)
+            .frame(width: filedProject == nil ? 35 : nil, height: 35)
             .background(Capsule().fill(.ultraThinMaterial).environment(\.colorScheme, .dark))
         }
+        .accessibilityLabel(filedProject ?? "Pick project")
+        .animation(.easeInOut(duration: 0.2), value: filedProject)
     }
 
     // MARK: Bottom — shutter, mode toggle, thumbnail, flip
@@ -937,7 +942,7 @@ private struct ProjectPickerSheet: View {
                     }
                 }
             }
-            .navigationTitle("Shoot into…")
+            .navigationTitle("Pick project")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
         }
