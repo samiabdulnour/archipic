@@ -104,6 +104,26 @@ final class CameraController: NSObject {
         if Thread.isMainThread { work() } else { DispatchQueue.main.async(execute: work) }
     }
 
+    /// Lock every video connection to portrait, and mirror it for the front camera.
+    ///
+    /// Must be called **after** `commitConfiguration()`: swapping the device input
+    /// rebuilds the connections, so anything set before the commit is discarded —
+    /// which left the front camera sideways (a connection defaults to 0°).
+    /// `isVideoMirrored` also requires the automatic adjustment to be off first.
+    /// Call on the session queue.
+    private func applyConnectionGeometry(front: Bool) {
+        let connections = [photoOutput.connection(with: .video),
+                           videoOutput.connection(with: .video),
+                           movieOutput.connection(with: .video)].compactMap { $0 }
+        for conn in connections {
+            if conn.isVideoRotationAngleSupported(90) { conn.videoRotationAngle = 90 }
+            if conn.isVideoMirroringSupported {
+                conn.automaticallyAdjustsVideoMirroring = false
+                conn.isVideoMirrored = front
+            }
+        }
+    }
+
     // MARK: Permission + setup
 
     func requestAccessAndConfigure() {
@@ -149,33 +169,23 @@ final class CameraController: NSObject {
                 self.photoOutput.maxPhotoQualityPrioritization = .quality
             }
 
-            if let conn = self.photoOutput.connection(with: .video),
-               conn.isVideoRotationAngleSupported(90) {
-                conn.videoRotationAngle = 90
-            }
-
             // Live frames for the Metal viewfinder.
             self.videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
             self.videoOutput.alwaysDiscardsLateVideoFrames = true
             self.videoOutput.setSampleBufferDelegate(self, queue: self.videoQueue)
             if self.session.canAddOutput(self.videoOutput) { self.session.addOutput(self.videoOutput) }
-            if let vc = self.videoOutput.connection(with: .video),
-               vc.isVideoRotationAngleSupported(90) { vc.videoRotationAngle = 90 }
 
             // Attach the movie output up front when the `.photo` preset allows it,
-            // so switching photo↔video is just a fast preset swap — not a slow
-            // add/remove of the output every time (which froze the feed ~1s).
-            // Some devices refuse it under `.photo`; there it's attached lazily on
-            // the first switch to video instead.
+            // so switching photo↔video needs no session change at all. Some devices
+            // refuse it under `.photo`; there it's attached lazily on first video.
             if self.session.canAddOutput(self.movieOutput) {
                 self.session.addOutput(self.movieOutput)
                 self.movieAdded = true
                 self.movieUnderPhoto = true   // recording coexists with .photo → no swap on switch
-                if let mc = self.movieOutput.connection(with: .video),
-                   mc.isVideoRotationAngleSupported(90) { mc.videoRotationAngle = 90 }
             }
 
             self.session.commitConfiguration()
+            self.applyConnectionGeometry(front: false)
 
             let maxZ = min(device.activeFormat.videoMaxZoomFactor, 8.0)
             self.session.startRunning()
@@ -222,19 +232,11 @@ final class CameraController: NSObject {
                 self.session.addInput(input)
                 self.videoDevice = device
             }
-            if let conn = self.photoOutput.connection(with: .video),
-               conn.isVideoRotationAngleSupported(90) {
-                conn.videoRotationAngle = 90
-            }
-            if let vc = self.videoOutput.connection(with: .video) {
-                if vc.isVideoRotationAngleSupported(90) { vc.videoRotationAngle = 90 }
-                if vc.isVideoMirroringSupported { vc.isVideoMirrored = (newPos == .front) }
-            }
-            if let mc = self.movieOutput.connection(with: .video) {
-                if mc.isVideoRotationAngleSupported(90) { mc.videoRotationAngle = 90 }
-                if mc.isVideoMirroringSupported { mc.isVideoMirrored = (newPos == .front) }
-            }
             self.session.commitConfiguration()
+            // The new input rebuilt the connections — orient them now, not before
+            // the commit (setting it earlier was discarded, so the front camera
+            // came back sideways).
+            self.applyConnectionGeometry(front: newPos == .front)
             let maxZ = min(self.videoDevice?.activeFormat.videoMaxZoomFactor ?? 1, 8.0)
             self.onMain {
                 self.position = newPos
@@ -321,10 +323,6 @@ final class CameraController: NSObject {
 
     // MARK: Photo / video mode
 
-    /// Switch between stills and movie capture. The movie output is attached only
-    /// in video mode (under `.high`), and removed for photo mode (so the `.photo`
-    /// preset — best still quality — is never asked to host it). The live preview
-    /// also stops being graded in video mode so it matches the straight recording.
     /// True when photo↔video needs no session reconfiguration (the movie output
     /// shares the `.photo` preset), so the UI can switch instantly with no cover.
     var switchIsInstant: Bool { movieUnderPhoto }
@@ -350,10 +348,6 @@ final class CameraController: NSObject {
                     self.session.addOutput(self.movieOutput)
                     self.movieAdded = true
                 }
-                if let mc = self.movieOutput.connection(with: .video) {
-                    if mc.isVideoRotationAngleSupported(90) { mc.videoRotationAngle = 90 }
-                    if mc.isVideoMirroringSupported { mc.isVideoMirrored = mirror }
-                }
             } else {
                 // Keep the movie output attached (fast future switches). Only pull
                 // it if this device won't accept the `.photo` preset alongside it.
@@ -364,11 +358,9 @@ final class CameraController: NSObject {
                     if self.session.canSetSessionPreset(.photo) { self.session.sessionPreset = .photo }
                 }
             }
-            // Re-assert the preview connection's rotation — a preset change can
-            // reset it, which would leave the Metal viewfinder sideways.
-            if let vc = self.videoOutput.connection(with: .video),
-               vc.isVideoRotationAngleSupported(90) { vc.videoRotationAngle = 90 }
             self.session.commitConfiguration()
+            // A preset change can reset the connections — re-orient after commit.
+            self.applyConnectionGeometry(front: mirror)
             let maxZ = min(self.videoDevice?.activeFormat.videoMaxZoomFactor ?? 1, 8.0)
             self.onMain { self.maxZoom = maxZ; completion() }
         }
@@ -389,11 +381,9 @@ final class CameraController: NSObject {
                 self.onMain { let h = self.recordHandler; self.recordHandler = nil; h?(nil) }
                 return
             }
+            // Adding the mic rebuilds connections, so re-orient afterwards.
             self.ensureAudioInput()
-            if let mc = self.movieOutput.connection(with: .video) {
-                if mc.isVideoRotationAngleSupported(90) { mc.videoRotationAngle = 90 }
-                if mc.isVideoMirroringSupported { mc.isVideoMirrored = mirror }
-            }
+            self.applyConnectionGeometry(front: mirror)
             let url = FileManager.default.temporaryDirectory
                 .appendingPathComponent(UUID().uuidString).appendingPathExtension("mov")
             self.movieOutput.startRecording(to: url, recordingDelegate: self)

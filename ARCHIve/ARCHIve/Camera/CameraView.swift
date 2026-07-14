@@ -82,7 +82,9 @@ struct CameraView: View {
         }
         .sheet(isPresented: $showProjectPicker) {
             ProjectPickerSheet(projects: existingProjects, current: camera.currentProject) { name in
-                camera.currentProject = name?.isEmpty == true ? nil : name
+                // Never store an empty/blank name — unfiled is nil.
+                let n = (name ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                camera.currentProject = n.isEmpty ? nil : n
             }
         }
     }
@@ -276,11 +278,14 @@ struct CameraView: View {
                 reuseTags = (reuseTags == nil) ? latest?.humanTags : nil
             }
             // Tilt (keystone) is a top-level control here in photo mode; it
-            // toggles the correction slider above the shutter. Hidden for video.
+            // toggles the correction slider above the shutter. Hidden for video
+            // (the look/tilt pipeline is stills-only) — fading rather than
+            // popping, so the pill reflows smoothly on a mode switch.
             if camera.mediaMode == .photo {
                 pillButton("skew", active: camera.keystoneStrength != 0) {
                     withAnimation(.easeInOut(duration: 0.2)) { tool = (tool == .keystone) ? .none : .keystone }
                 }
+                .transition(.opacity.combined(with: .scale(scale: 0.6)))
             }
             // The gear opens flash / timer / aspect / effect / grain / grid /
             // level / settings; it lights up when a colour look is active.
@@ -290,6 +295,7 @@ struct CameraView: View {
         }
         .padding(.horizontal, 10).padding(.vertical, 3)
         .background(Capsule().fill(.ultraThinMaterial).environment(\.colorScheme, .dark))
+        .animation(.easeInOut(duration: 0.22), value: camera.mediaMode)
     }
 
     /// A thin red frame around the capture area — the "recording" signal
@@ -339,11 +345,19 @@ struct CameraView: View {
 
     /// Project mode replaces the Type segment with a Pick-project pill
     /// (matches the old app); tap to choose / change the project.
+    /// The pill's label — the project name, or the placeholder when unfiled.
+    /// Treats an empty/whitespace name as unfiled too, so the placeholder can
+    /// never be replaced by a blank label.
+    private var projectLabel: String {
+        let name = (camera.currentProject ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? "Pick project" : name
+    }
+
     private var projectPill: some View {
         Button { showProjectPicker = true } label: {
             HStack(spacing: 7) {
                 Circle().fill(Palette.lemon).frame(width: 7, height: 7)
-                Text(camera.currentProject ?? "Pick project")
+                Text(projectLabel)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white)
             }
