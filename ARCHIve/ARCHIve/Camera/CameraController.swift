@@ -140,7 +140,15 @@ final class CameraController: NSObject {
             // Stills and movies are oriented by the connection instead (they carry it
             // as EXIF / a track transform) and come out right; a late setting doesn't
             // matter for them, since nothing is shown live.
-            conn.isVideoMirrored = (name == "preview") ? false : front
+            // preview: never mirror here — the pipeline mirrors it (see delegate).
+            // photo: never mirror — selfies save unmirrored like the native
+            //   default, and this connection can't be trusted to apply settings
+            //   predictably anyway (it claims rotations it doesn't perform).
+            // movie: mirror front recordings (matches the mirrored viewfinder).
+            switch name {
+            case "preview", "photo": conn.isVideoMirrored = false
+            default: conn.isVideoMirrored = front
+            }
         }
     }
 
@@ -541,9 +549,20 @@ extension CameraController: AVCapturePhotoCaptureDelegate {
                      error: Error?) {
         let ratio = pendingCropRatio   // set on session queue before capture; safe here
         guard error == nil, let data = photo.fileDataRepresentation(),
-              let image = UIImage(data: data) else {
+              var image = UIImage(data: data) else {
             onMain { self.deliver(nil) }
             return
+        }
+        // The app frames portrait-only, but the front camera's photo connection —
+        // like its preview connection — claims the 90° rotation and then delivers
+        // unrotated landscape pixels stamped as already-upright, so the saved
+        // selfie came out sideways. Normalize EXIF first; if the still is somehow
+        // still landscape, stand it upright (90° CW — the same direction the
+        // viewfinder needed for this sensor). The back camera honours the
+        // rotation, arrives portrait, and skips this.
+        image = CameraController.normalized(image)
+        if image.size.width > image.size.height, let cg = image.cgImage {
+            image = CameraController.normalized(UIImage(cgImage: cg, scale: 1, orientation: .right))
         }
         let processed = processedStill(image, keystone: pendingKeystone ?? 0, look: pendingLook)
         let cropped = CameraController.crop(processed, toRatio: ratio)
