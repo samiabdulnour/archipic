@@ -132,7 +132,7 @@ enum CameraProcessing {
         d[.portra] = Recipe(
             wbTo: 6600, wbTint: 0,                                  // near-neutral — no global orange cast
             bands: [Band(lo: 0, hi: 18, rot: 7, sat: 1.05),        // reds → orange, a touch fuller
-                    Band(lo: 18, hi: 42, rot: 2, sat: 1.14),       // ORANGES punchy
+                    Band(lo: 18, hi: 42, rot: 2, sat: 1.06),       // oranges = SKIN — peachy, not hot
                     Band(lo: 42, hi: 70, rot: 1, sat: 1.20),       // YELLOWS punchy
                     Band(lo: 80, hi: 160, rot: -9, sat: 0.86),     // greens → muted olive (Portra tell)
                     Band(lo: 165, hi: 200, rot: 3, sat: 0.88),     // cyans muted
@@ -140,21 +140,29 @@ enum CameraProcessing {
             shadow: SIMD3(-0.03, 0.012, 0.05), highlight: SIMD3(0.028, 0.01, -0.028), split: 0.7,
             sat: 0.96, con: 0.99, curveY: [0, 0.20, 0.52, 0.82, 0.96], clarity: 0.15, grain: 0.17)
 
-        // ---- SUNNY · airy-white — reds→CRIMSON, Fuji emerald greens, punchy ----
+        // ---- SUNNY · airy-white — crimson reds, Fuji emerald greens, punchy ----
+        // Skin-rebalanced (owner, 2026-07: faces came out red vs a Ricoh GR
+        // reference). Skin lives at ~15–40°: that band now drifts slightly GOLD
+        // (+3°) and desaturates a touch, the crimson push is kept for true reds
+        // only (and halved), highlights tint amber-neutral instead of red, and the
+        // global sat boost is mostly moved out of the way of skin. Landscape
+        // character (emerald greens, teal-leaning skies) is untouched.
         d[.superia] = Recipe(
-            wbTo: 6300, wbTint: -6,
-            bands: [Band(lo: 0, hi: 20, rot: -10, sat: 1.12, val: 0.96), Band(lo: 20, hi: 40, rot: -4, sat: 1.05),
-                    Band(lo: 40, hi: 70, rot: 5, sat: 0.95), Band(lo: 80, hi: 160, rot: 8, sat: 1.22),
+            wbTo: 6360, wbTint: -4,
+            bands: [Band(lo: 0, hi: 20, rot: -5, sat: 1.06, val: 0.97), Band(lo: 20, hi: 42, rot: 3, sat: 0.95),
+                    Band(lo: 42, hi: 70, rot: 5, sat: 0.95), Band(lo: 80, hi: 160, rot: 8, sat: 1.22),
                     Band(lo: 160, hi: 195, rot: 2, sat: 1.12), Band(lo: 195, hi: 250, rot: -7, sat: 1.15)],
-            shadow: SIMD3(-0.035, 0.025, 0.04), highlight: SIMD3(0.03, 0.008, 0.01), split: 0.8,
+            shadow: SIMD3(-0.035, 0.025, 0.04), highlight: SIMD3(0.018, 0.014, 0.0), split: 0.7,
             // Softer contrast: gentle near-linear toe (light shadows keep detail), true
-            // black only at the very bottom; lower contrast. Colour/sat unchanged.
-            sat: 1.12, con: 1.03, curveY: [0, 0.245, 0.50, 0.78, 0.98], clarity: 0.15, grain: 0)
+            // black only at the very bottom; lower contrast.
+            sat: 1.05, con: 1.03, curveY: [0, 0.245, 0.50, 0.78, 0.98], clarity: 0.15, grain: 0)
 
         // ---- VIVID — bold clean colour, deep skies, electric greens ----
         d[.ektar] = Recipe(
             wbTo: 6540, wbTint: 1,
-            bands: [Band(lo: 0, hi: 22, rot: 7, sat: 1.16), Band(lo: 22, hi: 45, rot: 4, sat: 1.05),
+            // Skin band (22–45°) kept near-neutral — Ektar's bold sat was clipping
+            // deep skin to 100%; boldness stays in greens/blues/clarity instead.
+            bands: [Band(lo: 0, hi: 22, rot: 7, sat: 1.08), Band(lo: 22, hi: 45, rot: 2, sat: 0.98),
                     Band(lo: 45, hi: 70, rot: 0, sat: 1.10), Band(lo: 80, hi: 160, rot: -8, sat: 1.12),
                     Band(lo: 160, hi: 195, rot: 0, sat: 1.06), Band(lo: 195, hi: 255, rot: -5, sat: 1.18),
                     Band(lo: 255, hi: 338, rot: -3, sat: 0.92)],
@@ -164,9 +172,10 @@ enum CameraProcessing {
         // ---- OVERCAST · cold-airy — cyan-greens, pastel, cool/clean split ----
         d[.pro400h] = Recipe(
             wbTo: 6900, wbTint: -6,
+            // Skin stays pastel-desaturated but no longer drifts toward red (rot ≈ 0).
             bands: [Band(lo: 80, hi: 165, rot: 15, sat: 0.80), Band(lo: 165, hi: 200, rot: -4, sat: 0.95),
-                    Band(lo: 200, hi: 250, rot: 4, sat: 0.88), Band(lo: 0, hi: 20, rot: -3, sat: 0.78),
-                    Band(lo: 20, hi: 45, rot: -4, sat: 0.82)],
+                    Band(lo: 200, hi: 250, rot: 4, sat: 0.88), Band(lo: 0, hi: 20, rot: -1, sat: 0.78),
+                    Band(lo: 20, hi: 45, rot: -1, sat: 0.82)],
             shadow: SIMD3(-0.03, 0.03, 0.045), highlight: SIMD3(-0.012, 0, 0.008), split: 0.7,
             sat: 0.85, con: 0.95, curveY: [0, 0.23, 0.49, 0.80, 0.94], clarity: 0.13, grain: 0.14)
 
@@ -338,19 +347,44 @@ enum CameraProcessing {
         return f.outputImage ?? ci
     }
 
-    /// Apply a look's hue bands to one colour: rotate hue + scale sat/value within
-    /// each band. Greens are kept from crossing into cyan (≤178°).
+    private static func smoothstep(_ e0: Float, _ e1: Float, _ x: Float) -> Float {
+        let t = min(max((x - e0) / (e1 - e0), 0), 1)
+        return t * t * (3 - 2 * t)
+    }
+
+    /// Feathered weight of hue `h` in band `b` (hue-circle aware). 1 deep inside
+    /// the band, easing to 0 across ~10° outside its edges, so neighbouring bands
+    /// BLEND instead of snapping. Hard band edges were visible on faces: skin spans
+    /// roughly 15–40°, so a face straddled two bands with different treatments and
+    /// came out blotchy where the boundary cut across it.
+    private static func bandWeight(_ h: Float, _ b: Band) -> Float {
+        let f: Float = min(10, (b.hi - b.lo) / 2)
+        for hh in [h, h - 360, h + 360] where hh >= b.lo - f && hh <= b.hi + f {
+            return min(smoothstep(b.lo - f, b.lo + f, hh),
+                       1 - smoothstep(b.hi - f, b.hi + f, hh))
+        }
+        return 0
+    }
+
+    /// Apply a look's hue bands to one colour: rotate hue + scale sat/value by the
+    /// feather-weighted sum of every band covering this hue. Greens are kept from
+    /// crossing into cyan (≤178°).
     private static func bandMap(_ rgb: SIMD3<Float>, _ bands: [Band]) -> SIMD3<Float> {
         var hsv = rgb2hsv(rgb)
         let h = hsv.x
-        for b in bands where h >= b.lo && h <= b.hi {
-            var nh = h + b.rot
-            if b.rot > 0 && h < 180 && nh > 178 { nh = 178 }   // don't tip greens into cyan
-            hsv.x = nh
-            hsv.y = min(hsv.y * b.sat, 1)
-            hsv.z = hsv.z * b.val
-            break
+        var rot: Float = 0, satM: Float = 1, valM: Float = 1
+        for b in bands {
+            let w = bandWeight(h, b)
+            guard w > 0 else { continue }
+            rot += w * b.rot
+            satM += w * (b.sat - 1)
+            valM += w * (b.val - 1)
         }
+        var nh = h + rot
+        if rot > 0 && h < 180 && nh > 178 { nh = 178 }   // don't tip greens into cyan
+        hsv.x = nh
+        hsv.y = min(hsv.y * max(satM, 0), 1)
+        hsv.z = hsv.z * max(valM, 0)
         if hsv.x < 0 { hsv.x += 360 }
         if hsv.x >= 360 { hsv.x -= 360 }
         return hsv2rgb(hsv)
