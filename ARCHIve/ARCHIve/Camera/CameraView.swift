@@ -352,12 +352,16 @@ struct CameraView: View {
         return name.isEmpty ? nil : name
     }
 
-    /// Unfiled shows just the lemon dot (a quiet, minimal target); once a project
-    /// is chosen the pill grows to carry its name.
+    /// Unfiled shows just the folder icon (matches the gallery's Project lens);
+    /// once a project is chosen the pill grows to carry its name, and the folder
+    /// fills in lemon to read as "filed".
     private var projectPill: some View {
         Button { showProjectPicker = true } label: {
             HStack(spacing: 7) {
-                Circle().fill(Palette.lemon).frame(width: 7, height: 7)
+                Image(systemName: filedProject == nil ? "folder" : "folder.fill")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(filedProject == nil ? .white : Palette.lemon)
+                    .rotatingIcon(motion.iconAngle)
                 if let filedProject {
                     Text(filedProject)
                         .font(.system(size: 14, weight: .semibold))
