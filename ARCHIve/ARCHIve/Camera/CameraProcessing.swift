@@ -89,6 +89,12 @@ enum CameraProcessing {
         var mono = false
         var blueDarken: Float = 0           // <1 darkens skies before mono (Acros yellow-filter)
         var bloom: Float = 0                // halation glow intensity (night looks)
+        // Saturation CONTRAST, baked into the cube: pushes saturation away from
+        // `satPivot` — muting already-dull colours while making vivid ones POP.
+        // 1 = off. This is how Eterna keeps a muted green ambient while its neons
+        // stay punchy: a flat global desaturation can't separate the two.
+        var satContrast: Float = 1
+        var satPivot: Float = 0.4
     }
 
     // MARK: Colour looks — recipe-driven pipeline
@@ -212,20 +218,20 @@ enum CameraProcessing {
         // UP, deeper toe, more bloom (phosphor glow).
         d[.eterna] = Recipe(
             wbTo: 7200, wbTint: 30,                                    // cool + a moderate green cast
-            bands: [Band(lo: 80, hi: 170, rot: 4, sat: 1.18),          // greens lifted, not neon
-                    Band(lo: 170, hi: 200, rot: -6, sat: 0.90),        // cyans eased toward green
-                    Band(lo: 200, hi: 260, rot: -10, sat: 0.70),       // blues → teal, pulled back
-                    Band(lo: 0, hi: 30, rot: 5, sat: 0.52),            // reds: an accent, not the subject
-                    Band(lo: 30, hi: 60, rot: 6, sat: 0.72),           // sodium/tungsten survive — the accent
-                    Band(lo: 285, hi: 350, rot: -15, sat: 0.40)],      // magenta/pink neon pulled well back
-            // A moderate global green (wbTint) is the Matrix cast; the shadow split
-            // adds a little more green down low so it's SHAPED (stronger in the
-            // shadows/mids, gentler in the highlights) rather than a flat wash.
-            // Blue never below green (green−blue would read yellow).
-            shadow: SIMD3(-0.05, 0.05, 0.006), highlight: SIMD3(-0.012, 0.014, 0.004), split: 0.9,
-            // DESATURATE hard, then cast green: a muted, contrasty frame lets the
-            // green read cinematic; a saturated one turns it neon. Deep blacks.
-            sat: 0.72, con: 1.10, curveY: [0, 0.17, 0.45, 0.80, 0.96], clarity: 0.2, grain: 0.16, bloom: 0.14)
+            bands: [Band(lo: 80, hi: 170, rot: 4, sat: 1.20),          // greens → lime
+                    Band(lo: 170, hi: 200, rot: -8, sat: 1.05),        // cyans → green-teal
+                    Band(lo: 200, hi: 260, rot: -12, sat: 1.02),       // blues → teal, keep the punch
+                    Band(lo: 0, hi: 30, rot: 4, sat: 1.05),            // reds: neon punch comes from satContrast,
+                    Band(lo: 30, hi: 65, rot: 6, sat: 1.05),           // amber: keep the per-hue boost gentle so
+                    Band(lo: 285, hi: 350, rot: -8, sat: 1.05)],       // magenta: skin/lit faces don't run hot
+            // Green from the shadow split (mood down low); highlights near-neutral
+            // so bright neon isn't tinted. Blue never below green (→ yellow).
+            shadow: SIMD3(-0.05, 0.055, 0.006), highlight: SIMD3(-0.01, 0.012, 0.004), split: 0.9,
+            // The Matrix split: MUTE the dull ambient, POP the vivid neon — done by
+            // satContrast (below), not a flat desaturation (which kills the neon
+            // too). Dark, contrasty, crisp; the shadow split greens the ambient.
+            sat: 0.98, con: 1.14, curveY: [0, 0.15, 0.44, 0.80, 0.97], clarity: 0.30, grain: 0.16, bloom: 0.16,
+            satContrast: 1.5, satPivot: 0.34)
 
         // ---- B&W · soft — gritty grain, airy skies, faint warm tone ----
         d[.trix] = Recipe(
@@ -246,7 +252,7 @@ enum CameraProcessing {
         var d: [CameraLook: Data] = [:]
         for look in CameraLook.allCases {
             guard let r = recipes[look], !r.mono, !r.bands.isEmpty else { continue }
-            d[look] = makeCube { bandMap($0, r.bands) }
+            d[look] = makeCube { bandMap($0, r.bands, satContrast: r.satContrast, satPivot: r.satPivot) }
         }
         return d
     }()
@@ -384,7 +390,8 @@ enum CameraProcessing {
     /// Apply a look's hue bands to one colour: rotate hue + scale sat/value by the
     /// feather-weighted sum of every band covering this hue. Greens are kept from
     /// crossing into cyan (≤178°).
-    private static func bandMap(_ rgb: SIMD3<Float>, _ bands: [Band]) -> SIMD3<Float> {
+    private static func bandMap(_ rgb: SIMD3<Float>, _ bands: [Band],
+                                satContrast: Float = 1, satPivot: Float = 0.4) -> SIMD3<Float> {
         var hsv = rgb2hsv(rgb)
         let h = hsv.x
         var rot: Float = 0, satM: Float = 1, valM: Float = 1
@@ -398,7 +405,11 @@ enum CameraProcessing {
         var nh = h + rot
         if rot > 0 && h < 180 && nh > 178 { nh = 178 }   // don't tip greens into cyan
         hsv.x = nh
-        hsv.y = min(hsv.y * max(satM, 0), 1)
+        var s = hsv.y * max(satM, 0)
+        // Saturation contrast: expand away from the pivot so dull colours go duller
+        // (muted green ambient) and vivid ones go more vivid (punchy neon).
+        if satContrast != 1 { s = satPivot + (s - satPivot) * satContrast }
+        hsv.y = min(max(s, 0), 1)
         hsv.z = hsv.z * max(valM, 0)
         if hsv.x < 0 { hsv.x += 360 }
         if hsv.x >= 360 { hsv.x -= 360 }
