@@ -107,6 +107,7 @@ final class CameraController: NSObject {
     /// Portrait crop ratio (width/height) the saved photo is cropped to. Set by
     /// the view from the live framing geometry so the save matches the preview.
     @ObservationIgnored private var pendingCropRatio: CGFloat = 3.0 / 4.0
+    @ObservationIgnored private var pendingFront = false   // was this capture on the front camera?
 
     private func onMain(_ work: @escaping () -> Void) {
         if Thread.isMainThread { work() } else { DispatchQueue.main.async(execute: work) }
@@ -496,12 +497,14 @@ final class CameraController: NSObject {
         let flash = self.flashMode
         let keystone: Double? = keystoneOn ? keystoneStrength : nil
         let look = self.colorLook
+        let front = (position == .front)
 
         sessionQueue.async { [weak self] in
             guard let self else { return }
             self.pendingKeystone = keystone
             self.pendingLook = look
             self.pendingCropRatio = cropRatio
+            self.pendingFront = front
             // No camera (e.g. the Simulator) → safe no-op instead of throwing.
             guard self.session.isRunning, self.photoOutput.connection(with: .video) != nil else {
                 self.onMain { self.deliver(nil) }
@@ -568,6 +571,13 @@ extension CameraController: AVCapturePhotoCaptureDelegate {
         image = CameraController.normalized(image)
         if image.size.width > image.size.height, let cg = image.cgImage {
             image = CameraController.normalized(UIImage(cgImage: cg, scale: 1, orientation: .left))
+        }
+        // Un-mirror the selfie. This front camera ignores the connection's
+        // mirroring setting (as it ignores rotation), so it saves mirrored
+        // regardless — flip it back here so a saved selfie reads naturally (text
+        // the right way round), matching how others see you.
+        if pendingFront, let cg = image.cgImage {
+            image = CameraController.normalized(UIImage(cgImage: cg, scale: image.scale, orientation: .upMirrored))
         }
         let processed = processedStill(image, keystone: pendingKeystone ?? 0, look: pendingLook)
         let cropped = CameraController.crop(processed, toRatio: ratio)
