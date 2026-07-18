@@ -1,67 +1,83 @@
 import SwiftUI
+import CoreImage
+import Metal
 
-/// Film-simulation picker as a horizontal **name wheel** above the shutter —
-/// like a camera mode dial. Tap a name to jump to it, or swipe to rotate; the
-/// centred name is selected. Names only, no thumbnails. Less is more.
-struct LooksWheel: View {
+/// Native-Camera-style film-look picker: a horizontal strip of thumbnail swatches
+/// — the live scene rendered through each look — that sits BELOW the shutter, so
+/// the capture frame keeps its full size. Tap a swatch to select; the selected
+/// one gets a white border. The caller shows the look's name above the shutter.
+struct LooksStrip: View {
     @Bindable var camera: CameraController
-    @State private var centered: CameraLook?
+    @State private var thumbs: [String: UIImage] = [:]
 
-    private let itemWidth: CGFloat = 132
-    private let hitHeight: CGFloat = 46     // tall, finger-friendly tap target
+    // Metal-backed, matching the live camera path; caches off so repeated opens
+    // don't creep memory.
+    private static let ctx: CIContext = {
+        if let d = MTLCreateSystemDefaultDevice() {
+            return CIContext(mtlDevice: d, options: [.cacheIntermediates: false])
+        }
+        return CIContext(options: [.cacheIntermediates: false])
+    }()
+
+    private let swatch: CGFloat = 52
 
     var body: some View {
-        VStack(spacing: 6) {
-            wheel
-            // Just the "best for" time/weather line — the long description is
-            // dropped so the tray stays short and the capture frame stays large.
-            if let look = centered {
-                Label(look.recommendation.text, systemImage: look.recommendation.icon)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(Palette.lemon.opacity(0.9))
-                    .lineLimit(1)
-                    .id(look)
-                    .transition(.opacity)
-                    .animation(.easeInOut(duration: 0.2), value: centered)
-            }
-        }
-    }
-
-    private var wheel: some View {
-        GeometryReader { geo in
-            let side = max(0, (geo.size.width - itemWidth) / 2)
+        ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 0) {
+                HStack(spacing: 8) {
                     ForEach(CameraLook.allCases) { look in
-                        let on = centered == look
-                        Text(look.rawValue.uppercased())
-                            .font(.system(size: 11, weight: on ? .semibold : .regular))
-                            .tracking(1.4)
-                            .foregroundStyle(on ? Palette.lemon : .white.opacity(0.5))
-                            // Visible text stays small, but the whole 132×46 slot
-                            // is tappable so a fingertip can't miss between names.
-                            .frame(width: itemWidth, height: hitHeight)
-                            .contentShape(Rectangle())
-                            .id(look)
-                            // Tap any name to centre + select it — no need to nudge
-                            // the swipe just right.
-                            .onTapGesture {
-                                withAnimation(.snappy(duration: 0.28)) { centered = look }
-                            }
+                        swatchButton(look).id(look)
                     }
                 }
-                .scrollTargetLayout()
+                .padding(.horizontal, 6)
             }
-            .scrollTargetBehavior(.viewAligned)
-            .scrollPosition(id: $centered, anchor: .center)
-            .contentMargins(.horizontal, side, for: .scrollContent)
-            .onAppear { centered = camera.colorLook }
-            .onChange(of: centered) { _, v in
-                guard let v, v != camera.colorLook else { return }
-                camera.setColorLook(v)
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            }
+            .onAppear { proxy.scrollTo(camera.colorLook, anchor: .center) }
         }
-        .frame(height: hitHeight)
+        .frame(height: swatch)
+        .task { await render() }
+    }
+
+    private func swatchButton(_ look: CameraLook) -> some View {
+        let on = camera.colorLook == look
+        return Button {
+            withAnimation(.snappy(duration: 0.2)) { camera.setColorLook(look) }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        } label: {
+            ZStack {
+                if let img = thumbs[look.rawValue] {
+                    Image(uiImage: img).resizable().scaledToFill()
+                } else {
+                    Rectangle().fill(.white.opacity(0.10))
+                }
+            }
+            .frame(width: swatch, height: swatch)
+            .clipShape(RoundedRectangle(cornerRadius: 9))
+            .overlay(RoundedRectangle(cornerRadius: 9)
+                .strokeBorder(on ? Color.white : Color.white.opacity(0.18), lineWidth: on ? 2.5 : 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Render each look once from the current preview frame, progressively (a
+    /// `Task.yield` between renders keeps the UI responsive). A nil frame — e.g.
+    /// the Simulator, which has no camera — leaves neutral placeholder swatches.
+    private func render() async {
+        guard let base = camera.latestFrame else { return }
+        let e = base.extent
+        guard e.width > 0, e.height > 0 else { return }
+        // Centre-square crop → small, so each look renders cheaply.
+        let side = min(e.width, e.height)
+        let crop = CGRect(x: e.midX - side / 2, y: e.midY - side / 2, width: side, height: side)
+        let sq = base.cropped(to: crop)
+            .transformed(by: CGAffineTransform(translationX: -crop.minX, y: -crop.minY))
+        let f = 140 / side
+        let small = sq.transformed(by: CGAffineTransform(scaleX: f, y: f))
+        for look in CameraLook.allCases {
+            let g = CameraProcessing.colored(small, look: look, applyGrain: false)
+            if let cg = Self.ctx.createCGImage(g, from: g.extent) {
+                thumbs[look.rawValue] = UIImage(cgImage: cg)
+            }
+            await Task.yield()
+        }
     }
 }

@@ -129,13 +129,11 @@ struct CameraView: View {
         let fullW = geo.size.width
         let fullH = geo.size.height + topSafe + botSafe   // physical screen height
         let topReserve = topSafe + 74                     // top pill row + breathing room so the frame sits a little lower
-        // Reserve extra room when the looks/keystone tray (or the active-effect
-        // reminder chips) sit above the shutter, so nothing touches the 4:3 border.
-        let trayOpen = tool != .none
+        // The tool pickers now live in the bottom control band (below the shutter,
+        // native-style), so opening them no longer shrinks the frame. Only the
+        // look name/weather chip sits above the shutter — reserve a little for it.
         let tiltActive = camera.keystoneStrength != 0
-        // Looks tray is now compact (name wheel + one weather line), so it needs
-        // little more room than the tilt slider — the frame stays large.
-        let bottomReserve = botSafe + 172 + (trayOpen ? (tool == .looks ? 80 : 70) : (tiltActive ? 44 : 0))
+        let bottomReserve = botSafe + 172 + (tool == .looks ? 46 : (tiltActive && tool == .none ? 44 : 0))
         let availH = max(0, fullH - topReserve - bottomReserve)
         let frameH = min(availH, fullW / ratio)
         let frameW = min(fullW, frameH * ratio)
@@ -233,25 +231,18 @@ struct CameraView: View {
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 16) {
-                // In full-bleed (16:9) the zoom bar floats above the shutter;
-                // in framed modes it rides the crop window's bottom edge instead.
-                if isFullBleed && camera.maxZoom > 1.5 { zoomBar }
-                toolTray
+                // Zoom bar floats above the shutter in full-bleed; hidden while a
+                // tool picker is open to keep the area clean.
+                if isFullBleed && camera.maxZoom > 1.5 && tool == .none { zoomBar }
+                // Selected look name + weather above the shutter while picking (native).
+                if tool == .looks { lookNameChip }
                 if tool == .none && camera.keystoneStrength != 0 && camera.mediaMode == .photo {
                     activeEffectChips
                 }
                 if camera.mediaMode == .video { recordButton } else { shutterButton }
-                ZStack {
-                    HStack {
-                        thumbnailButton.opacity(camera.isRecording ? 0.35 : 1)
-                            .disabled(camera.isRecording)
-                        Spacer()
-                        flipButton.opacity(camera.isRecording ? 0.35 : 1)
-                            .disabled(camera.isRecording)
-                    }
-                    // Hide the media toggle while recording (like the native Camera).
-                    if !camera.isRecording { mediaModeToggle }
-                }
+                // Below the shutter: the normal controls, or — like the native
+                // Camera — the active tool's picker, so the frame never shrinks.
+                bottomControls
             }
             .padding(.horizontal, 22)
             .padding(.top, 14)
@@ -562,25 +553,53 @@ struct CameraView: View {
         }
     }
 
-    /// One effects panel above the shutter — looks OR keystone, never both, so
-    /// the core controls (zoom, shutter) stay uncrowded. A trailing ✕ closes it
-    /// (since the entry points moved into the settings sheet).
-    @ViewBuilder private var toolTray: some View {
+    /// The band directly under the shutter: normally the gallery / flip / mode
+    /// controls, but when a tool is active it becomes that tool's picker (film
+    /// looks or tilt), native-Camera style — so the picker never shrinks the frame.
+    @ViewBuilder private var bottomControls: some View {
         switch tool {
-        case .looks:    trayContainer { LooksWheel(camera: camera) }
-        case .keystone: trayContainer { keystoneSlider }
-        case .none:     EmptyView()
+        case .none:
+            ZStack {
+                HStack {
+                    thumbnailButton.opacity(camera.isRecording ? 0.35 : 1)
+                        .disabled(camera.isRecording)
+                    Spacer()
+                    flipButton.opacity(camera.isRecording ? 0.35 : 1)
+                        .disabled(camera.isRecording)
+                }
+                // Hide the media toggle while recording (like the native Camera).
+                if !camera.isRecording { mediaModeToggle }
+            }
+        case .looks:
+            HStack(spacing: 10) {
+                trayCloseButton
+                LooksStrip(camera: camera)
+            }
+        case .keystone:
+            HStack(spacing: 14) {
+                trayCloseButton
+                keystoneSlider
+            }
         }
     }
 
-    /// Centres the control on screen (so its middle lands exactly above the
-    /// shutter) while the ✕ floats at the trailing edge without nudging it.
-    private func trayContainer<C: View>(@ViewBuilder _ content: () -> C) -> some View {
-        ZStack {
-            content()
-            HStack { Spacer(); trayCloseButton }
+    /// The centred look's name + its "best for" weather hint, shown above the
+    /// shutter while the film-look strip is open (like the native filter name).
+    private var lookNameChip: some View {
+        VStack(spacing: 1) {
+            Text(camera.colorLook.rawValue.uppercased())
+                .font(.system(size: 12, weight: .semibold)).tracking(1)
+                .foregroundStyle(camera.colorLook == .original ? .white : Palette.lemon)
+            Label(camera.colorLook.recommendation.text, systemImage: camera.colorLook.recommendation.icon)
+                .font(.system(size: 9.5, weight: .medium))
+                .foregroundStyle(.white.opacity(0.7))
+                .lineLimit(1)
         }
-        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 12).padding(.vertical, 5)
+        .background(Capsule().fill(.black.opacity(0.4)))
+        .id(camera.colorLook)
+        .transition(.opacity)
+        .animation(.easeInOut(duration: 0.2), value: camera.colorLook)
     }
 
     /// Reminder that a tilt is currently applied, shown above the shutter when no
