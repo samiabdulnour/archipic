@@ -17,7 +17,6 @@ struct CameraView: View {
     @State private var tagTarget: Photo?
 
     @State private var tagMode: TagMode = .full
-    @State private var reuseTags: HumanTags?
 
     // Lite-mode "Saved" toast
     @State private var savedToast: Photo?
@@ -273,9 +272,6 @@ struct CameraView: View {
         HStack(spacing: 8) {
             pillButton(tagMode == .full ? "tag.fill" : "tag", active: tagMode == .full) {
                 tagMode = tagMode == .full ? .lite : .full
-            }
-            pillButton("arrow.2.squarepath", active: reuseTags != nil) {
-                reuseTags = (reuseTags == nil) ? latest?.humanTags : nil
             }
             // Tilt (keystone) is a top-level control here in photo mode; it
             // toggles the correction slider above the shutter. Hidden for video
@@ -790,11 +786,10 @@ struct CameraView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.5, execute: item)
     }
 
-    /// Seed the new capture's tags from any tags being reused from the last shot.
-    /// The Kind (building/element/graphic) is chosen later in tagging, not at
-    /// capture, so a fresh shot starts untagged unless tags are being reused.
+    /// A fresh capture starts untagged — the Kind (building/element/graphic) and
+    /// everything else is chosen later in tagging, not at capture.
     private func prefilledTags() -> HumanTags {
-        reuseTags ?? HumanTags()
+        HumanTags()
     }
 }
 

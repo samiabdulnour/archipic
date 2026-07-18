@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import PDFKit
 
 /// Compose a board from a selection (or edit a saved one): set a title, pick a
 /// layout, reorder by dragging, remove photos, then Save and/or Export a PDF.
@@ -15,6 +16,8 @@ struct BoardComposerView: View {
     @State private var working = false
     @State private var shareURL: URL?
     @State private var showShare = false
+    @State private var previewURL: URL?
+    @State private var showPreview = false
     @State private var showAddPhotos = false
     @State private var confirmDelete = false
 
@@ -90,10 +93,11 @@ struct BoardComposerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
-                ToolbarItem(placement: .primaryAction) {
+                // The ⋯ menu holds the secondary actions; Save is its own button.
+                ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        Button { save() } label: { Label(existing == nil ? "Save board" : "Save changes", systemImage: "tray.and.arrow.down") }
-                            .disabled(order.isEmpty)
+                        Button { Task { await preview() } } label: { Label("Preview", systemImage: "eye") }
+                            .disabled(order.isEmpty || working)
                         Button { Task { await export() } } label: { Label("Export PDF", systemImage: "square.and.arrow.up") }
                             .disabled(order.isEmpty || working)
                         if existing != nil {
@@ -104,6 +108,10 @@ struct BoardComposerView: View {
                         }
                     } label: { Image(systemName: "ellipsis.circle") }
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    Button(existing == nil ? "Save" : "Done") { save() }
+                        .fontWeight(.semibold).disabled(order.isEmpty)
+                }
             }
             .overlay {
                 if working {
@@ -112,6 +120,7 @@ struct BoardComposerView: View {
                 }
             }
             .sheet(isPresented: $showShare) { if let shareURL { ActivityView(items: [shareURL]) } }
+            .sheet(isPresented: $showPreview) { if let previewURL { BoardPreviewSheet(url: previewURL) } }
             .sheet(isPresented: $showAddPhotos) {
                 BoardPhotoPicker(excluding: Set(order)) { ids in
                     for id in ids where !order.contains(id) { order.append(id) }
@@ -157,13 +166,65 @@ struct BoardComposerView: View {
         working = false
         if let url { shareURL = url; showShare = true }
     }
+
+    /// Render the board and show it full-screen — the same PDF that Export
+    /// produces, so it's an exact preview.
+    private func preview() async {
+        guard !working else { return }
+        working = true
+        let url = await BoardRenderer.makePDF(photos: orderedPhotos, layout: layout, title: title)
+        working = false
+        if let url { previewURL = url; showPreview = true }
+    }
+}
+
+/// Full-screen preview of a rendered board PDF, with a Share button.
+private struct BoardPreviewSheet: View {
+    let url: URL
+    @Environment(\.dismiss) private var dismiss
+    @State private var showShare = false
+
+    var body: some View {
+        NavigationStack {
+            PDFKitView(url: url)
+                .ignoresSafeArea(edges: .bottom)
+                .navigationTitle("Preview")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
+                    ToolbarItem(placement: .primaryAction) {
+                        Button { showShare = true } label: { Image(systemName: "square.and.arrow.up") }
+                    }
+                }
+                .sheet(isPresented: $showShare) { ActivityView(items: [url]) }
+        }
+    }
+}
+
+/// A zoomable PDF view (PDFKit) for previewing a rendered board.
+private struct PDFKitView: UIViewRepresentable {
+    let url: URL
+    func makeUIView(context: Context) -> PDFView {
+        let v = PDFView()
+        v.autoScales = true
+        v.backgroundColor = .systemGray6
+        v.document = PDFDocument(url: url)
+        return v
+    }
+    func updateUIView(_ v: PDFView, context: Context) {
+        if v.document?.documentURL != url { v.document = PDFDocument(url: url) }
+    }
 }
 
 /// The shelf of saved boards — tap to reopen, or "+" to start a new one.
 struct BoardsListView: View {
     @Environment(\.modelContext) private var ctx
     @Query(sort: \Board.updatedAt, order: .reverse) private var boards: [Board]
+    @Query private var allPhotos: [Photo]
     @State private var route: Route?
+
+    private var byID: [String: Photo] { Dictionary(allPhotos.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a }) }
+    private func cover(_ b: Board) -> [Photo] { b.photoIDs.prefix(8).compactMap { byID[$0] } }
 
     /// One composer sheet, opened either fresh ("New board") or on a saved board.
     private enum Route: Identifiable {
@@ -189,10 +250,7 @@ struct BoardsListView: View {
                         ForEach(boards) { b in
                             Button { route = .edit(b) } label: {
                                 HStack(spacing: 12) {
-                                    Image(systemName: b.layout.icon)
-                                        .font(.system(size: 18)).foregroundStyle(Palette.coral)
-                                        .frame(width: 38, height: 38)
-                                        .background(RoundedRectangle(cornerRadius: 9).fill(Palette.tile))
+                                    BoardMiniature(photos: cover(b)).frame(width: 44, height: 44)
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(b.title.isEmpty ? "Untitled board" : b.title)
                                             .font(.headline).foregroundStyle(Palette.ink)
@@ -222,6 +280,39 @@ struct BoardsListView: View {
                 }
             }
         }
+    }
+}
+
+/// A little thumbnail of a board for the shelf: one photo fills it, several tile
+/// into a small grid — so a board reads at a glance instead of a generic icon.
+private struct BoardMiniature: View {
+    let photos: [Photo]
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 9)
+            .fill(Palette.tile)
+            .overlay { content }
+            .clipShape(RoundedRectangle(cornerRadius: 9))
+            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(Palette.hairline, lineWidth: 1))
+    }
+
+    @ViewBuilder private var content: some View {
+        if photos.isEmpty {
+            Image(systemName: "doc.richtext").font(.system(size: 16)).foregroundStyle(Palette.ink3)
+        } else if photos.count == 1 {
+            PhotoThumbnail(photo: photos[0])
+        } else {
+            // 2×2 grid; with 2–3 photos the cells cycle so none sit empty.
+            let g = Array(photos.prefix(4))
+            Grid(horizontalSpacing: 1, verticalSpacing: 1) {
+                GridRow { cell(g, 0); cell(g, 1) }
+                GridRow { cell(g, 2); cell(g, 3) }
+            }
+        }
+    }
+
+    private func cell(_ g: [Photo], _ i: Int) -> some View {
+        PhotoThumbnail(photo: g[i % g.count]).clipped()
     }
 }
 

@@ -187,7 +187,7 @@ struct GalleryView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button { showFilter = true } label: { Label("Filter", systemImage: "line.3.horizontal.decrease.circle") }
-                    Button { showLibrary = true } label: { Label("Tag from Photos…", systemImage: "photo.on.rectangle.angled") }
+                    Button { showLibrary = true } label: { Label("From Photos", systemImage: "photo.on.rectangle.angled") }
                     Button { selecting = true } label: { Label("Select", systemImage: "checkmark.circle") }
                     Button { showBoards = true } label: { Label("Boards", systemImage: "doc.richtext") }
                     Divider()
