@@ -15,14 +15,6 @@ struct SettingsView: View {
     @AppStorage("autoSuggestTags") private var autoSuggestTags = true
 
     @State private var newProject = ""
-    @State private var sync = SyncMonitor()
-
-    // Backup
-    @State private var exportURL: URL?
-    @State private var showExportShare = false
-    @State private var showImporter = false
-    @State private var backupMessage = ""
-    @State private var showBackupResult = false
 
     private var derivedProjects: [String] {
         var seen = Set<String>(); var out: [String] = []
@@ -47,12 +39,6 @@ struct SettingsView: View {
                 } header: { header("Smart tagging") } footer: {
                     Text("Uses on-device image recognition (Apple Vision) to suggest a Kind when you tag. Nothing leaves your device; you always confirm.")
                 }
-                Section { iCloudBody } header: { header("iCloud sync") } footer: {
-                    Text("Your archive syncs to your private iCloud and appears on your other devices signed in with the same Apple ID.")
-                }
-                Section { backupBody } header: { header("Backup") } footer: {
-                    Text("Saves all photos + tags to a folder you can keep in Files or iCloud Drive. Restore adds back any photos not already here.")
-                }
                 Section {
                     NavigationLink { HowToUseView() } label: { Text("How to use Archi.vé") }
                     NavigationLink { AboutView() } label: { Text("About Archi.vé") }
@@ -63,113 +49,12 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
-            .onAppear { sync.refreshAccount() }
         }
         .tint(Palette.coral)
         // Appearance is driven at the window level (Settings.applyAppearance),
         // so the sheet — and Auto — update correctly without a per-sheet
         // preferredColorScheme override.
         .onChange(of: appearance) { _, new in Settings.applyAppearance(new) }
-        .sheet(isPresented: $showExportShare) {
-            if let exportURL { ActivityView(items: [exportURL]) }
-        }
-        .fileImporter(isPresented: $showImporter, allowedContentTypes: [.folder]) { result in
-            handleRestore(result)
-        }
-        .alert("Backup", isPresented: $showBackupResult) {
-            Button("OK") { }
-        } message: { Text(backupMessage) }
-    }
-
-    // MARK: iCloud sync
-    @ViewBuilder private var iCloudBody: some View {
-        HStack {
-            Label("iCloud account", systemImage: "person.icloud")
-            Spacer()
-            Text(accountText).foregroundStyle(.secondary)
-        }
-        HStack {
-            Label("Status", systemImage: "arrow.triangle.2.circlepath")
-            Spacer()
-            if sync.isSyncing {
-                HStack(spacing: 6) {
-                    ProgressView().controlSize(.small)
-                    Text("Syncing…").foregroundStyle(.secondary)
-                }
-            } else if sync.lastError != nil {
-                Text("Error").foregroundStyle(.red)
-            } else if let d = sync.lastSync {
-                Text("Synced \(d.formatted(.relative(presentation: .named)))")
-                    .foregroundStyle(.secondary)
-            } else {
-                Text("Idle").foregroundStyle(.secondary)
-            }
-        }
-        if let err = sync.lastError {
-            Text(err).font(.caption).foregroundStyle(.red)
-        }
-    }
-
-    private var accountText: String {
-        switch sync.account {
-        case .checking:  return "Checking…"
-        case .available: return "Available"
-        case .noAccount: return "Not signed in"
-        case .restricted: return "Restricted"
-        case .error:     return "Unavailable"
-        }
-    }
-
-    // MARK: Backup
-    @ViewBuilder private var backupBody: some View {
-        Button {
-            Task {
-                do {
-                    exportURL = try await BackupManager.makeBackup(photos)
-                    showExportShare = true
-                } catch {
-                    backupMessage = "Backup failed: \(error.localizedDescription)"
-                    showBackupResult = true
-                }
-            }
-        } label: {
-            Label("Back up all photos", systemImage: "square.and.arrow.up.on.square")
-        }
-        .disabled(photos.isEmpty)
-
-        Button {
-            showImporter = true
-        } label: {
-            Label("Restore from backup", systemImage: "square.and.arrow.down.on.square")
-        }
-    }
-
-    private func handleRestore(_ result: Result<URL, Error>) {
-        switch result {
-        case .success(let url):
-            let scoped = url.startAccessingSecurityScopedResource()
-            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            do {
-                let res = try BackupManager.restore(from: url, into: modelContext,
-                                                    existingIDs: Set(photos.map(\.id)))
-                if res.added == 0 && res.missingReferences == 0 {
-                    backupMessage = "Nothing new to restore — everything in this backup is already here."
-                } else {
-                    var msg = res.added == 0 ? "No new photos restored."
-                                             : "Restored \(res.added) photo\(res.added == 1 ? "" : "s")."
-                    if res.missingReferences > 0 {
-                        msg += "\n\n\(res.missingReferences) couldn't be restored — their originals are no longer in Photos and this older backup didn't include a copy. Make a fresh backup to keep a self-contained copy."
-                    }
-                    backupMessage = msg
-                }
-            } catch {
-                backupMessage = "Restore failed. Make sure you picked an Archi.vé backup folder.\n\n\(error.localizedDescription)"
-            }
-            showBackupResult = true
-        case .failure(let error):
-            backupMessage = "Restore failed: \(error.localizedDescription)"
-            showBackupResult = true
-        }
     }
 
     private func header(_ t: String) -> some View {

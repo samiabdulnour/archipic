@@ -690,21 +690,13 @@ struct CameraView: View {
             let coord = LocationProvider.shared.last
             let proj = camera.currentProject
             Task { @MainActor in
-                // Save the shot into Photos and keep only a reference — one copy,
-                // no duplicate. If saving isn't permitted, fall back to storing
-                // the pixels in-app so the shot is never lost.
-                let localID = await PhotosLibrary.saveImage(data, coordinate: coord)
-                let photo: Photo
-                if let localID {
-                    photo = Photo(imageData: Data(),
+                // Store the just-captured bytes and show the preview IMMEDIATELY —
+                // the tag sheet / gallery render straight from imageData, so the
+                // Photos write no longer sits on the shutter-to-preview path (the
+                // slow part). The photo is never lost regardless.
+                let photo = Photo(imageData: data,
                                   latitude: coord?.latitude, longitude: coord?.longitude,
-                                  humanTags: prefilledTags(), project: proj,
-                                  assetLocalID: localID, isCameraShot: true)
-                } else {
-                    photo = Photo(imageData: data,
-                                  latitude: coord?.latitude, longitude: coord?.longitude,
-                                  humanTags: prefilledTags(), project: proj)
-                }
+                                  humanTags: prefilledTags(), project: proj, isCameraShot: true)
                 modelContext.insert(photo)
                 try? modelContext.save()
                 savedCount += 1
@@ -715,6 +707,18 @@ struct CameraView: View {
                     // Lite mode: no tag sheet — confirm with a toast offering a
                     // one-tap "Tag now" (like the old app).
                     showSavedToast(photo)
+                }
+                // In the background, move the pixels into Photos and switch this
+                // record to a reference (one copy, no duplicate) — off the hot
+                // path so it never delays the preview. If Photos isn't permitted,
+                // the shot simply stays owned in-app.
+                Task.detached(priority: .utility) {
+                    guard let localID = await PhotosLibrary.saveImage(data, coordinate: coord) else { return }
+                    await MainActor.run {
+                        photo.assetLocalID = localID
+                        photo.imageData = Data()   // pixels now live in Photos
+                        try? modelContext.save()
+                    }
                 }
             }
         }

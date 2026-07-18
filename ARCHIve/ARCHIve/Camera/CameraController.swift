@@ -579,7 +579,13 @@ extension CameraController: AVCapturePhotoCaptureDelegate {
         if pendingFront, let cg = image.cgImage {
             image = CameraController.normalized(UIImage(cgImage: cg, scale: image.scale, orientation: .upMirrored))
         }
-        let processed = processedStill(image, keystone: pendingKeystone ?? 0, look: pendingLook)
+        // Skip the whole Core Image round-trip when there's nothing to grade
+        // (no colour look, no tilt) — the common case. This alone cut a big chunk
+        // off the shutter-to-preview delay.
+        let ks = pendingKeystone ?? 0
+        let processed = (pendingLook == .original && ks == 0)
+            ? image
+            : processedStill(image, keystone: ks, look: pendingLook)
         let cropped = CameraController.crop(processed, toRatio: ratio)
         let jpeg = cropped.jpegData(compressionQuality: 0.9)
         onMain { self.deliver(jpeg) }
