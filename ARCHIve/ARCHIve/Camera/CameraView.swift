@@ -129,11 +129,11 @@ struct CameraView: View {
         let fullW = geo.size.width
         let fullH = geo.size.height + topSafe + botSafe   // physical screen height
         let topReserve = topSafe + 74                     // top pill row + breathing room so the frame sits a little lower
-        // The tool pickers now live in the bottom control band (below the shutter,
-        // native-style), so opening them no longer shrinks the frame. Only the
-        // look name/weather chip sits above the shutter — reserve a little for it.
-        let tiltActive = camera.keystoneStrength != 0
-        let bottomReserve = botSafe + 172 + (tool == .looks ? 46 : (tiltActive && tool == .none ? 44 : 0))
+        // A CONSTANT bottom band (below the shutter) — sized for the film-look
+        // strip + its name — so the capture frame and the shutter never move
+        // between states. When no tool is open the normal controls just sit in
+        // that same fixed band.
+        let bottomReserve = botSafe + 190
         let availH = max(0, fullH - topReserve - bottomReserve)
         let frameH = min(availH, fullW / ratio)
         let frameW = min(fullW, frameH * ratio)
@@ -234,15 +234,14 @@ struct CameraView: View {
                 // Zoom bar floats above the shutter in full-bleed; hidden while a
                 // tool picker is open to keep the area clean.
                 if isFullBleed && camera.maxZoom > 1.5 && tool == .none { zoomBar }
-                // Selected look name + weather above the shutter while picking (native).
-                if tool == .looks { lookNameChip }
-                if tool == .none && camera.keystoneStrength != 0 && camera.mediaMode == .photo {
-                    activeEffectChips
-                }
+                // The shutter always sits here — its position never changes.
                 if camera.mediaMode == .video { recordButton } else { shutterButton }
-                // Below the shutter: the normal controls, or — like the native
-                // Camera — the active tool's picker, so the frame never shrinks.
+                // A FIXED-height band below the shutter: normal controls, or — like
+                // the native Camera — the active tool's picker (with its name above
+                // the swatches). Fixed height ⇒ shutter & frame never move.
                 bottomControls
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 84)
             }
             .padding(.horizontal, 22)
             .padding(.top, 14)
@@ -571,9 +570,13 @@ struct CameraView: View {
                 if !camera.isRecording { mediaModeToggle }
             }
         case .looks:
-            HStack(spacing: 10) {
-                trayCloseButton
-                LooksStrip(camera: camera)
+            // Name + weather ABOVE the swatch strip (the colour preview).
+            VStack(spacing: 5) {
+                lookNameChip
+                HStack(spacing: 10) {
+                    trayCloseButton
+                    LooksStrip(camera: camera)
+                }
             }
         case .keystone:
             HStack(spacing: 14) {
@@ -583,8 +586,8 @@ struct CameraView: View {
         }
     }
 
-    /// The centred look's name + its "best for" weather hint, shown above the
-    /// shutter while the film-look strip is open (like the native filter name).
+    /// The selected look's name + its "best for" weather hint, shown directly
+    /// above the swatch strip (like the native filter name).
     private var lookNameChip: some View {
         VStack(spacing: 1) {
             Text(camera.colorLook.rawValue.uppercased())
@@ -595,40 +598,9 @@ struct CameraView: View {
                 .foregroundStyle(.white.opacity(0.7))
                 .lineLimit(1)
         }
-        .padding(.horizontal, 12).padding(.vertical, 5)
-        .background(Capsule().fill(.black.opacity(0.4)))
         .id(camera.colorLook)
         .transition(.opacity)
         .animation(.easeInOut(duration: 0.2), value: camera.colorLook)
-    }
-
-    /// Reminder that a tilt is currently applied, shown above the shutter when no
-    /// tool tray is open. Tap to switch it off in one click. (No chip for colour
-    /// looks — those are usually left on deliberately; the gear still lights up.)
-    @ViewBuilder private var activeEffectChips: some View {
-        if camera.keystoneStrength != 0 {
-            effectChip(icon: "skew", text: "Tilt") {
-                camera.setKeystoneStrength(0)
-                keystoneWasZero = true
-            }
-        }
-    }
-
-    private func effectChip(icon: String, text: String, _ clear: @escaping () -> Void) -> some View {
-        Button {
-            withAnimation(.easeInOut(duration: 0.18)) { clear() }
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        } label: {
-            HStack(spacing: 5) {
-                Image(systemName: icon).font(.system(size: 11, weight: .semibold))
-                Text(text.uppercased()).font(.system(size: 11, weight: .semibold)).tracking(0.5)
-                Image(systemName: "xmark").font(.system(size: 9, weight: .heavy)).opacity(0.85)
-            }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 11).padding(.vertical, 6)
-            .background(Capsule().fill(Palette.coral.opacity(0.92)))
-        }
-        .buttonStyle(.plain)
     }
 
     private var trayCloseButton: some View {
@@ -845,9 +817,12 @@ private struct CameraSettingsSheet: View {
                 }
                 item("GRID", "grid", active: camera.gridOn) { camera.gridOn.toggle() }
                 item("LEVEL", "level", active: camera.levelOn) { camera.levelOn.toggle() }
-                item("SETTINGS", "gearshape", active: false) { showAppSettings = true }
             }
             .padding(.horizontal, 22)
+            // Settings on its own row, centred under the Grid button.
+            item("SETTINGS", "gearshape", active: false) { showAppSettings = true }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 22)
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
