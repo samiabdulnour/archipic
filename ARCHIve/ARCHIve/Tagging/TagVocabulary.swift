@@ -172,7 +172,7 @@ enum TagVocab {
     }
 
     static let roomSymbols: [String: String] = [
-        "outdoor": "leaf", "lobby": "door.left.hand.open", "hall": "rectangle.portrait", "living": "sofa",
+        "outdoor": "building.2", "lobby": "door.left.hand.open", "hall": "rectangle.portrait", "living": "sofa",
         "bedroom": "bed.double", "workspace": "laptopcomputer", "kitchen": "fork.knife", "bathroom": "shower",
         "dining": "fork.knife", "meeting": "person.3", "auditorium": "theatermasks", "library": "books.vertical",
         "shop": "cart", "showroom": "bag", "bar": "wineglass", "spa": "drop", "lab": "testtube.2",

@@ -146,12 +146,6 @@ enum Settings {
         list(UserDefaults.standard.string(forKey: "customProjects") ?? "")
     }
 
-    /// Film grain on captured photos (and edited-look renders). Default on.
-    /// The live camera preview never shows grain regardless.
-    static var grainEnabled: Bool {
-        UserDefaults.standard.object(forKey: "grainEnabled") as? Bool ?? true
-    }
-
     // MARK: Capture flow steps
 
     /// (key, label) per Kind — the sections the user can show/hide.

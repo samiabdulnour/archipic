@@ -479,7 +479,9 @@ final class CameraController: NSObject {
             let f = maxDim / longest
             ci = ci.transformed(by: CGAffineTransform(scaleX: f, y: f))
         }
-        let processed = CameraProcessing.apply(to: ci, keystone: keystone, look: look, grain: Settings.grainEnabled)
+        // Grain rides with the film look automatically (each look carries its own
+        // amount; Original has none) — no separate toggle. Preview stays grain-free.
+        let processed = CameraProcessing.apply(to: ci, keystone: keystone, look: look, grain: true)
         guard let out = stillContext.createCGImage(processed, from: processed.extent) else { return upright }
         return UIImage(cgImage: out, scale: 1, orientation: .up)
     }

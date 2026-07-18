@@ -184,10 +184,17 @@ struct GalleryView: View {
                 Button(allSelected ? "Deselect All" : "Select All") { toggleSelectAll() }
             }
         } else {
+            // Tag existing library photos — a dedicated button beside the camera
+            // (both leading), since it's a primary way to add to the archive.
+            ToolbarItem(placement: .topBarLeading) {
+                Button { showLibrary = true } label: {
+                    Image(systemName: "photo.on.rectangle.angled")
+                }
+                .accessibilityLabel("Tag from Photos")
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button { showFilter = true } label: { Label("Filter", systemImage: "line.3.horizontal.decrease.circle") }
-                    Button { showLibrary = true } label: { Label("From Photos", systemImage: "photo.on.rectangle.angled") }
                     Button { selecting = true } label: { Label("Select", systemImage: "checkmark.circle") }
                     Button { showBoards = true } label: { Label("Boards", systemImage: "doc.richtext") }
                     Divider()

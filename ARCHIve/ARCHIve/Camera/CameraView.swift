@@ -75,9 +75,7 @@ struct CameraView: View {
             TagSheetView(photo: photo) { tagTarget = nil }
         }
         .sheet(isPresented: $showSettings) {
-            CameraSettingsSheet(camera: camera) { selected in
-                withAnimation(.easeInOut(duration: 0.2)) { tool = selected }
-            }
+            CameraSettingsSheet(camera: camera, tagMode: $tagMode)
         }
         .sheet(isPresented: $showProjectPicker) {
             ProjectPickerSheet(projects: existingProjects, current: camera.currentProject) { name in
@@ -266,26 +264,26 @@ struct CameraView: View {
         }
     }
 
-    // MARK: Top — action pill (tag mode, reuse, tilt, more)
+    // MARK: Top — action pill (film look, tilt, more)
 
     private var actionPill: some View {
         HStack(spacing: 8) {
-            pillButton(tagMode == .full ? "tag.fill" : "tag", active: tagMode == .full) {
-                tagMode = tagMode == .full ? .lite : .full
-            }
-            // Tilt (keystone) is a top-level control here in photo mode; it
-            // toggles the correction slider above the shutter. Hidden for video
-            // (the look/tilt pipeline is stills-only) — fading rather than
-            // popping, so the pill reflows smoothly on a mode switch.
+            // Photo-only: the film look (Colours) and tilt, each opening a tray
+            // above the shutter. Colours is a top-level control now (was buried in
+            // the settings sheet). Hidden for video — the look/tilt pipeline is
+            // stills-only — fading rather than popping so the pill reflows smoothly.
             if camera.mediaMode == .photo {
+                pillButton("camera.filters", active: camera.colorLook != .original) {
+                    withAnimation(.easeInOut(duration: 0.2)) { tool = (tool == .looks) ? .none : .looks }
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.6)))
                 pillButton("skew", active: camera.keystoneStrength != 0) {
                     withAnimation(.easeInOut(duration: 0.2)) { tool = (tool == .keystone) ? .none : .keystone }
                 }
                 .transition(.opacity.combined(with: .scale(scale: 0.6)))
             }
-            // The gear opens flash / timer / aspect / effect / grain / grid /
-            // level / settings; it lights up when a colour look is active.
-            pillButton("circle.grid.3x3.fill", active: camera.colorLook != .original) {
+            // More — flash / timer / aspect / grid / level / tag mode / settings.
+            pillButton("circle.grid.3x3.fill", active: false) {
                 showSettings = true
             }
         }
@@ -801,11 +799,10 @@ struct CameraView: View {
 
 private struct CameraSettingsSheet: View {
     @Bindable var camera: CameraController
-    /// Opens the looks/keystone tray above the shutter, then dismisses the sheet.
-    var onSelectTool: (CameraView.CameraTool) -> Void
+    /// Tag immediately after each shot (Full) vs save-and-tag-later (Lite).
+    @Binding var tagMode: CameraView.TagMode
     @Environment(\.dismiss) private var dismiss
     @State private var showAppSettings = false
-    @AppStorage("grainEnabled") private var grainEnabled = true
 
     private let cols = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
 
@@ -815,15 +812,15 @@ private struct CameraSettingsSheet: View {
             LazyVGrid(columns: cols, spacing: 22) {
                 // Framing applies to both photo and video (shared aspect).
                 item("ASPECT", "aspectratio", active: camera.aspect != .fourThree, badge: camera.aspect.rawValue) { cycleAspect() }
-                // Stills-only controls (flash, timer, film look, grain).
+                // Stills-only controls (flash, timer).
                 if camera.mediaMode == .photo {
                     item("FLASH", flashIcon, active: camera.flashMode != .off) { cycleFlash() }
                     item("TIMER", "timer", active: camera.timerSeconds != 0,
                          badge: camera.timerSeconds == 0 ? nil : "\(camera.timerSeconds)") { cycleTimer() }
-                    item("EFFECT", "camera.filters", active: camera.colorLook != .original) {
-                        onSelectTool(.looks); dismiss()
-                    }
-                    item("GRAIN", "circle.dotted", active: grainEnabled) { grainEnabled.toggle() }
+                }
+                // Tag now (opens tagging after each shot) vs tag later.
+                item("TAG NOW", tagMode == .full ? "tag.fill" : "tag", active: tagMode == .full) {
+                    tagMode = tagMode == .full ? .lite : .full
                 }
                 item("GRID", "grid", active: camera.gridOn) { camera.gridOn.toggle() }
                 item("LEVEL", "level", active: camera.levelOn) { camera.levelOn.toggle() }

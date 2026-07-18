@@ -64,7 +64,7 @@ enum PhotoEdits {
 
         // 3) Tilt + colour look — the same engine as the live camera.
         let look = CameraLook(rawValue: photo.editLookRaw ?? "") ?? .original
-        ci = CameraProcessing.apply(to: ci, keystone: photo.editKeystone, look: look, grain: Settings.grainEnabled)
+        ci = CameraProcessing.apply(to: ci, keystone: photo.editKeystone, look: look, grain: true)
 
         guard let outCG = ctx.createCGImage(ci, from: ci.extent) else { return up }
         ctx.clearCaches()
