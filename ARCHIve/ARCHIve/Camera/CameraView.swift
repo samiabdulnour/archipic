@@ -129,10 +129,10 @@ struct CameraView: View {
         let fullW = geo.size.width
         let fullH = geo.size.height + topSafe + botSafe   // physical screen height
         let topReserve = topSafe + 74                     // top pill row + breathing room so the frame sits a little lower
-        // Shutter + controls sit in a fixed bottom band (172); a tool picker opens
-        // ABOVE the shutter, so the shutter and the bottom row never move — the
-        // capture frame just rides up a little to make room for the picker.
-        let bottomReserve = botSafe + 172 + (tool == .looks ? 78 : (tool == .keystone ? 44 : 0))
+        // CONSTANT reserve — the capture frame never changes size, in any tool
+        // state. The tool pickers swap into the fixed control band below the
+        // shutter (same height as the normal row), so nothing moves.
+        let bottomReserve = botSafe + 172
         let availH = max(0, fullH - topReserve - bottomReserve)
         let frameH = min(availH, fullW / ratio)
         let frameW = min(fullW, frameH * ratio)
@@ -233,12 +233,22 @@ struct CameraView: View {
                 // Zoom bar floats above the shutter in full-bleed; hidden while a
                 // tool picker is open to keep the area clean.
                 if isFullBleed && camera.maxZoom > 1.5 && tool == .none { zoomBar }
-                // Tool picker (film-look strip + name, or tilt) sits ABOVE the
-                // shutter; the frame rides up to make room, the shutter stays put.
-                effectsTray
-                // Shutter and the bottom row keep their positions in every state.
-                if camera.mediaMode == .video { recordButton } else { shutterButton }
-                bottomRow
+                // Shutter — fixed position in every state.
+                Group {
+                    if camera.mediaMode == .video { recordButton } else { shutterButton }
+                }
+                .overlay(alignment: .top) {
+                    // Selected look name + weather, floating above the shutter (an
+                    // overlay adds no layout height, so the frame never moves) —
+                    // like the native filter name.
+                    if tool == .looks { lookNameChip.fixedSize().offset(y: -32) }
+                }
+                // Fixed-height band UNDER the shutter: the normal controls, or the
+                // active tool's picker (film-look swatches / tilt), native-Camera
+                // style. Same height in every state ⇒ frame & shutter never move.
+                bottomBand
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
             }
             .padding(.horizontal, 22)
             .padding(.top, 14)
@@ -549,42 +559,34 @@ struct CameraView: View {
         }
     }
 
-    /// The tool picker above the shutter — film-look swatches (with the name +
-    /// weather above them) or the tilt slider — or nothing when no tool is open.
-    @ViewBuilder private var effectsTray: some View {
+    /// The fixed-height band directly under the shutter: normally the gallery /
+    /// mode / flip row, but while a tool is active it becomes that tool's picker
+    /// (film-look swatches or the tilt slider), native-Camera style. Every case is
+    /// the same height, so swapping never moves the shutter or the frame.
+    @ViewBuilder private var bottomBand: some View {
         switch tool {
         case .none:
-            EmptyView()
-        case .looks:
-            // Name + weather directly ABOVE the swatch strip (the colour preview).
-            VStack(spacing: 6) {
-                lookNameChip
-                HStack(spacing: 10) {
-                    trayCloseButton
-                    LooksStrip(camera: camera)
+            ZStack {
+                HStack {
+                    thumbnailButton.opacity(camera.isRecording ? 0.35 : 1)
+                        .disabled(camera.isRecording)
+                    Spacer()
+                    flipButton.opacity(camera.isRecording ? 0.35 : 1)
+                        .disabled(camera.isRecording)
                 }
+                // Hide the media toggle while recording (like the native Camera).
+                if !camera.isRecording { mediaModeToggle }
+            }
+        case .looks:
+            HStack(spacing: 10) {
+                trayCloseButton
+                LooksStrip(camera: camera)
             }
         case .keystone:
             HStack(spacing: 14) {
                 trayCloseButton
                 keystoneSlider
             }
-        }
-    }
-
-    /// The gallery / mode / flip row at the very bottom — always present, so the
-    /// shutter above it never moves.
-    private var bottomRow: some View {
-        ZStack {
-            HStack {
-                thumbnailButton.opacity(camera.isRecording ? 0.35 : 1)
-                    .disabled(camera.isRecording)
-                Spacer()
-                flipButton.opacity(camera.isRecording ? 0.35 : 1)
-                    .disabled(camera.isRecording)
-            }
-            // Hide the media toggle while recording (like the native Camera).
-            if !camera.isRecording { mediaModeToggle }
         }
     }
 
