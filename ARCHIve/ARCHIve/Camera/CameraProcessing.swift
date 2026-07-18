@@ -141,13 +141,16 @@ enum CameraProcessing {
         // ---- SUNNY · warm — reds→ORANGE, soft, olive greens; teal/amber split ----
         d[.portra] = Recipe(
             wbTo: 6600, wbTint: 0,                                  // near-neutral — no global orange cast
-            bands: [Band(lo: 0, hi: 18, rot: 7, sat: 1.05),        // reds → orange, a touch fuller
-                    Band(lo: 18, hi: 42, rot: 2, sat: 1.06),       // oranges = SKIN — peachy, not hot
+            // Skin was running YELLOW (owner, 2026-07): the reds→orange push bled
+            // up into skin (~25°→33°). Reds still warm to orange, but the push is
+            // gentler and the skin band pulls back toward red, so skin lands ~26–28°.
+            bands: [Band(lo: 0, hi: 18, rot: 5, sat: 1.05),        // reds → orange, softer push
+                    Band(lo: 18, hi: 42, rot: -3, sat: 1.03),      // SKIN — hold at red-orange, not yellow
                     Band(lo: 42, hi: 70, rot: 1, sat: 1.20),       // YELLOWS punchy
                     Band(lo: 80, hi: 160, rot: -9, sat: 0.86),     // greens → muted olive (Portra tell)
                     Band(lo: 165, hi: 200, rot: 3, sat: 0.88),     // cyans muted
                     Band(lo: 200, hi: 250, rot: -6, sat: 0.85)],   // skies soft, not punchy
-            shadow: SIMD3(-0.03, 0.012, 0.05), highlight: SIMD3(0.028, 0.01, -0.028), split: 0.7,
+            shadow: SIMD3(-0.03, 0.012, 0.05), highlight: SIMD3(0.018, 0.008, -0.024), split: 0.7,
             sat: 0.96, con: 0.99, curveY: [0, 0.20, 0.52, 0.82, 0.96], clarity: 0.15, grain: 0.17)
 
         // ---- SUNNY · airy-white — crimson reds, Fuji emerald greens, punchy ----
@@ -159,24 +162,28 @@ enum CameraProcessing {
         // character (emerald greens, teal-leaning skies) is untouched.
         d[.superia] = Recipe(
             wbTo: 6360, wbTint: 4,
-            bands: [Band(lo: 0, hi: 20, rot: -5, sat: 1.06, val: 0.97), Band(lo: 20, hi: 42, rot: 3, sat: 0.95),
+            // Skin hue is fine (~25–27°); the "too red" was rising SATURATION
+            // (owner, 2026-07) — the crimson reds + punch bled saturation into skin.
+            // Skin desaturated a touch here; the emerald greens / teal skies keep it.
+            bands: [Band(lo: 0, hi: 20, rot: -5, sat: 0.98, val: 0.97), Band(lo: 20, hi: 42, rot: 3, sat: 0.82),
                     Band(lo: 42, hi: 70, rot: 5, sat: 0.95), Band(lo: 80, hi: 160, rot: 8, sat: 1.22),
                     Band(lo: 160, hi: 195, rot: 2, sat: 1.12), Band(lo: 195, hi: 250, rot: -7, sat: 1.15)],
             shadow: SIMD3(-0.035, 0.025, 0.04), highlight: SIMD3(0.018, 0.014, 0.0), split: 0.7,
             // Softer contrast: gentle near-linear toe (light shadows keep detail), true
             // black only at the very bottom; lower contrast.
-            sat: 1.05, con: 1.03, curveY: [0, 0.245, 0.50, 0.78, 0.98], clarity: 0.15, grain: 0)
+            sat: 1.0, con: 1.03, curveY: [0, 0.245, 0.50, 0.78, 0.98], clarity: 0.15, grain: 0)
 
         // ---- VIVID — bold clean colour, deep skies, electric greens ----
         d[.ektar] = Recipe(
             wbTo: 6540, wbTint: 1,
-            // Skin band (22–45°) kept near-neutral — Ektar's bold sat was clipping
-            // deep skin to 100%; boldness stays in greens/blues/clarity instead.
-            bands: [Band(lo: 0, hi: 22, rot: 7, sat: 1.08), Band(lo: 22, hi: 45, rot: 2, sat: 0.98),
+            // Skin ran intense/ruddy (owner, 2026-07) — hue pushed toward yellow AND
+            // saturation climbed. Skin band now holds near red-orange (rot −1) and
+            // desaturates; the bold sat stays in greens/blues/clarity, not on faces.
+            bands: [Band(lo: 0, hi: 22, rot: 3, sat: 0.98), Band(lo: 22, hi: 45, rot: -2, sat: 0.78),
                     Band(lo: 45, hi: 70, rot: 0, sat: 1.10), Band(lo: 80, hi: 160, rot: -8, sat: 1.12),
                     Band(lo: 160, hi: 195, rot: 0, sat: 1.06), Band(lo: 195, hi: 255, rot: -5, sat: 1.18),
                     Band(lo: 255, hi: 338, rot: -3, sat: 0.92)],
-            shadow: SIMD3(-0.02, 0.005, 0.04), highlight: SIMD3(0.045, 0.015, -0.03), split: 0.8,
+            shadow: SIMD3(-0.02, 0.005, 0.04), highlight: SIMD3(0.030, 0.012, -0.028), split: 0.8,
             sat: 1.07, con: 1.04, curveY: [0, 0.225, 0.51, 0.83, 0.99], clarity: 0.25, grain: 0.12)
 
         // ---- OVERCAST · cold-airy — cyan-greens, pastel, cool/clean split ----
