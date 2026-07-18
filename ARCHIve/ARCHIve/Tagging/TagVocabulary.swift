@@ -97,7 +97,7 @@ enum TagVocab {
     // Materials (10, multi)
     static let materials: [String] = [
         "Concrete", "Brick", "Stone", "Timber", "Metal",
-        "Glass", "Plaster", "Tile", "Earth", "Other",
+        "Glass", "Plaster", "Tile", "Fabric", "Other",
     ]
 
     // Colors (10) — optional; hex for swatches
@@ -158,7 +158,7 @@ enum TagVocab {
             raw = ["Concrete": "square.grid.3x3.fill", "Brick": "rectangle.split.3x1.fill",
                    "Stone": "mountain.2.fill", "Timber": "tree.fill", "Metal": "circle.hexagongrid.fill",
                    "Glass": "cube.transparent", "Plaster": "paintbrush.fill", "Tile": "checkerboard.rectangle",
-                   "Earth": "square.3.layers.3d", "Other": "ellipsis"][id] ?? "square.dashed"
+                   "Fabric": "curtains.closed", "Other": "ellipsis"][id] ?? "square.dashed"
         case "visual":
             raw = ["Colorful": "paintpalette", "Monochrome": "circle.lefthalf.filled", "Textured": "square.grid.3x3",
                    "Minimal": "square", "Patterned": "circle.grid.2x2", "Ornate": "seal", "Geometric": "triangle",

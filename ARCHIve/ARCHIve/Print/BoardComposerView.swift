@@ -219,6 +219,7 @@ private struct PDFKitView: UIViewRepresentable {
 /// The shelf of saved boards — tap to reopen, or "+" to start a new one.
 struct BoardsListView: View {
     @Environment(\.modelContext) private var ctx
+    @Environment(\.dismiss) private var dismiss
     @Query(sort: \Board.updatedAt, order: .reverse) private var boards: [Board]
     @Query private var allPhotos: [Photo]
     @State private var route: Route?
@@ -269,6 +270,10 @@ struct BoardsListView: View {
             .navigationTitle("Boards")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // Clear way back to the gallery (this is a sheet over it).
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { dismiss() } label: { Label("Gallery", systemImage: "chevron.left") }
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button { route = .new } label: { Label("New board", systemImage: "plus") }
                 }
