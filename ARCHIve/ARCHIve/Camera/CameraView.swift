@@ -216,6 +216,14 @@ struct CameraView: View {
             // Recording signal: a thin red frame around the actual capture area —
             // the phone's rounded edge in full-bleed, the crop rectangle otherwise.
             recordingBorder(isFullBleed: isFullBleed, w: frameW, h: frameH, cx: frameCx, cy: frameCy)
+
+            // Film-look name + weather over the bottom of the frame while picking
+            // (native-Camera style — inside the preview, not below it).
+            if tool == .looks {
+                lookNameChip
+                    .position(x: frameCx,
+                              y: isFullBleed ? (fullH - bottomReserve - 6) : (frameBottom - 34))
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()
@@ -234,15 +242,7 @@ struct CameraView: View {
                 // tool picker is open to keep the area clean.
                 if isFullBleed && camera.maxZoom > 1.5 && tool == .none { zoomBar }
                 // Shutter — fixed position in every state.
-                Group {
-                    if camera.mediaMode == .video { recordButton } else { shutterButton }
-                }
-                .overlay(alignment: .top) {
-                    // Selected look name + weather, floating above the shutter (an
-                    // overlay adds no layout height, so the frame never moves) —
-                    // like the native filter name.
-                    if tool == .looks { lookNameChip.fixedSize().offset(y: -32) }
-                }
+                if camera.mediaMode == .video { recordButton } else { shutterButton }
                 // Fixed-height band UNDER the shutter: the normal controls, or the
                 // active tool's picker (film-look swatches / tilt), native-Camera
                 // style. Same height in every state ⇒ frame & shutter never move.
