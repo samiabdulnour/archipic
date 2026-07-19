@@ -710,6 +710,11 @@ struct CameraView: View {
                 Task.detached(priority: .utility) {
                     guard let localID = await PhotosLibrary.saveImage(data, coordinate: coord) else { return }
                     await MainActor.run {
+                        // The owned Photo may have been deleted while the Photos
+                        // write was in flight; mutating a deleted SwiftData model
+                        // throws an uncatchable ObjC exception, so bail if it's gone
+                        // (its context is cleared once delete+save has run).
+                        guard photo.modelContext != nil else { return }
                         photo.assetLocalID = localID
                         photo.imageData = Data()   // pixels now live in Photos
                         try? modelContext.save()

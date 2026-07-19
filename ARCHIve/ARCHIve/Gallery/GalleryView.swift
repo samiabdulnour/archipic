@@ -453,7 +453,10 @@ struct GalleryView: View {
     /// photos — a `.sheet(isPresented:)` seeded the composer's order state before
     /// the selection was set, so it opened empty.
     private func composeBoard() {
-        let picks = filtered.filter { selected.contains($0.id) }
+        // Filter against all photos (not just the visible/filtered set) so a
+        // selection made before tightening a filter isn't silently dropped —
+        // matching Share and Delete. `photos` keeps the same gallery order.
+        let picks = photos.filter { selected.contains($0.id) }
         guard !picks.isEmpty else { return }
         composerSelection = BoardSelection(photos: picks)
     }
@@ -719,8 +722,12 @@ struct PhotoThumbnail: View {
                         .allowsHitTesting(false)
                 }
             }
-            .task(id: photo.id) {
-                if image != nil { return }
+            .task(id: "\(photo.id)#\(photo.hasEdits)") {
+                // Reset first: this cell is reused for different photos (grid and
+                // board-miniature recycling), so keeping a present image would show
+                // the previous photo's bitmap. Keying on id+hasEdits also reruns
+                // this when an edit is applied elsewhere, so the thumbnail refreshes.
+                image = nil
                 let base: UIImage?
                 // Videos carry their (framing-cropped) poster in imageData.
                 if photo.isVideo, !photo.imageData.isEmpty {

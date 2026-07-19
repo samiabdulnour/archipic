@@ -172,8 +172,16 @@ enum BackupManager {
         guard let all = try? context.fetch(FetchDescriptor<Photo>()) else { return }
         let groups = Dictionary(grouping: all, by: { $0.id })
         var changed = false
-        for (_, dupes) in groups where dupes.count > 1 {
-            func score(_ p: Photo) -> Int { (p.imageData.isEmpty ? 0 : 2) + (p.isUntagged ? 0 : 1) }
+        // Skip empty ids: a CloudKit field-drop can blank `id`, and grouping those
+        // together would treat genuinely different photos as duplicates.
+        for (gid, dupes) in groups where !gid.isEmpty && dupes.count > 1 {
+            // "Has pixels" counts a Photos reference (assetLocalID) as well as
+            // inline bytes, so a tagged reference is never discarded in favour of an
+            // owned-but-untagged copy. Ties then break toward the tagged record.
+            func score(_ p: Photo) -> Int {
+                let hasPixels = !p.imageData.isEmpty || !(p.assetLocalID ?? "").isEmpty
+                return (hasPixels ? 2 : 0) + (p.isUntagged ? 0 : 1)
+            }
             let keep = dupes.max { score($0) < score($1) }
             for p in dupes where p !== keep { context.delete(p); changed = true }
         }

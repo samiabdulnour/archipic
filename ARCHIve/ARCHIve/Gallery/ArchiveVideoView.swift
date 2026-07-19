@@ -15,6 +15,7 @@ struct ArchiveVideoView: View {
 
     @State private var player: AVPlayer?
     @State private var tempURL: URL?
+    @State private var failed = false
 
     var body: some View {
         ZStack {
@@ -26,7 +27,23 @@ struct ArchiveVideoView: View {
                 } else {
                     Rectangle().fill(Palette.tile)
                 }
-                ProgressView().tint(.white)
+                if failed {
+                    // The movie couldn't be resolved — an iCloud reference that
+                    // isn't downloaded (offline), or a clip removed from Photos.
+                    // Show the poster with a clear badge + retry instead of an
+                    // endless spinner.
+                    VStack(spacing: 10) {
+                        Image(systemName: "exclamationmark.icloud").font(.system(size: 34, weight: .light))
+                        Text("Video unavailable").font(.footnote.weight(.medium))
+                        Button("Retry") { failed = false; Task { await load() } }
+                            .buttonStyle(.bordered).tint(.white)
+                    }
+                    .foregroundStyle(.white)
+                    .padding(18)
+                    .background(.black.opacity(0.4), in: RoundedRectangle(cornerRadius: 14))
+                } else {
+                    ProgressView().tint(.white)
+                }
             }
         }
         .clipped()
@@ -38,6 +55,7 @@ struct ArchiveVideoView: View {
     }
 
     private func load() async {
+        failed = false
         // In-app fallback copy (Photos wasn't available at capture): play the bytes.
         if let data = photo.videoData, !data.isEmpty, let url = VideoTools.writeTemp(data) {
             tempURL = url
@@ -47,7 +65,9 @@ struct ArchiveVideoView: View {
         // Reference: pull the AVAsset from Photos (downloads from iCloud if needed).
         if let id = photo.assetLocalID, !id.isEmpty, let asset = await PhotosLibrary.avAsset(localID: id) {
             player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+            return
         }
+        failed = true
     }
 }
 

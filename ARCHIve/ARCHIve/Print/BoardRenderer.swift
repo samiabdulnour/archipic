@@ -256,6 +256,7 @@ enum BoardRenderer {
         }
         cg.saveGState(); cg.addRect(rect); cg.clip()
         let isz = image.size
+        guard isz.width > 0, isz.height > 0 else { cg.restoreGState(); return }
         let scale = max(rect.width / isz.width, rect.height / isz.height)
         let dw = isz.width * scale, dh = isz.height * scale
         image.draw(in: CGRect(x: rect.midX - dw / 2, y: rect.midY - dh / 2, width: dw, height: dh))

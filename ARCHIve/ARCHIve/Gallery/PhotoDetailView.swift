@@ -20,6 +20,7 @@ struct PhotoDetailView: View {
     @State private var currentImage: UIImage?
     @State private var exportingVideo = false   // cropping a video for share
     @State private var shareVideoURL: URL?      // the cropped movie to share
+    @State private var shareFailed = false      // export/download couldn't produce a file
     /// A copied set of human tags, ready to paste onto another photo. Stored as
     /// JSON so it survives paging between photos and app relaunches.
     @AppStorage(TagClipboard.key) private var copiedTagsJSON = ""
@@ -114,6 +115,15 @@ struct PhotoDetailView: View {
         } message: {
             Text("This permanently removes the photo from your archive.")
         }
+        .alert("Couldn't prepare video", isPresented: $shareFailed) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("This video isn't available to share right now. If it lives in iCloud, make sure it has finished downloading, then try again.")
+        }
+        .onDisappear {
+            // Remove the temp export left for the share sheet so it doesn't linger.
+            if let url = shareVideoURL { try? FileManager.default.removeItem(at: url) }
+        }
     }
 
     /// Share the current photo's image, or — for a video — a file cropped to its
@@ -130,6 +140,7 @@ struct PhotoDetailView: View {
                     exportingVideo = false
                     shareVideoURL = url
                     showShare = (url != nil)
+                    shareFailed = (url == nil)
                 }
             }
         } else {

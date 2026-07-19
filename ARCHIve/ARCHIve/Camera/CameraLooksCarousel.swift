@@ -73,10 +73,16 @@ struct LooksStrip: View {
         let f = 140 / side
         let small = sq.transformed(by: CGAffineTransform(scaleX: f, y: f))
         for look in CameraLook.allCases {
-            let g = CameraProcessing.colored(small, look: look, applyGrain: false)
-            if let cg = Self.ctx.createCGImage(g, from: g.extent) {
-                thumbs[look.rawValue] = UIImage(cgImage: cg)
-            }
+            // Render each swatch off the main actor: createCGImage forces a
+            // synchronous GPU flush, and doing ~10 of them inline here (this method
+            // mutates @State, so it runs on the MainActor) hitches the UI as the
+            // strip opens. CIImage/CIContext are immutable and thread-safe.
+            let img = await Task.detached { () -> UIImage? in
+                let g = CameraProcessing.colored(small, look: look, applyGrain: false)
+                guard let cg = Self.ctx.createCGImage(g, from: g.extent) else { return nil }
+                return UIImage(cgImage: cg)
+            }.value
+            if let img { thumbs[look.rawValue] = img }
             await Task.yield()
         }
     }

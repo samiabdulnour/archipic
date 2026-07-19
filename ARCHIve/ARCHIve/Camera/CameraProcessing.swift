@@ -376,6 +376,7 @@ enum CameraProcessing {
     }
 
     private static func smoothstep(_ e0: Float, _ e1: Float, _ x: Float) -> Float {
+        guard e1 > e0 else { return x >= e1 ? 1 : 0 }   // zero-width edge → hard step (avoids NaN)
         let t = min(max((x - e0) / (e1 - e0), 0), 1)
         return t * t * (3 - 2 * t)
     }

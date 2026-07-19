@@ -98,6 +98,11 @@ final class CameraController: NSObject {
     @ObservationIgnored private var awaitingSettledFrame = false
     @ObservationIgnored private var settleDeadline: CFAbsoluteTime = 0
     @ObservationIgnored private var recordHandler: ((URL?) -> Void)?
+    /// Main-thread debounce: true from the instant a start is requested until the
+    /// recording finishes. `isRecording` only flips asynchronously on the session
+    /// queue, so without this a quick double-tap starts a second recording that
+    /// cancels the first (losing the clip). Read and written on the main thread.
+    @ObservationIgnored private var recordPending = false
     @ObservationIgnored private var captureHandler: ((Data?) -> Void)?
     /// True from the moment a capture is requested until its completion fires.
     /// Set/read only on the main thread (capture() and deliver()), so a rapid
@@ -411,12 +416,17 @@ final class CameraController: NSObject {
     /// thread with the finished file URL (or nil on failure) once recording ends.
     func startRecording(completion: @escaping (URL?) -> Void) {
         guard configured else { completion(nil); return }
+        // Debounce on the main thread: ignore a second tap while a start is already
+        // pending or a recording is active (`isRecording` only flips later, on the
+        // session queue, so it can't gate this on its own).
+        guard !recordPending else { return }
+        recordPending = true
         recordHandler = completion
         let mirror = (position == .front)
         sessionQueue.async { [weak self] in
             guard let self else { return }
             guard self.movieAdded, !self.movieOutput.isRecording else {
-                self.onMain { let h = self.recordHandler; self.recordHandler = nil; h?(nil) }
+                self.onMain { self.recordPending = false; let h = self.recordHandler; self.recordHandler = nil; h?(nil) }
                 return
             }
             // Adding the mic rebuilds connections, so re-orient afterwards.
@@ -597,11 +607,17 @@ extension CameraController: AVCapturePhotoCaptureDelegate {
 extension CameraController: AVCaptureFileOutputRecordingDelegate {
     func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL,
                     from connections: [AVCaptureConnection], error: Error?) {
+        // A non-nil error can still accompany a fully usable file (e.g. the
+        // recording was ended by an interruption such as an incoming call);
+        // AVFoundation signals that via the success key, so keep the clip.
+        let finishedOK = error == nil
+            || (error as NSError?)?.userInfo[AVErrorRecordingSuccessfullyFinishedKey] as? Bool == true
         onMain {
             self.isRecording = false
+            self.recordPending = false
             let handler = self.recordHandler
             self.recordHandler = nil
-            handler?(error == nil ? outputFileURL : nil)
+            handler?(finishedOK ? outputFileURL : nil)
         }
     }
 }
