@@ -14,8 +14,8 @@ enum BoardLayout: String, CaseIterable, Identifiable {
     }
     var blurb: String {
         switch self {
-        case .posterB1: return "Big masonry catalogue (700×1000 mm)"
-        case .posterA2: return "Masonry catalogue (420×594 mm)"
+        case .posterB1: return "Big justified wall catalogue (700×1000 mm)"
+        case .posterA2: return "Justified wall catalogue (420×594 mm)"
         case .journalA4: return "Chronological diary, A4 landscape spreads"
         }
     }
@@ -137,53 +137,92 @@ enum BoardRenderer {
               options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).height)
     }
 
-    // MARK: Poster (masonry) — B1 by default, any page size via widthMM/heightMM
+    // MARK: Poster (JUSTIFIED / wall) — B1 by default, any page size via widthMM/heightMM
+    //
+    // Photos flow into horizontal ROWS. Each full row is scaled uniformly so its
+    // photos + gaps span the content width exactly (flush to both side margins, on
+    // every row). Photo heights vary within a row via a stable per-photo factor;
+    // photos are centred on the row's mid-line (taller ones bleed above/below,
+    // never cropped/stretched). The last short row stays natural size, left-aligned.
+    // A caption hangs under each photo (same language as before). Base row height is
+    // binary-searched so the whole wall fits the content height — more photos ⇒
+    // smaller photos, never an overflow. (Ported from catalog-poster.js `wall*`.)
+
+    /// One photo after row justification (scaled sizes, x-relative frame).
+    private struct WallPhoto { let idx: Int; let w: CGFloat; let h: CGFloat }
+    /// One justified row: photos, its image-band height (tallest photo), and the
+    /// tallest caption in the row (measured at each photo's actual width).
+    private struct WallRow { let photos: [WallPhoto]; let imgH: CGFloat; let capH: CGFloat }
 
     static func posterPDF(_ plates: [BoardPlate], widthMM: CGFloat = 700, heightMM: CGFloat = 1000) -> Data {
         let W = widthMM * mm, H = heightMM * mm
         let s = widthMM / 700                       // scale margins/footer with page size
         let MT = 32 * s * mm, MS = 30 * s * mm, MB = 28 * s * mm, FOOT = 16 * s * mm
-        let bodyX = MS, bodyY = MT, bodyW = W - 2 * MS, bodyH = H - MT - MB - FOOT
-        let n = max(1, plates.count)
-        let GUT = max(5, min(16, 16 - CGFloat(n - 6) * (11.0 / 34.0))) * mm
+        let bodyX = MS, bodyY = MT, availW = W - 2 * MS, availH = H - MT - MB - FOOT
         let capGap = 1.5 * mm
 
-        // Balanced column layout (emulates CSS column-count): fill each of c
-        // columns to ~equal height, so the grid spans the FULL content width with
-        // any surplus falling to the bottom — never a staircase that empties the
-        // right side. Pick the fewest columns (largest photos) that still fit.
-        func layout(_ c: Int) -> (cols: [[Int]], colW: CGFloat, maxH: CGFloat) {
-            let w = (bodyW - GUT * CGFloat(c - 1)) / CGFloat(c)
-            // Use the tallest caption as a uniform slot so layout matches drawing.
-            let maxCHforLayout = plates.map { capHeight($0, w) }.max() ?? 0
-            let blocks = plates.map { w / max(0.2, $0.ar) + capGap + maxCHforLayout }
-            // columns needed if no column may exceed height `cap` (order-preserving)
-            func need(_ cap: CGFloat) -> Int {
-                var cols = 1, h: CGFloat = 0
-                for b in blocks { let g = h > 0 ? GUT : 0
-                    if h > 0 && h + g + b > cap { cols += 1; h = b } else { h += g + b } }
-                return cols
-            }
-            // binary-search the SMALLEST column height that still fits in c columns
-            // → the most even split possible (min-max partition).
-            let maxBlock = blocks.max() ?? 0
-            let total = blocks.reduce(0, +) + GUT * CGFloat(max(0, blocks.count - 1))
-            var lo = maxBlock, hi = max(maxBlock, total)
-            for _ in 0..<48 { let mid = (lo + hi) / 2; if need(mid) <= c { hi = mid } else { lo = mid } }
-            let cap = hi
-            var cols: [[Int]] = [], cur: [Int] = []; var h: CGFloat = 0
-            for i in plates.indices {
-                let b = blocks[i], g = cur.isEmpty ? 0 : GUT
-                if !cur.isEmpty && h + g + b > cap { cols.append(cur); cur = []; h = 0 }
-                cur.append(i); h += (cur.count > 1 ? GUT : 0) + b
-            }
-            if !cur.isEmpty { cols.append(cur) }
-            let maxH = cols.map { col in col.reduce(0) { $0 + blocks[$1] } + GUT * CGFloat(max(0, col.count - 1)) }.max() ?? 0
-            return (cols, w, maxH)
+        // Build each caption's attributed string once; measuring only re-flows to
+        // width (the binary search measures many times).
+        let captions = plates.map(caption)
+        func capH(_ i: Int, _ w: CGFloat) -> CGFloat {
+            ceil(captions[i].boundingRect(with: CGSize(width: w, height: .greatestFiniteMagnitude),
+                  options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).height)
         }
-        var chosen = layout(7)
-        for c in 2...7 { let l = layout(c); if l.maxH <= bodyH { chosen = l; break } }
-        let colW = chosen.colW
+
+        // Stable per-photo size factor 0.74…1.30 — a deterministic "random" so the
+        // wall looks organic but never reflows differently between renders.
+        func factor(_ i: Int) -> CGFloat {
+            let x = sin(Double(i + 1) * 12.9898) * 43758.5453
+            return 0.74 + CGFloat(x - floor(x)) * 0.56
+        }
+
+        // Lay out every row at a trial base height; return the rows + total height.
+        func wall(_ baseH: CGFloat) -> (rows: [WallRow], hgap: CGFloat, vgap: CGFloat, total: CGFloat) {
+            let hgap = baseH * 0.44, vgap = baseH * 0.5
+            // 1) Greedy break into rows at pre-scale sizes.
+            var raw: [[(idx: Int, h: CGFloat, iw: CGFloat)]] = []
+            var cur: [(Int, CGFloat, CGFloat)] = []
+            var rowW: CGFloat = 0
+            for i in plates.indices {
+                let h = baseH * factor(i)
+                let iw = max(0.2, plates[i].ar) * h
+                if !cur.isEmpty && rowW + hgap + iw > availW { raw.append(cur); cur = []; rowW = 0 }
+                rowW += (cur.isEmpty ? 0 : hgap) + iw
+                cur.append((i, h, iw))
+            }
+            if !cur.isEmpty { raw.append(cur) }
+            // 2) Justify each row to the full width (short last row stays natural).
+            var rows: [WallRow] = []
+            for (r, row) in raw.enumerated() {
+                let imgSum = row.reduce(0) { $0 + $1.iw }
+                let gaps = hgap * CGFloat(max(0, row.count - 1))
+                var scale = imgSum > 0 ? (availW - gaps) / imgSum : 1
+                if r == raw.count - 1 && imgSum + gaps < availW { scale = 1 }   // last short row: natural
+                var photos: [WallPhoto] = []; var imgH: CGFloat = 0; var ch: CGFloat = 0
+                for p in row {
+                    let w = p.iw * scale, h = p.h * scale
+                    photos.append(WallPhoto(idx: p.idx, w: w, h: h))
+                    imgH = max(imgH, h)
+                    ch = max(ch, capH(p.idx, w))
+                }
+                rows.append(WallRow(photos: photos, imgH: imgH, capH: ch))
+            }
+            // 3) Total laid-out height: each row's image band + caption, plus vgaps.
+            var total: CGFloat = 0
+            for (r, row) in rows.enumerated() {
+                total += row.imgH + capGap + row.capH
+                if r < rows.count - 1 { total += vgap }
+            }
+            return (rows, hgap, vgap, total)
+        }
+
+        // 4) Binary-search the largest base height whose wall fits the content height.
+        var lo = 6 * mm, hi = 95 * mm, best = 6 * mm
+        for _ in 0..<22 {
+            let mid = (lo + hi) / 2
+            if wall(mid).total <= availH { best = mid; lo = mid } else { hi = mid }
+        }
+        let laid = wall(best)
 
         let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: W, height: H))
         return renderer.pdfData { ctx in
@@ -191,27 +230,23 @@ enum BoardRenderer {
             let cg = ctx.cgContext
             UIColor.white.setFill(); cg.fill(CGRect(x: 0, y: 0, width: W, height: H))
 
-            // Precompute the tallest caption across all plates so every image-to-image
-        // gap is identical regardless of how long any individual caption is.
-        let maxCH = plates.map { capHeight($0, colW) }.max() ?? 0
-
-        for (ci, colIdx) in chosen.cols.enumerated() {
-                let x = bodyX + CGFloat(ci) * (colW + GUT)
-                var y = bodyY
-                for i in colIdx {
-                    let p = plates[i]
-                    let imgH = colW / max(0.2, p.ar), ch = capHeight(p, colW)
-                    let imgRect = CGRect(x: x, y: y, width: colW, height: imgH)
-                    drawCover(p.image, in: imgRect, cg)
+            var y = bodyY
+            for row in laid.rows {
+                var x = bodyX
+                for p in row.photos {
+                    // Centre each photo on the row's mid-line; caption hangs below it.
+                    let py = y + (row.imgH - p.h) / 2
+                    let imgRect = CGRect(x: x, y: py, width: p.w, height: p.h)
+                    drawCover(plates[p.idx].image, in: imgRect, cg)
                     hair.setStroke()
                     let o = UIBezierPath(rect: imgRect.insetBy(dx: 0.15 * mm, dy: 0.15 * mm)); o.lineWidth = 0.3 * mm; o.stroke()
-                    // Draw at natural caption height; advance by the uniform slot.
-                    caption(p).draw(with: CGRect(x: x, y: y + imgH + capGap, width: colW, height: ch + 4),
-                                    options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
-                    y += imgH + capGap + maxCH + GUT
+                    captions[p.idx].draw(with: CGRect(x: x, y: py + p.h + capGap, width: p.w, height: row.capH + 4),
+                                         options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
+                    x += p.w + laid.hgap
                 }
+                y += row.imgH + capGap + row.capH + laid.vgap
             }
-            drawFooter(plates: plates, x: bodyX, w: bodyW, y: H - MB - 15 * s * mm, cg: cg)
+            drawFooter(plates: plates, x: bodyX, w: availW, y: H - MB - 15 * s * mm, cg: cg)
         }
     }
 
