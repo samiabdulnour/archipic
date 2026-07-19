@@ -4,6 +4,13 @@ import MapKit
 import PhotosUI
 import ImageIO
 
+/// A gallery selection handed to the board composer. Identifiable so it can drive
+/// `.sheet(item:)`, which builds the composer fresh with these photos.
+struct BoardSelection: Identifiable {
+    let id = UUID()
+    let photos: [Photo]
+}
+
 enum GalleryLens: String, CaseIterable, Identifiable {
     case time = "Time", reference = "Reference", project = "Project", map = "Map"
     var id: String { rawValue }
@@ -40,8 +47,7 @@ struct GalleryView: View {
     @State private var confirmDelete = false
     @State private var shareItems: [UIImage] = []
     @State private var showShare = false
-    @State private var composerPhotos: [Photo] = []   // selection to compose into a board
-    @State private var showComposer = false
+    @State private var composerSelection: BoardSelection?   // selection to compose into a board
     @State private var showBoards = false             // saved-boards shelf
     // drag-to-paint selection
     @State private var gridWidth: CGFloat = 0
@@ -155,7 +161,7 @@ struct GalleryView: View {
             Button("Cancel", role: .cancel) {}
         } message: { Text("This can't be undone.") }
         .sheet(isPresented: $showShare) { ActivityView(items: shareItems) }
-        .sheet(isPresented: $showComposer) { BoardComposerView(photos: composerPhotos) }
+        .sheet(item: $composerSelection) { sel in BoardComposerView(photos: sel.photos) }
         .sheet(isPresented: $showBoards) { BoardsListView() }
         .sheet(isPresented: $showSettings) { SettingsView() }
         .fullScreenCover(item: $editTarget) { photo in
@@ -443,10 +449,13 @@ struct GalleryView: View {
 
     /// Open the board composer pre-loaded with the current selection (in gallery
     /// order). The composer handles reorder / size / title / save / export.
+    /// Presented via `.sheet(item:)` so the composer is built fresh with these
+    /// photos — a `.sheet(isPresented:)` seeded the composer's order state before
+    /// the selection was set, so it opened empty.
     private func composeBoard() {
-        composerPhotos = filtered.filter { selected.contains($0.id) }
-        guard !composerPhotos.isEmpty else { return }
-        showComposer = true
+        let picks = filtered.filter { selected.contains($0.id) }
+        guard !picks.isEmpty else { return }
+        composerSelection = BoardSelection(photos: picks)
     }
 
     private func deleteSelected() {
