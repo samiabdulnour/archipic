@@ -202,7 +202,9 @@ struct CameraView: View {
 
             // Framed-mode zoom bar rides the crop window's bottom edge — kept
             // ABOVE the focus overlay so tapping a factor zooms (not focuses).
-            if !isFullBleed && camera.maxZoom > 1.5 {
+            // Hidden while a tool picker is open (same rule as full-bleed): the
+            // look name sits in that exact spot, so the two would collide.
+            if !isFullBleed && camera.maxZoom > 1.5 && tool == .none {
                 zoomBar.position(x: frameCx, y: frameBottom - 26)
             }
 
