@@ -82,6 +82,18 @@ struct GalleryView: View {
             || filterProject != nil || filterFavorites || filterMinRating > 0
     }
 
+    /// Whether the result bar (active-filter pills + count) is on screen.
+    private var showResultBar: Bool { filtersActive || !search.isEmpty }
+
+    /// A cheap value that changes whenever the visible result set could change.
+    /// Animations key off this instead of `filtered` (an array of model objects
+    /// that isn't usefully Equatable), so applying or clearing a filter reflows
+    /// the grid smoothly rather than snapping to the new set.
+    private var filterToken: String {
+        "\(filterType ?? "")|\(filterTypology ?? "")|\(filterMaterial ?? "")|\(filterYear)"
+            + "|\(filterProject ?? "")|\(filterFavorites)|\(filterMinRating)|\(search)"
+    }
+
     private var filtered: [Photo] {
         let words = search.lowercased().split(separator: " ").map(String.init)
         let cal = Calendar.current
@@ -133,7 +145,11 @@ struct GalleryView: View {
             if photos.isEmpty {
                 emptyState
             } else {
-                if filtersActive || !search.isEmpty { resultBar }
+                if showResultBar {
+                    // Slide+fade in rather than popping, so the grid below eases
+                    // down instead of jumping a row's height.
+                    resultBar.transition(.move(edge: .top).combined(with: .opacity))
+                }
                 switch lens {
                 case .time:      grid(filtered)
                 // Reference is a browse-only row index; in Select mode show a flat
@@ -144,6 +160,10 @@ struct GalleryView: View {
                 }
             }
         }
+        // Coordinates the result bar sliding in/out with the grid easing to its
+        // new position, so applying the first filter (or clearing the last) is
+        // one motion instead of a layout jump.
+        .animation(.easeInOut(duration: 0.24), value: showResultBar)
         .background(Palette.paper.ignoresSafeArea())
         .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search")
         .toolbar { galleryToolbar }
@@ -264,6 +284,10 @@ struct GalleryView: View {
                 ForEach(items) { cell($0) }
             }
             .animation(.easeInOut(duration: 0.2), value: gridCols)
+            // Reflow when the filter changes: cells that survive the new filter
+            // glide to their new slot (keeping their loaded thumbnail), and the
+            // rest fade out — instead of the whole grid snapping.
+            .animation(.easeInOut(duration: 0.26), value: filterToken)
             .background(GeometryReader { p in Color.clear
                 .onAppear { gridWidth = p.size.width }
                 .onChange(of: p.size.width) { _, w in gridWidth = w } })
@@ -412,10 +436,14 @@ struct GalleryView: View {
                     if filterYear > 0 { filterPill(label: String(filterYear)) { filterYear = 0 } }
                     if let fp = filterProject { filterPill(label: fp) { filterProject = nil } }
                 }
+                // Clearing one pill lets the others slide over, rather than snap.
+                .animation(.easeInOut(duration: 0.22), value: filterToken)
             }
             Text("\(filtered.count) of \(photos.count)")
                 .font(.caption).foregroundStyle(Palette.ink3)
                 .fixedSize()
+                .contentTransition(.numericText())   // count rolls instead of snapping
+                .animation(.easeInOut(duration: 0.22), value: filterToken)
         }
         .padding(.horizontal, 12).padding(.bottom, 6)
     }
@@ -428,6 +456,7 @@ struct GalleryView: View {
         .padding(.horizontal, 10).padding(.vertical, 4)
         .background(Capsule().fill(Palette.tile))
         .foregroundStyle(Palette.ink)
+        .transition(.scale(scale: 0.8).combined(with: .opacity))
     }
 
     // MARK: Selection action bar
