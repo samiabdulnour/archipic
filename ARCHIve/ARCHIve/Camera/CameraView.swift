@@ -302,11 +302,11 @@ struct CameraView: View {
         Group {
             if isFullBleed {
                 RoundedRectangle(cornerRadius: Self.displayCornerRadius, style: .continuous)
-                    .strokeBorder(Color.red, lineWidth: 3)
+                    .strokeBorder(Palette.coral, lineWidth: 3)   // matches the coral record button
                     .ignoresSafeArea()
             } else {
                 Rectangle()
-                    .stroke(Color.red, lineWidth: 3)
+                    .stroke(Palette.coral, lineWidth: 3)
                     .frame(width: w, height: h)
                     .position(x: cx, y: cy)
             }
@@ -374,13 +374,10 @@ struct CameraView: View {
     // MARK: Bottom — shutter, mode toggle, thumbnail, flip
 
     private var shutterButton: some View {
-        // Native iOS Camera shutter: white ring + a gap + white centre, with a
-        // springy press-shrink for tactility.
+        // The app mark as a shutter: the App Store icon's dash-dot-dot ring around
+        // a filled disc, in white. Springy press-shrink for tactility.
         Button(action: onShutter) {
-            ZStack {
-                Circle().stroke(.white, lineWidth: 2.5).frame(width: 72, height: 72)
-                Circle().fill(.white).frame(width: 63, height: 63)
-            }
+            CaptureMark(color: .white)
         }
         .buttonStyle(ShutterButtonStyle())
         .disabled(countdown != nil)
@@ -416,17 +413,11 @@ struct CameraView: View {
         }
     }
 
-    /// Record button (video mode): a red disc that morphs to a red square while
-    /// recording, inside the same white ring as the shutter.
+    /// Record button (video mode): the same app mark in the app's coral red; its
+    /// inner disc morphs to a rounded square while recording.
     private var recordButton: some View {
         Button(action: onRecordTap) {
-            ZStack {
-                Circle().stroke(.white, lineWidth: 2.5).frame(width: 72, height: 72)
-                RoundedRectangle(cornerRadius: camera.isRecording ? 8 : 31.5, style: .continuous)
-                    .fill(.red)
-                    .frame(width: camera.isRecording ? 32 : 63, height: camera.isRecording ? 32 : 63)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: camera.isRecording)
-            }
+            CaptureMark(color: Palette.coral, recording: camera.isRecording)
         }
         .buttonStyle(ShutterButtonStyle())
     }
@@ -981,6 +972,40 @@ private struct ShutterButtonStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.88 : 1)
             .animation(.spring(response: 0.22, dampingFraction: 0.55), value: configuration.isPressed)
+    }
+}
+
+/// The app mark rendered as a capture control — the App Store icon's ISO 128
+/// long-dash-double-dot ring around a filled disc. White for photo, coral for
+/// video; the disc morphs to a rounded square while recording. Keeps the old
+/// native shutter's 72pt footprint so nothing else in the bar shifts.
+private struct CaptureMark: View {
+    var color: Color
+    var recording = false
+    var ring: CGFloat = 72
+    var disc: CGFloat = 56
+
+    /// One "long-dash · dot · dot" repeat, seven around the ring — derived from
+    /// the circumference so the technical linetype tiles cleanly at this size.
+    private var dash: [CGFloat] {
+        let repeats: CGFloat = 7
+        let rl = (.pi * ring) / repeats
+        let dot: CGFloat = 0.6
+        let long = 0.44 * rl
+        let gap = (rl - long - 2 * dot) / 3
+        return [long, gap, dot, gap, dot, gap]
+    }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(color, style: StrokeStyle(lineWidth: 2.6, lineCap: .round, dash: dash))
+                .frame(width: ring, height: ring)
+            RoundedRectangle(cornerRadius: recording ? 8 : disc / 2, style: .continuous)
+                .fill(color)
+                .frame(width: recording ? 30 : disc, height: recording ? 30 : disc)
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: recording)
+        }
     }
 }
 
