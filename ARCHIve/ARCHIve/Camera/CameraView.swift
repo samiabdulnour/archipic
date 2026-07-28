@@ -976,35 +976,42 @@ private struct ShutterButtonStyle: ButtonStyle {
 }
 
 /// The app mark rendered as a capture control — the App Store icon's ISO 128
-/// long-dash-double-dot ring around a filled disc. White for photo, coral for
-/// video; the disc morphs to a rounded square while recording. Keeps the old
-/// native shutter's 72pt footprint so nothing else in the bar shifts.
+/// long-dash-double-dot ring around a filled disc, in the icon's exact
+/// proportions (disc/ring diameter ratio and dash rhythm measured from the
+/// 1024² source). White for photo, coral for video. While recording the button
+/// is unchanged except the ring rotates. Keeps the old shutter's 72pt footprint.
 private struct CaptureMark: View {
     var color: Color
     var recording = false
     var ring: CGFloat = 72
-    var disc: CGFloat = 56
 
-    /// One "long-dash · dot · dot" repeat, seven around the ring — derived from
-    /// the circumference so the technical linetype tiles cleanly at this size.
+    /// Disc diameter = 0.911 × ring, straight from the icon (its disc nearly
+    /// touches the ring — a tight, deliberate gap, not the wide one before).
+    private var disc: CGFloat { ring * 0.911 }
+
+    /// The icon's ring is 15 long-dash-double-dot repeats. Per 24° repeat: a
+    /// 9.75° long dash, two 1.5° dots, three 3.75° gaps — reproduced here from
+    /// the circumference so it tiles exactly at any ring size.
     private var dash: [CGFloat] {
-        let repeats: CGFloat = 7
-        let rl = (.pi * ring) / repeats
-        let dot: CGFloat = 0.6
-        let long = 0.44 * rl
-        let gap = (rl - long - 2 * dot) / 3
+        let c = CGFloat.pi * ring
+        let long = c * 9.75 / 360
+        let dot  = c * 1.5  / 360
+        let gap  = c * 3.75 / 360
         return [long, gap, dot, gap, dot, gap]
     }
 
     var body: some View {
         ZStack {
             Circle()
-                .stroke(color, style: StrokeStyle(lineWidth: 2.6, lineCap: .round, dash: dash))
+                .stroke(color, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, dash: dash))
                 .frame(width: ring, height: ring)
-            RoundedRectangle(cornerRadius: recording ? 8 : disc / 2, style: .continuous)
+                .rotationEffect(.degrees(recording ? 360 : 0))
+                .animation(recording ? .linear(duration: 4).repeatForever(autoreverses: false)
+                                     : .easeOut(duration: 0.3),
+                           value: recording)
+            Circle()
                 .fill(color)
-                .frame(width: recording ? 30 : disc, height: recording ? 30 : disc)
-                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: recording)
+                .frame(width: disc, height: disc)
         }
     }
 }
