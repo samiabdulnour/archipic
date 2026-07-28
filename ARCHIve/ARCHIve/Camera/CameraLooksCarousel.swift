@@ -11,8 +11,10 @@ struct LooksStrip: View {
     @State private var thumbs: [String: UIImage] = [:]
 
     // Metal-backed, matching the live camera path; caches off so repeated opens
-    // don't creep memory.
-    private static let ctx: CIContext = {
+    // don't creep memory. `nonisolated` so the swatch renders can read it from a
+    // background Task.detached (keeps that GPU work off the main actor); CIContext
+    // is Sendable, so this is safe — without it it's a Swift 6 error.
+    nonisolated private static let ctx: CIContext = {
         if let d = MTLCreateSystemDefaultDevice() {
             return CIContext(mtlDevice: d, options: [.cacheIntermediates: false])
         }
