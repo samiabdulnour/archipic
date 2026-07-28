@@ -375,9 +375,10 @@ struct CameraView: View {
 
     private var shutterButton: some View {
         // The app mark as a shutter: the App Store icon's dash-dot-dot ring around
-        // a filled disc, in white. Springy press-shrink for tactility.
+        // a filled disc, in the app's lemon (matches the PHOTO label). Springy
+        // press-shrink for tactility.
         Button(action: onShutter) {
-            CaptureMark(color: .white)
+            CaptureMark(color: Palette.lemon)
         }
         .buttonStyle(ShutterButtonStyle())
         .disabled(countdown != nil)
