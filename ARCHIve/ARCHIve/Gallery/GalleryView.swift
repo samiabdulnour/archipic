@@ -139,6 +139,13 @@ struct GalleryView: View {
         return Set(photos.map { cal.component(.year, from: $0.createdAt) }).sorted(by: >)
     }
 
+    /// Lens-switch motion: the arriving lens fades in while rising a touch; the
+    /// leaving one fades in place. Soft, and safe for the Map lens too.
+    private var lensTransition: AnyTransition {
+        .asymmetric(insertion: .opacity.combined(with: .offset(y: 14)),
+                    removal: .opacity)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             lensPicker
@@ -150,14 +157,20 @@ struct GalleryView: View {
                     // down instead of jumping a row's height.
                     resultBar.transition(.move(edge: .top).combined(with: .opacity))
                 }
-                switch lens {
-                case .time:      grid(filtered)
-                // Reference is a browse-only row index; in Select mode show a flat
-                // selectable grid instead (the row browser has no selection).
-                case .reference: if selecting { grid(filtered) } else { referenceLens }
-                case .project:   projectLens
-                case .map:       MapLens(photos: filtered.filter { $0.latitude != nil }, selecting: false)
+                // Crossfade + a gentle rise between lenses, instead of a hard blink.
+                Group {
+                    switch lens {
+                    case .time:      grid(filtered)
+                    // Reference is a browse-only row index; in Select mode show a
+                    // flat selectable grid instead (the row browser has no selection).
+                    case .reference: if selecting { grid(filtered) } else { referenceLens }
+                    case .project:   projectLens
+                    case .map:       MapLens(photos: filtered.filter { $0.latitude != nil }, selecting: false)
+                    }
                 }
+                .id(lens)
+                .transition(lensTransition)
+                .animation(.easeOut(duration: 0.28), value: lens)
             }
         }
         // Coordinates the result bar sliding in/out with the grid easing to its
