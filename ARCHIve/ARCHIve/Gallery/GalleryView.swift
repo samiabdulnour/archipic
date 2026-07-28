@@ -71,8 +71,8 @@ struct GalleryView: View {
 
     private let cols = Array(repeating: GridItem(.flexible(), spacing: 2), count: 3)
 
-    // Time-grid zoom: pinch to change how many photos per row (1...5).
-    @State private var gridCols = 3
+    // Time-grid zoom: pinch to change how many photos per row (1...8).
+    @State private var gridCols = 4
     @State private var pinchBaseCols: Int?
 
     // MARK: Derived
