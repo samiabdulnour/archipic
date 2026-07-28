@@ -140,13 +140,6 @@ struct GalleryView: View {
         return Set(photos.map { cal.component(.year, from: $0.createdAt) }).sorted(by: >)
     }
 
-    /// Lens-switch motion: the arriving lens fades in while rising a touch; the
-    /// leaving one fades in place. Soft, and safe for the Map lens too.
-    private var lensTransition: AnyTransition {
-        .asymmetric(insertion: .opacity.combined(with: .offset(y: 14)),
-                    removal: .opacity)
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             lensPicker
@@ -158,7 +151,10 @@ struct GalleryView: View {
                     // down instead of jumping a row's height.
                     resultBar.transition(.move(edge: .top).combined(with: .opacity))
                 }
-                // Crossfade + a gentle rise between lenses, instead of a hard blink.
+                // Each lens shows its placeholder tiles immediately, then the
+                // thumbnails fade in individually (see PhotoThumbnail) — the native
+                // Photos feel, instead of a whole-grid crossfade or blink. `.id`
+                // rebuilds on switch so every thumbnail runs its fade-in.
                 Group {
                     switch lens {
                     case .time:      grid(filtered)
@@ -170,8 +166,6 @@ struct GalleryView: View {
                     }
                 }
                 .id(lens)
-                .transition(lensTransition)
-                .animation(.easeOut(duration: 0.28), value: lens)
             }
         }
         // Coordinates the result bar sliding in/out with the grid easing to its
@@ -749,7 +743,12 @@ struct PhotoThumbnail: View {
         GeometryReader { geo in
             ZStack {
                 Palette.tile
-                if let image { Image(uiImage: image).resizable().scaledToFill() }
+                if let image {
+                    // Fade from the placeholder tile to the photo as it decodes,
+                    // like the native Photos grid (see the withAnimation below).
+                    Image(uiImage: image).resizable().scaledToFill()
+                        .transition(.opacity)
+                }
             }
             .frame(width: geo.size.width, height: geo.size.height)
             .overlay(alignment: .bottomTrailing) {
@@ -780,7 +779,10 @@ struct PhotoThumbnail: View {
                 } else {
                     base = await Self.thumbnail(from: photo.imageData, maxPixel: 400)
                 }
-                if let base { image = (photo.hasEdits && !photo.isVideo) ? PhotoEdits.render(base, photo) : base }
+                if let base {
+                    let out = (photo.hasEdits && !photo.isVideo) ? PhotoEdits.render(base, photo) : base
+                    withAnimation(.easeOut(duration: 0.3)) { image = out }
+                }
             }
         }
     }
