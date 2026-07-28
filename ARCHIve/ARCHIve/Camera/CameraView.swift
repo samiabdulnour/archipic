@@ -173,11 +173,6 @@ struct CameraView: View {
                 .compositingGroup()
                 .allowsHitTesting(false)
 
-                Rectangle().stroke(.white.opacity(0.5), lineWidth: 1)
-                    .frame(width: frameW, height: frameH)
-                    .position(x: frameCx, y: frameCy)
-                    .allowsHitTesting(false)
-
                 if camera.gridOn {
                     GridOverlay()
                         .frame(width: frameW, height: frameH)
