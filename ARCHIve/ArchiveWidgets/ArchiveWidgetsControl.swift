@@ -9,7 +9,7 @@ struct ArchiveWidgetsControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(kind: "com.samiabdulnour.archive.OpenCamera") {
             ControlWidgetButton(action: OpenCameraIntent()) {
-                Label("Capture", systemImage: "camera.aperture")
+                Label("Capture", image: "ArchiveMark")   // the app mark (template asset)
             }
         }
         .displayName("Archi.vé Camera")

@@ -51,11 +51,19 @@ struct LaunchWidgetView: View {
             case .accessoryCircular:
                 ZStack {
                     AccessoryWidgetBackground()
-                    Image(systemName: "camera.aperture").font(.system(size: 22))
+                    // The app mark (dash-dot ring + disc); template so it takes the
+                    // Lock Screen's monochrome tint.
+                    Image("ArchiveMark")
+                        .renderingMode(.template)
+                        .resizable().scaledToFit()
+                        .padding(7)
                 }
             default:
-                Image(systemName: "camera.aperture")
-                    .font(.system(size: 44, weight: .regular))
+                // The app mark in white on the coral container — mirrors the icon.
+                Image("ArchiveMark")
+                    .renderingMode(.template)
+                    .resizable().scaledToFit()
+                    .frame(width: 92, height: 92)
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
