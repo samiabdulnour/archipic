@@ -152,6 +152,41 @@ capturing a photo (location is stored on the photo to enable the Map view).
 
 ---
 
+## Version 1.3 — What's New
+
+Video comes to Archi.vé — plus a visual refresh and a lot of polish.
+
+VIDEO
+Capture video as easily as stills. Switch the camera between Photo and Video,
+record in clean HD, and your clips file, browse, share, and land on Boards right
+alongside your photos — cropped to the same framing you shot.
+
+A NEW MARK
+A new icon — a filled disc inside a technical dash-dot ring — now runs through
+the whole app. It's the shutter you tap, and it spins while a video records. The
+Home Screen, Lock Screen, and Control Centre widgets wear it too.
+
+ONE CAMERA
+Reference and Project capture are now a single, calmer viewfinder: your project
+sits top-left, tilt correction top-right, and the film looks are one tap away —
+with the frame holding its exact size as you choose.
+
+COLOUR, REWORKED
+The film looks were rebuilt from measured colour — natural skin tones across the
+set, and a proper Eterna: green-shadowed and moody, with crisp, saturated neons.
+
+BOARDS
+Compose any selection into a print-ready poster — a justified gallery wall — or
+an A4 journal, exported as PDF.
+
+A SMOOTHER GALLERY
+Thumbnails fade in like the native Photos grid instead of blinking, filters
+animate cleanly, and the grid remembers your preferred photos-per-row.
+
+And dozens of fixes across video recording, capture speed, and stability.
+
+---
+
 ## Version 1.0 — What's New
 
 First release. Fast two-tap capture, the architecture tag taxonomy
