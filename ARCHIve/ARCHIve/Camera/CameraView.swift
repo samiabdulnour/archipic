@@ -210,9 +210,8 @@ struct CameraView: View {
                     .position(x: frameCx, y: isFullBleed ? fullH / 2 : frameCy)
             }
 
-            // Recording signal: a thin red frame around the actual capture area —
-            // the phone's rounded edge in full-bleed, the crop rectangle otherwise.
-            recordingBorder(isFullBleed: isFullBleed, w: frameW, h: frameH, cx: frameCx, cy: frameCy)
+            // Recording is signalled by the spinning record button alone (see
+            // CaptureMark) — no frame around the viewfinder.
 
             // Film-look name + weather over the bottom of the frame while picking
             // (native-Camera style — inside the preview, not below it).
@@ -287,41 +286,6 @@ struct CameraView: View {
         .background(Capsule().fill(.ultraThinMaterial).environment(\.colorScheme, .dark))
         .animation(.easeInOut(duration: 0.22), value: camera.mediaMode)
     }
-
-    /// A thin red frame around the capture area — the "recording" signal
-    /// (unobtrusive, fades in/out, never blocks the controls). In full-bleed
-    /// (16:9) it follows the phone's rounded fillets; in a framed ratio it
-    /// outlines the crop rectangle (square corners, like the crop guide).
-    @ViewBuilder
-    private func recordingBorder(isFullBleed: Bool, w: CGFloat, h: CGFloat, cx: CGFloat, cy: CGFloat) -> some View {
-        Group {
-            if isFullBleed {
-                RoundedRectangle(cornerRadius: Self.displayCornerRadius, style: .continuous)
-                    .strokeBorder(Palette.coral, lineWidth: 3)   // matches the coral record button
-                    .ignoresSafeArea()
-            } else {
-                Rectangle()
-                    .stroke(Palette.coral, lineWidth: 3)
-                    .frame(width: w, height: h)
-                    .position(x: cx, y: cy)
-            }
-        }
-        .allowsHitTesting(false)
-        .opacity(camera.isRecording ? 1 : 0)
-        .animation(.easeInOut(duration: 0.2), value: camera.isRecording)
-    }
-
-    /// The screen's actual rounded-corner radius. No public API exposes it, so
-    /// read it via KVC (a stable, widely-used key) with a sensible fallback.
-    private static let displayCornerRadius: CGFloat = {
-        let screen = UIApplication.shared.connectedScenes
-            .compactMap { ($0 as? UIWindowScene)?.keyWindow?.screen }
-            .first
-        if let r = screen?.value(forKey: "_displayCornerRadius") as? CGFloat, r > 0 {
-            return r
-        }
-        return 60
-    }()
 
     private func pillButton(_ symbol: String, active: Bool, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
