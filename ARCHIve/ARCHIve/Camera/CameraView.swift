@@ -199,8 +199,8 @@ struct CameraView: View {
             // ABOVE the focus overlay so tapping a factor zooms (not focuses).
             // Hidden while a tool picker is open (same rule as full-bleed): the
             // look name sits in that exact spot, so the two would collide.
-            if !isFullBleed && camera.maxZoom > 1.5 && tool == .none {
-                zoomBar.position(x: frameCx, y: frameBottom - 26)
+            if !isFullBleed && showsZoomControl && tool == .none {
+                zoomControl.position(x: frameCx, y: frameBottom - 26)
             }
 
             if shutterFlash { Color.black.ignoresSafeArea() }
@@ -236,7 +236,7 @@ struct CameraView: View {
             VStack(spacing: 16) {
                 // Zoom bar floats above the shutter in full-bleed; hidden while a
                 // tool picker is open to keep the area clean.
-                if isFullBleed && camera.maxZoom > 1.5 && tool == .none { zoomBar }
+                if isFullBleed && showsZoomControl && tool == .none { zoomControl }
                 // Shutter — fixed position in every state.
                 if camera.mediaMode == .video { recordButton } else { shutterButton }
                 // Fixed-height band UNDER the shutter: the normal controls, or the
@@ -418,6 +418,52 @@ struct CameraView: View {
                 .frame(width: 46, height: 46)
                 .background(Circle().fill(.white.opacity(0.16)))
         }
+    }
+
+    /// Whether to show any zoom/lens control: a lens switcher on multi-camera
+    /// phones, otherwise the digital zoom bar when the lens can zoom.
+    private var showsZoomControl: Bool {
+        (camera.position == .back && camera.backLenses.count > 1) || camera.maxZoom > 1.5
+    }
+
+    /// The optical lens switcher on multi-camera phones (back only), else the
+    /// digital zoom bar.
+    @ViewBuilder private var zoomControl: some View {
+        if camera.position == .back && camera.backLenses.count > 1 {
+            lensBar
+        } else {
+            zoomBar
+        }
+    }
+
+    /// 0.5× / 1× / tele buttons that switch physical lenses. Pinch still does
+    /// digital zoom within the selected lens.
+    private var lensBar: some View {
+        HStack(spacing: 4) {
+            ForEach(camera.backLenses) { lens in
+                let active = camera.currentLensType == lens.type
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    camera.switchLens(to: lens.type)
+                    baseZoom = 1
+                } label: {
+                    Text(active ? "\(lens.label)×" : lens.label)
+                        .font(.system(size: active ? 15 : 13, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(active ? Palette.lemon : .white)
+                        .shadow(color: .black.opacity(active ? 0 : 0.45), radius: 2)
+                        .frame(width: active ? 44 : 34, height: 34)
+                        .background(Circle().fill(.black.opacity(active ? 0.55 : 0)))
+                        .scaleEffect(active ? 1 : 0.9)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .rotatingIcon(motion.iconAngle)
+        .padding(.horizontal, 6).padding(.vertical, 4)
+        .background(Capsule().fill(.black.opacity(0.3)))
+        .animation(.smooth(duration: 0.25), value: camera.currentLensType)
     }
 
     private var zoomBar: some View {

@@ -61,6 +61,19 @@ final class CameraController: NSObject {
     var videoCapable = false               // set once the session is up; gates the VIDEO toggle
     var position: AVCaptureDevice.Position = .back
 
+    /// One selectable back lens for the switcher.
+    struct BackLens: Identifiable, Equatable {
+        let type: AVCaptureDevice.DeviceType
+        let label: String                 // "0.5", "1", "2", "3", "5"…
+        var id: String { type.rawValue }
+    }
+    /// Optical back lenses on this device (widest first). Empty on single-lens
+    /// phones, so the switcher stays hidden and nothing changes there.
+    var backLenses: [BackLens] = []
+    /// Which back lens is live — drives the switcher's active state.
+    var currentLensType: AVCaptureDevice.DeviceType = .builtInWideAngleCamera
+    @ObservationIgnored private var lensDeviceByType: [AVCaptureDevice.DeviceType: AVCaptureDevice] = [:]
+
     /// Selected colour look (film-simulation style), applied live + on capture.
     var colorLook: CameraLook = .original
 
@@ -221,6 +234,7 @@ final class CameraController: NSObject {
             self.session.commitConfiguration()
             self.applyConnectionGeometry(front: false)
             self.liveFront = false
+            self.discoverBackLenses()
 
             let maxZ = min(device.activeFormat.videoMaxZoomFactor, 8.0)
             self.session.startRunning()
@@ -283,6 +297,74 @@ final class CameraController: NSObject {
             let maxZ = min(self.videoDevice?.activeFormat.videoMaxZoomFactor ?? 1, 8.0)
             self.onMain {
                 self.position = newPos
+                self.maxZoom = maxZ
+                self.zoomFactor = 1
+                if newPos == .back { self.currentLensType = .builtInWideAngleCamera }
+            }
+        }
+    }
+
+    // MARK: Back-lens switch (ultra-wide / wide / telephoto)
+
+    /// Find the physical back lenses so the UI can offer a lens switcher. Runs on
+    /// the session queue at setup; publishes `backLenses` on the main thread.
+    private func discoverBackLenses() {
+        let types: [AVCaptureDevice.DeviceType] = [.builtInUltraWideCamera, .builtInWideAngleCamera, .builtInTelephotoCamera]
+        let found = AVCaptureDevice.DiscoverySession(deviceTypes: types, mediaType: .video, position: .back).devices
+        guard let wide = found.first(where: { $0.deviceType == .builtInWideAngleCamera }) else { return }
+        let wideFOV = wide.activeFormat.videoFieldOfView
+        let order: [AVCaptureDevice.DeviceType] = [.builtInUltraWideCamera, .builtInWideAngleCamera, .builtInTelephotoCamera]
+        var map: [AVCaptureDevice.DeviceType: AVCaptureDevice] = [:]
+        var lenses: [BackLens] = []
+        for d in found.sorted(by: { (order.firstIndex(of: $0.deviceType) ?? 9) < (order.firstIndex(of: $1.deviceType) ?? 9) }) {
+            map[d.deviceType] = d
+            let label: String
+            switch d.deviceType {
+            case .builtInUltraWideCamera: label = "0.5"
+            case .builtInWideAngleCamera: label = "1"
+            default:
+                // Telephoto: optical multiplier ≈ wideFOV / teleFOV, snapped to a
+                // clean value (2 / 2.5 / 3 / 5) for the button label.
+                let fov = d.activeFormat.videoFieldOfView
+                let mult = (fov > 0 && wideFOV > 0) ? Double(wideFOV / fov) : 2
+                let snap = [2.0, 2.5, 3.0, 5.0].min(by: { abs($0 - mult) < abs($1 - mult) }) ?? 2
+                label = snap.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", snap) : String(format: "%.1f", snap)
+            }
+            lenses.append(BackLens(type: d.deviceType, label: label))
+        }
+        self.lensDeviceByType = map
+        let publish = lenses.count > 1 ? lenses : []   // single-lens phone → hide switcher
+        self.onMain { self.backLenses = publish }
+    }
+
+    /// Swap the live back lens — like the front/back flip, but between the
+    /// physical back cameras. Digital zoom resets to 1× on the new lens.
+    func switchLens(to type: AVCaptureDevice.DeviceType) {
+        guard position == .back, type != currentLensType else { return }
+        sessionQueue.async { [weak self] in
+            guard let self, let device = self.lensDeviceByType[type] else { return }
+            self.session.beginConfiguration()
+            for input in self.session.inputs {
+                if let di = input as? AVCaptureDeviceInput, di.device.hasMediaType(.video) {
+                    self.session.removeInput(di)
+                }
+            }
+            if let input = try? AVCaptureDeviceInput(device: device), self.session.canAddInput(input) {
+                self.session.addInput(input)
+                self.videoDevice = device
+            }
+            // Geometry inside + after the commit, exactly like flipCamera.
+            self.applyConnectionGeometry(front: false)
+            self.session.commitConfiguration()
+            self.applyConnectionGeometry(front: false)
+            // Hold the last good frame until the new lens delivers, so the swap
+            // doesn't flash black.
+            self.liveFront = false
+            self.awaitingSettledFrame = true
+            self.settleDeadline = CFAbsoluteTimeGetCurrent() + 1.0
+            let maxZ = min(device.activeFormat.videoMaxZoomFactor, 8.0)
+            self.onMain {
+                self.currentLensType = type
                 self.maxZoom = maxZ
                 self.zoomFactor = 1
             }
