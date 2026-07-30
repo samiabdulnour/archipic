@@ -535,9 +535,12 @@ struct CameraView: View {
                 LooksStrip(camera: camera)
             }
         case .keystone:
-            HStack(spacing: 14) {
-                trayCloseButton
+            // Slider centred in the band so its 0 (off) tick sits exactly under
+            // the shutter; the close button floats at the leading edge instead of
+            // pushing the slider off-centre.
+            ZStack {
                 keystoneSlider
+                HStack { trayCloseButton; Spacer() }
             }
         }
     }
