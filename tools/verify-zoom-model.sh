@@ -56,7 +56,7 @@ for c in cases {
   print("\(ok ? "PASS" : "FAIL")  \(name)  base=\(Int(base))x  got \(got)  want \(c.want)")
 }
 print("\n\(pass)/\(pass + fail) passed" + (fail == 0 ? "  all models correct" : "  \(fail) FAILED"))
-if fail > 0 { exit 1 }
+exit(fail > 0 ? 1 : 0)
 SWIFT
 
 swiftc -O "$WORK/main.swift" -o "$WORK/zoomtest"
