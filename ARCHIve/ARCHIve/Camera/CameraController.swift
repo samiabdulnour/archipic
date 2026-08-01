@@ -11,6 +11,49 @@ import Metal
 /// interface; a project is attached optionally (top-left pill) regardless.
 enum CaptureMediaMode { case photo, video }
 
+/// Pure lens/zoom-stop math — no AVFoundation — so the multi-lens behaviour is
+/// verifiable for every iPhone layout without a device (see the offline test
+/// harness). `applyZoomModel` maps the real device into `model(...)`.
+enum CameraZoom {
+    enum Lens: Equatable { case ultraWide, wide, telephoto, other }
+    struct Stop: Equatable { let factor: CGFloat; let label: String }
+
+    /// Given a (virtual) device's `virtualDeviceSwitchOverVideoZoomFactors` and
+    /// its constituent lenses (widest first), return the videoZoomFactor that
+    /// frames the wide at "1×" and the display stops (0.5× / 1× / 2× / tele).
+    /// - The widest lens sits at videoZoomFactor 1.0; each next lens starts at its
+    ///   switch-over factor. "1×" is the wide's factor (2.0 when an ultra-wide is
+    ///   the widest, 1.0 otherwise). Display× = factor / base.
+    /// - Adds an Apple-style 2× (48-MP wide crop) when there's no native ~2× lens.
+    static func model(switchovers: [CGFloat], lenses: [Lens],
+                      is48MP: Bool, maxAvailable: CGFloat) -> (base: CGFloat, stops: [Stop]) {
+        let native: [CGFloat] = [1.0] + switchovers
+        let wideIndex = lenses.firstIndex(of: .wide)
+        let base = wideIndex.flatMap { $0 < native.count ? native[$0] : nil } ?? 1.0
+        let maxF = min(maxAvailable, base * 15)
+        var stops: [Stop] = []
+        if lenses.isEmpty {
+            stops.append(Stop(factor: base, label: "1"))
+        } else {
+            for (i, _) in lenses.enumerated() where i < native.count {
+                stops.append(Stop(factor: native[i], label: label(native[i] / base)))
+            }
+        }
+        let has2 = stops.contains { abs($0.factor / base - 2) < 0.12 }
+        if !has2 && is48MP && maxF >= base * 2 {
+            stops.append(Stop(factor: base * 2, label: "2"))
+        }
+        return (base, stops.sorted { $0.factor < $1.factor })
+    }
+
+    /// Clean stop label for a display multiplier ("0.5", "1", "2", "5").
+    static func label(_ mult: CGFloat) -> String {
+        if mult < 0.95 { return "0.5" }
+        let r = (mult * 2).rounded() / 2                 // snap to nearest 0.5
+        return r.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", r) : String(format: "%.1f", r)
+    }
+}
+
 enum CaptureAspect: String, CaseIterable, Identifiable {
     case fourThree = "4:3"      // the full sensor
     case square = "1:1"
@@ -338,37 +381,27 @@ final class CameraController: NSObject {
     /// ultra-wide). Call on the session queue after configuring the input.
     private func applyZoomModel(for device: AVCaptureDevice) {
         let switchovers = device.virtualDeviceSwitchOverVideoZoomFactors.map { CGFloat(truncating: $0) }
-        let constituents = device.constituentDevices
-        // Native videoZoomFactor of each constituent (widest first): the widest
-        // sits at 1.0; each subsequent lens begins at its switch-over factor.
-        let nativeFactors: [CGFloat] = [1.0] + switchovers
-        let wideIndex = constituents.firstIndex { $0.deviceType == .builtInWideAngleCamera }
-        let base = wideIndex.flatMap { $0 < nativeFactors.count ? nativeFactors[$0] : nil } ?? 1.0
-        let minF = device.minAvailableVideoZoomFactor
-        let maxF = min(device.maxAvailableVideoZoomFactor, base * 15)   // cap display at ~15×
-
-        var stops: [ZoomStop] = []
-        if constituents.isEmpty {
-            stops.append(ZoomStop(factor: base, label: "1"))
-        } else {
-            for (i, _) in constituents.enumerated() where i < nativeFactors.count {
-                let f = nativeFactors[i]
-                stops.append(ZoomStop(factor: f, label: Self.stopLabel(f / base)))
+        let lenses: [CameraZoom.Lens] = device.constituentDevices.map {
+            switch $0.deviceType {
+            case .builtInUltraWideCamera: return .ultraWide
+            case .builtInWideAngleCamera: return .wide
+            case .builtInTelephotoCamera: return .telephoto
+            default:                      return .other
             }
         }
-        // Apple-style 2× (a crop of a 48-MP wide) when there's no native ~2× lens
-        // but the wide sensor is 48-MP and the range reaches 2×. Scan the wide's
-        // formats (not just the active one, which may be 12-MP-binned).
-        let has2 = stops.contains { abs($0.factor / base - 2) < 0.12 }
-        let wideDevice = constituents.first { $0.deviceType == .builtInWideAngleCamera }
-            ?? (constituents.isEmpty ? device : nil)
+        // 48-MP wide → offer the Apple-style 2× crop. Scan the wide's formats (not
+        // just the active one, which may be 12-MP-binned).
+        let wideDevice = device.constituentDevices.first { $0.deviceType == .builtInWideAngleCamera }
+            ?? (device.constituentDevices.isEmpty ? device : nil)
         let is48MP = (wideDevice?.formats ?? []).contains { fmt in
             fmt.supportedMaxPhotoDimensions.contains { Int($0.width) >= 7500 }
         }
-        if !has2 && is48MP && maxF >= base * 2 {
-            stops.append(ZoomStop(factor: base * 2, label: "2"))
-        }
-        stops.sort { $0.factor < $1.factor }
+        let minF = device.minAvailableVideoZoomFactor
+        let maxAvail = device.maxAvailableVideoZoomFactor
+        let (base, specs) = CameraZoom.model(switchovers: switchovers, lenses: lenses,
+                                             is48MP: is48MP, maxAvailable: maxAvail)
+        let maxF = min(maxAvail, base * 15)
+        let stops = specs.map { ZoomStop(factor: $0.factor, label: $0.label) }
 
         // Open at 1× (the wide), not the ultra-wide's native 1.0.
         do { try device.lockForConfiguration(); device.videoZoomFactor = base; device.unlockForConfiguration() } catch {}
@@ -382,13 +415,6 @@ final class CameraController: NSObject {
             self.zoomStops = published
             self.zoomFactor = base
         }
-    }
-
-    /// Format a display multiplier as a clean stop label ("0.5", "1", "2", "5").
-    static func stopLabel(_ mult: CGFloat) -> String {
-        if mult < 0.95 { return "0.5" }
-        let r = (mult * 2).rounded() / 2                 // snap to nearest 0.5
-        return r.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", r) : String(format: "%.1f", r)
     }
 
     // MARK: Tap to focus + exposure
