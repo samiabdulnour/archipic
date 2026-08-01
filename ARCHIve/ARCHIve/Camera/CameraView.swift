@@ -12,7 +12,6 @@ struct CameraView: View {
 
     @State private var countdown: Int?
     @State private var shutterFlash = false
-    @State private var baseZoom: CGFloat = 1.0
     @State private var savedCount = 0
     @State private var tagTarget: Photo?
 
@@ -189,7 +188,6 @@ struct CameraView: View {
             // Focus only registers inside the crop frame (whole screen in 16:9).
             FocusExposureView(
                 camera: camera,
-                baseZoom: $baseZoom,
                 focusRegion: isFullBleed
                     ? CGRect(x: 0, y: 0, width: fullW, height: fullH)
                     : CGRect(x: frameCx - frameW / 2, y: frameCy - frameH / 2, width: frameW, height: frameH)
@@ -420,39 +418,28 @@ struct CameraView: View {
         }
     }
 
-    /// Whether to show any zoom/lens control: a lens switcher on multi-camera
-    /// phones, otherwise the digital zoom bar when the lens can zoom.
-    private var showsZoomControl: Bool {
-        (camera.position == .back && camera.backLenses.count > 1) || camera.maxZoom > 1.5
-    }
+    /// Shown when the device offers more than one lens/zoom stop (multi-lens, or
+    /// a 48-MP-crop 2×). Single-lens phones with no stops just pinch to zoom.
+    private var showsZoomControl: Bool { camera.zoomStops.count > 1 }
 
-    /// The optical lens switcher on multi-camera phones (back only), else the
-    /// digital zoom bar.
-    @ViewBuilder private var zoomControl: some View {
-        if camera.position == .back && camera.backLenses.count > 1 {
-            lensBar
-        } else {
-            zoomBar
-        }
-    }
-
-    /// 0.5× / 1× / tele buttons that switch physical lenses. Pinch still does
-    /// digital zoom within the selected lens.
-    private var lensBar: some View {
-        HStack(spacing: 4) {
-            ForEach(camera.backLenses) { lens in
-                let active = camera.currentLensType == lens.type
+    /// Native-Camera lens/zoom switcher: a row of real stops (0.5× / 1× / 2× / 5×)
+    /// derived from the device's lenses. The active stop shows the live "×" while
+    /// pinched; tapping a stop ramps the virtual camera to it (seamless optical
+    /// switch). Pinch (in FocusExposureView) zooms continuously across all lenses.
+    private var zoomControl: some View {
+        HStack(spacing: 3) {
+            ForEach(camera.zoomStops) { stop in
+                let active = abs(camera.activeStopFactor - stop.factor) < 0.001
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    camera.switchLens(to: lens.type)
-                    baseZoom = 1
+                    camera.setZoom(stop.factor, ramp: true)
                 } label: {
-                    Text(active ? "\(lens.label)×" : lens.label)
+                    Text(active ? "\(camera.displayZoomLabel)×" : stop.label)
                         .font(.system(size: active ? 15 : 13, weight: .semibold))
                         .monospacedDigit()
                         .foregroundStyle(active ? Palette.lemon : .white)
                         .shadow(color: .black.opacity(active ? 0 : 0.45), radius: 2)
-                        .frame(width: active ? 44 : 34, height: 34)
+                        .frame(width: active ? 46 : 32, height: 34)
                         .background(Circle().fill(.black.opacity(active ? 0.55 : 0)))
                         .scaleEffect(active ? 1 : 0.9)
                         .contentShape(Circle())
@@ -463,56 +450,7 @@ struct CameraView: View {
         .rotatingIcon(motion.iconAngle)
         .padding(.horizontal, 6).padding(.vertical, 4)
         .background(Capsule().fill(.black.opacity(0.3)))
-        .animation(.smooth(duration: 0.25), value: camera.currentLensType)
-    }
-
-    private var zoomBar: some View {
-        // Native style: the active factor is always centred with a small filled
-        // circle around it; the other factors are plain numbers flanking it.
-        // Everything that changes between active/inactive is animatable — the
-        // circle fades (opacity), the size scales (scaleEffect), and every slot
-        // is a fixed size — so switching factors is smooth, not flickery.
-        let stops = zoomStops
-        let activeIndex = stops.firstIndex { abs(camera.zoomFactor - $0) < 0.1 } ?? 0
-        let slot: CGFloat = 48
-        return ZStack {
-            ForEach(Array(stops.enumerated()), id: \.element) { i, z in
-                let active = i == activeIndex
-                let num = z == 1 ? "1" : String(format: "%.0f", z)
-                Button { camera.setZoom(z); baseZoom = z } label: {
-                    ZStack {
-                        Circle().fill(.black.opacity(0.5))
-                            .frame(width: 40, height: 40)
-                            .opacity(active ? 1 : 0)
-                        // Number stays put; the "×" just fades in for the active
-                        // factor (its width is always reserved), so nothing
-                        // jumps mid-animation.
-                        HStack(spacing: 0) {
-                            Text(num)
-                            Text("×").opacity(active ? 1 : 0).frame(width: 9)
-                        }
-                        .font(.system(size: 15, weight: .semibold))
-                        .monospacedDigit()
-                        .foregroundStyle(active ? Palette.lemon : .white)
-                        .shadow(color: .black.opacity(active ? 0 : 0.45), radius: 2)
-                    }
-                    .rotatingIcon(motion.iconAngle)
-                    .frame(width: 44, height: 44)
-                    .scaleEffect(active ? 1 : 0.88)
-                    .contentShape(Circle())
-                }
-                .offset(x: CGFloat(i - activeIndex) * slot)
-            }
-        }
-        .frame(height: 48)
-        .animation(.smooth(duration: 0.3), value: activeIndex)
-    }
-
-    private var zoomStops: [CGFloat] {
-        var stops: [CGFloat] = [1]
-        if camera.maxZoom >= 2 { stops.append(2) }
-        if camera.maxZoom >= 4 { stops.append(4) }
-        return stops
+        .animation(.smooth(duration: 0.25), value: camera.activeStopFactor)
     }
 
     /// Lite-mode confirmation toast: "Saved · Tag later in gallery" with a
@@ -1065,7 +1003,9 @@ private struct LevelOverlay: View {
 /// Also hosts the pinch-to-zoom so all camera-feed gestures live together.
 private struct FocusExposureView: View {
     let camera: CameraController
-    @Binding var baseZoom: CGFloat
+    /// The zoom factor captured at the start of a pinch, so the gesture scales
+    /// from wherever the camera actually is (any lens), not a stale value.
+    @State private var pinchAnchor: CGFloat?
     /// Taps that start outside this rect don't focus (the dimmed area in 4:3 /
     /// 1:1). Pinch-to-zoom still works anywhere.
     var focusRegion: CGRect
@@ -1126,8 +1066,12 @@ private struct FocusExposureView: View {
 
     private var zoomMagnify: some Gesture {
         MagnifyGesture()
-            .onChanged { value in camera.setZoom(baseZoom * value.magnification) }
-            .onEnded { _ in baseZoom = camera.zoomFactor }
+            .onChanged { value in
+                let anchor = pinchAnchor ?? camera.zoomFactor
+                if pinchAnchor == nil { pinchAnchor = anchor }
+                camera.setZoom(anchor * value.magnification)
+            }
+            .onEnded { _ in pinchAnchor = nil }
     }
 
     private func reveal() {

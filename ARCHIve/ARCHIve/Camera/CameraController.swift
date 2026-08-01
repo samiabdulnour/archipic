@@ -46,8 +46,13 @@ final class CameraController: NSObject {
     var gridOn = true
     var levelOn = true
     var timerSeconds = 0           // 0 | 3 | 10
-    var zoomFactor: CGFloat = 1.0
-    var maxZoom: CGFloat = 1.0
+    var zoomFactor: CGFloat = 1.0          // raw videoZoomFactor
+    var maxZoom: CGFloat = 1.0             // raw max videoZoomFactor (kept for callers)
+    /// videoZoomFactor that frames the wide camera at "1×" (2.0 on phones whose
+    /// widest lens is the ultra-wide, 1.0 otherwise).
+    var baseZoomFactor: CGFloat = 1.0
+    var minZoomFactor: CGFloat = 1.0
+    var maxZoomFactor: CGFloat = 1.0
     /// Architectural keystone: when on, the live preview is warped (and the
     /// saved photo corrected) to keep verticals straight as the phone tilts.
     var keystoneOn = true   // always available; the slider amount (0 = none) governs it
@@ -61,18 +66,31 @@ final class CameraController: NSObject {
     var videoCapable = false               // set once the session is up; gates the VIDEO toggle
     var position: AVCaptureDevice.Position = .back
 
-    /// One selectable back lens for the switcher.
-    struct BackLens: Identifiable, Equatable {
-        let type: AVCaptureDevice.DeviceType
-        let label: String                 // "0.5", "1", "2", "3", "5"…
-        var id: String { type.rawValue }
+    /// One lens/zoom stop for the switcher (e.g. 0.5× / 1× / 2× / 5×).
+    struct ZoomStop: Identifiable, Equatable {
+        let factor: CGFloat        // the videoZoomFactor this stop selects
+        let label: String          // "0.5", "1", "2", "3", "5"
+        var id: CGFloat { factor }
     }
-    /// Optical back lenses on this device (widest first). Empty on single-lens
-    /// phones, so the switcher stays hidden and nothing changes there.
-    var backLenses: [BackLens] = []
-    /// Which back lens is live — drives the switcher's active state.
-    var currentLensType: AVCaptureDevice.DeviceType = .builtInWideAngleCamera
-    @ObservationIgnored private var lensDeviceByType: [AVCaptureDevice.DeviceType: AVCaptureDevice] = [:]
+    /// Lens/zoom stops for the switcher, widest first. Fewer than two → a
+    /// single-lens phone, and the switcher stays hidden.
+    var zoomStops: [ZoomStop] = []
+
+    /// Current zoom as a display multiplier (1× = the wide camera).
+    var displayZoom: CGFloat { baseZoomFactor > 0 ? zoomFactor / baseZoomFactor : zoomFactor }
+    /// Live "×" readout, e.g. "1", "1.8", "0.5".
+    var displayZoomLabel: String {
+        let x = displayZoom
+        if x < 0.95 { return String(format: "%.1f", x) }
+        let r = (x * 10).rounded() / 10
+        return r.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", r) : String(format: "%.1f", r)
+    }
+    /// The active stop's factor (largest stop ≤ current zoom) — drives which
+    /// switcher button is highlighted.
+    var activeStopFactor: CGFloat {
+        zoomStops.last(where: { $0.factor <= zoomFactor + 0.05 })?.factor
+            ?? zoomStops.first?.factor ?? baseZoomFactor
+    }
 
     /// Selected colour look (film-simulation style), applied live + on capture.
     var colorLook: CameraLook = .original
@@ -201,7 +219,7 @@ final class CameraController: NSObject {
             self.session.sessionPreset = .photo
 
             guard
-                let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+                let device = self.bestBackDevice(),
                 let input = try? AVCaptureDeviceInput(device: device),
                 self.session.canAddInput(input)
             else {
@@ -234,12 +252,9 @@ final class CameraController: NSObject {
             self.session.commitConfiguration()
             self.applyConnectionGeometry(front: false)
             self.liveFront = false
-            self.discoverBackLenses()
-
-            let maxZ = min(device.activeFormat.videoMaxZoomFactor, 8.0)
             self.session.startRunning()
+            self.applyZoomModel(for: device)   // lens stops + open at 1×
             self.onMain {
-                self.maxZoom = maxZ
                 self.isRunning = true
                 self.videoCapable = true
             }
@@ -275,7 +290,10 @@ final class CameraController: NSObject {
                     self.session.removeInput(di)
                 }
             }
-            if let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: newPos),
+            let newDevice = newPos == .back
+                ? self.bestBackDevice()
+                : AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
+            if let device = newDevice,
                let input = try? AVCaptureDeviceInput(device: device),
                self.session.canAddInput(input) {
                 self.session.addInput(input)
@@ -294,81 +312,83 @@ final class CameraController: NSObject {
             self.liveFront = (newPos == .front)
             self.awaitingSettledFrame = true
             self.settleDeadline = CFAbsoluteTimeGetCurrent() + 1.5
-            let maxZ = min(self.videoDevice?.activeFormat.videoMaxZoomFactor ?? 1, 8.0)
-            self.onMain {
-                self.position = newPos
-                self.maxZoom = maxZ
-                self.zoomFactor = 1
-                if newPos == .back { self.currentLensType = .builtInWideAngleCamera }
-            }
+            self.onMain { self.position = newPos }
+            if let device = self.videoDevice { self.applyZoomModel(for: device) }
         }
     }
 
-    // MARK: Back-lens switch (ultra-wide / wide / telephoto)
+    // MARK: Zoom model (multi-lens)
 
-    /// Find the physical back lenses so the UI can offer a lens switcher. Runs on
-    /// the session queue at setup; publishes `backLenses` on the main thread.
-    private func discoverBackLenses() {
-        let types: [AVCaptureDevice.DeviceType] = [.builtInUltraWideCamera, .builtInWideAngleCamera, .builtInTelephotoCamera]
-        let found = AVCaptureDevice.DiscoverySession(deviceTypes: types, mediaType: .video, position: .back).devices
-        guard let wide = found.first(where: { $0.deviceType == .builtInWideAngleCamera }) else { return }
-        let wideFOV = wide.activeFormat.videoFieldOfView
-        let order: [AVCaptureDevice.DeviceType] = [.builtInUltraWideCamera, .builtInWideAngleCamera, .builtInTelephotoCamera]
-        var map: [AVCaptureDevice.DeviceType: AVCaptureDevice] = [:]
-        var lenses: [BackLens] = []
-        for d in found.sorted(by: { (order.firstIndex(of: $0.deviceType) ?? 9) < (order.firstIndex(of: $1.deviceType) ?? 9) }) {
-            map[d.deviceType] = d
-            let label: String
-            switch d.deviceType {
-            case .builtInUltraWideCamera: label = "0.5"
-            case .builtInWideAngleCamera: label = "1"
-            default:
-                // Telephoto: optical multiplier ≈ wideFOV / teleFOV, snapped to a
-                // clean value (2 / 2.5 / 3 / 5) for the button label.
-                let fov = d.activeFormat.videoFieldOfView
-                let mult = (fov > 0 && wideFOV > 0) ? Double(wideFOV / fov) : 2
-                let snap = [2.0, 2.5, 3.0, 5.0].min(by: { abs($0 - mult) < abs($1 - mult) }) ?? 2
-                label = snap.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", snap) : String(format: "%.1f", snap)
-            }
-            lenses.append(BackLens(type: d.deviceType, label: label))
+    /// The best back device for seamless multi-lens zoom: a virtual multi-camera
+    /// (which auto-switches physical lenses by zoom factor — like the native
+    /// Camera) when available, else the plain wide. Falls through gracefully on
+    /// every model: triple → dual-wide → dual → wide.
+    private func bestBackDevice() -> AVCaptureDevice? {
+        let types: [AVCaptureDevice.DeviceType] =
+            [.builtInTripleCamera, .builtInDualWideCamera, .builtInDualCamera, .builtInWideAngleCamera]
+        for t in types {
+            if let d = AVCaptureDevice.default(t, for: .video, position: .back) { return d }
         }
-        self.lensDeviceByType = map
-        let publish = lenses.count > 1 ? lenses : []   // single-lens phone → hide switcher
-        self.onMain { self.backLenses = publish }
+        return AVCaptureDevice.default(for: .video)
     }
 
-    /// Swap the live back lens — like the front/back flip, but between the
-    /// physical back cameras. Digital zoom resets to 1× on the new lens.
-    func switchLens(to type: AVCaptureDevice.DeviceType) {
-        guard position == .back, type != currentLensType else { return }
-        sessionQueue.async { [weak self] in
-            guard let self, let device = self.lensDeviceByType[type] else { return }
-            self.session.beginConfiguration()
-            for input in self.session.inputs {
-                if let di = input as? AVCaptureDeviceInput, di.device.hasMediaType(.video) {
-                    self.session.removeInput(di)
-                }
-            }
-            if let input = try? AVCaptureDeviceInput(device: device), self.session.canAddInput(input) {
-                self.session.addInput(input)
-                self.videoDevice = device
-            }
-            // Geometry inside + after the commit, exactly like flipCamera.
-            self.applyConnectionGeometry(front: false)
-            self.session.commitConfiguration()
-            self.applyConnectionGeometry(front: false)
-            // Hold the last good frame until the new lens delivers, so the swap
-            // doesn't flash black.
-            self.liveFront = false
-            self.awaitingSettledFrame = true
-            self.settleDeadline = CFAbsoluteTimeGetCurrent() + 1.0
-            let maxZ = min(device.activeFormat.videoMaxZoomFactor, 8.0)
-            self.onMain {
-                self.currentLensType = type
-                self.maxZoom = maxZ
-                self.zoomFactor = 1
+    /// Derive the lens/zoom stops from a device — the videoZoomFactor for each
+    /// optical lens (0.5× / 1× / tele) plus an Apple-style 48-MP-crop 2× — set the
+    /// "1×" base and the clamps, and open framed at 1× (the wide, not the
+    /// ultra-wide). Call on the session queue after configuring the input.
+    private func applyZoomModel(for device: AVCaptureDevice) {
+        let switchovers = device.virtualDeviceSwitchOverVideoZoomFactors.map { CGFloat(truncating: $0) }
+        let constituents = device.constituentDevices
+        // Native videoZoomFactor of each constituent (widest first): the widest
+        // sits at 1.0; each subsequent lens begins at its switch-over factor.
+        let nativeFactors: [CGFloat] = [1.0] + switchovers
+        let wideIndex = constituents.firstIndex { $0.deviceType == .builtInWideAngleCamera }
+        let base = wideIndex.flatMap { $0 < nativeFactors.count ? nativeFactors[$0] : nil } ?? 1.0
+        let minF = device.minAvailableVideoZoomFactor
+        let maxF = min(device.maxAvailableVideoZoomFactor, base * 15)   // cap display at ~15×
+
+        var stops: [ZoomStop] = []
+        if constituents.isEmpty {
+            stops.append(ZoomStop(factor: base, label: "1"))
+        } else {
+            for (i, _) in constituents.enumerated() where i < nativeFactors.count {
+                let f = nativeFactors[i]
+                stops.append(ZoomStop(factor: f, label: Self.stopLabel(f / base)))
             }
         }
+        // Apple-style 2× (a crop of a 48-MP wide) when there's no native ~2× lens
+        // but the wide sensor is 48-MP and the range reaches 2×. Scan the wide's
+        // formats (not just the active one, which may be 12-MP-binned).
+        let has2 = stops.contains { abs($0.factor / base - 2) < 0.12 }
+        let wideDevice = constituents.first { $0.deviceType == .builtInWideAngleCamera }
+            ?? (constituents.isEmpty ? device : nil)
+        let is48MP = (wideDevice?.formats ?? []).contains { fmt in
+            fmt.supportedMaxPhotoDimensions.contains { Int($0.width) >= 7500 }
+        }
+        if !has2 && is48MP && maxF >= base * 2 {
+            stops.append(ZoomStop(factor: base * 2, label: "2"))
+        }
+        stops.sort { $0.factor < $1.factor }
+
+        // Open at 1× (the wide), not the ultra-wide's native 1.0.
+        do { try device.lockForConfiguration(); device.videoZoomFactor = base; device.unlockForConfiguration() } catch {}
+
+        let published = stops.count > 1 ? stops : []
+        self.onMain {
+            self.baseZoomFactor = base
+            self.minZoomFactor = minF
+            self.maxZoomFactor = maxF
+            self.maxZoom = maxF
+            self.zoomStops = published
+            self.zoomFactor = base
+        }
+    }
+
+    /// Format a display multiplier as a clean stop label ("0.5", "1", "2", "5").
+    static func stopLabel(_ mult: CGFloat) -> String {
+        if mult < 0.95 { return "0.5" }
+        let r = (mult * 2).rounded() / 2                 // snap to nearest 0.5
+        return r.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", r) : String(format: "%.1f", r)
     }
 
     // MARK: Tap to focus + exposure
@@ -410,14 +430,21 @@ final class CameraController: NSObject {
 
     // MARK: Zoom
 
-    func setZoom(_ factor: CGFloat) {
-        let clamped = max(1.0, min(factor, maxZoom))
+    /// Set the zoom factor. `ramp` animates the change (used by lens-button taps
+    /// so the optical lens switch glides); pinch passes `false` for 1:1 tracking.
+    func setZoom(_ factor: CGFloat, ramp: Bool = false) {
+        let clamped = max(minZoomFactor, min(factor, maxZoomFactor))
         zoomFactor = clamped
         sessionQueue.async { [weak self] in
             guard let self, let device = self.videoDevice else { return }
             do {
                 try device.lockForConfiguration()
-                device.videoZoomFactor = clamped
+                if ramp {
+                    device.ramp(toVideoZoomFactor: clamped, withRate: 24)
+                } else {
+                    device.cancelVideoZoomRamp()
+                    device.videoZoomFactor = clamped
+                }
                 device.unlockForConfiguration()
             } catch { }
         }
@@ -486,8 +513,10 @@ final class CameraController: NSObject {
             self.session.commitConfiguration()
             // A preset change can reset the connections — re-orient after commit.
             self.applyConnectionGeometry(front: mirror)
-            let maxZ = min(self.videoDevice?.activeFormat.videoMaxZoomFactor ?? 1, 8.0)
-            self.onMain { self.maxZoom = maxZ; completion() }
+            // Refresh the max clamp for the (possibly new) format without disturbing
+            // the current zoom or the lens stops.
+            let maxZ = min(self.videoDevice?.maxAvailableVideoZoomFactor ?? 1, self.baseZoomFactor * 15)
+            self.onMain { self.maxZoom = maxZ; self.maxZoomFactor = maxZ; completion() }
         }
     }
 
