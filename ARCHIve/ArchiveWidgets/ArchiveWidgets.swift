@@ -73,14 +73,16 @@ struct WidgetMark: View {
     var body: some View {
         GeometryReader { g in
             let side = min(g.size.width, g.size.height)
-            let lw = max(1.5, side * 0.05)
+            // Exactly the capture button's proportions (ring 72 → lineWidth 1.6),
+            // so the widget mark matches the in-app mark and the icon: a thin ring,
+            // the icon's 15 long-dash-double-dot repeats, disc = 0.911 × ring.
+            let lw = side * (1.6 / 72)
             let ring = side - lw                 // keep the round-capped stroke in bounds
-            let disc = ring * 0.911              // icon-exact disc/ring ratio
+            let disc = ring * 0.911
             let c = CGFloat.pi * ring
-            let rl = c / 9                        // 9 long-dash-double-dot repeats
-            let dot = lw * 0.5
-            let long = 0.46 * rl
-            let gap = (rl - long - 2 * dot) / 3
+            let long = c * 9.75 / 360
+            let dot  = c * 1.5  / 360
+            let gap  = c * 3.75 / 360
             ZStack {
                 Circle()
                     .stroke(color, style: StrokeStyle(lineWidth: lw, lineCap: .round,
