@@ -534,7 +534,6 @@ struct GalleryView: View {
     private var emptyState: some View {
         VStack(spacing: 16) {
             Spacer()
-            Image(systemName: "camera.aperture").font(.system(size: 56, weight: .thin)).foregroundStyle(Palette.ink3)
             Text("Archi.vé")
                 .font(.system(size: 34, weight: .bold))
                 .foregroundStyle(Palette.ink)

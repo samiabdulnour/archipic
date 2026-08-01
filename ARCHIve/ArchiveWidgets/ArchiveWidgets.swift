@@ -51,24 +51,45 @@ struct LaunchWidgetView: View {
             case .accessoryCircular:
                 ZStack {
                     AccessoryWidgetBackground()
-                    // The app mark (dash-dot ring + disc); template so it takes the
-                    // Lock Screen's monochrome tint.
-                    Image("ArchiveMark")
-                        .renderingMode(.template)
-                        .resizable().scaledToFit()
-                        .padding(7)
+                    WidgetMark(color: .white).padding(8)
                 }
             default:
                 // The app mark in white on the coral container — mirrors the icon.
-                Image("ArchiveMark")
-                    .renderingMode(.template)
-                    .resizable().scaledToFit()
-                    .frame(width: 92, height: 92)
-                    .foregroundStyle(.white)
+                WidgetMark(color: .white)
+                    .frame(width: 96, height: 96)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// The app mark — the App Store icon's dash-dot ring around a filled disc —
+/// drawn as a shape so it always renders in the widget (no template-asset/tint
+/// quirks). Fills its frame; `color` is explicit.
+struct WidgetMark: View {
+    var color: Color
+
+    var body: some View {
+        GeometryReader { g in
+            let side = min(g.size.width, g.size.height)
+            let lw = max(1.5, side * 0.05)
+            let ring = side - lw                 // keep the round-capped stroke in bounds
+            let disc = ring * 0.911              // icon-exact disc/ring ratio
+            let c = CGFloat.pi * ring
+            let rl = c / 9                        // 9 long-dash-double-dot repeats
+            let dot = lw * 0.5
+            let long = 0.46 * rl
+            let gap = (rl - long - 2 * dot) / 3
+            ZStack {
+                Circle()
+                    .stroke(color, style: StrokeStyle(lineWidth: lw, lineCap: .round,
+                                                      dash: [long, gap, dot, gap, dot, gap]))
+                    .frame(width: ring, height: ring)
+                Circle().fill(color).frame(width: disc, height: disc)
+            }
+            .frame(width: g.size.width, height: g.size.height)
+        }
     }
 }
 
