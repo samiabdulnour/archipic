@@ -274,7 +274,9 @@ final class CameraController: NSObject {
 
             if self.session.canAddOutput(self.photoOutput) {
                 self.session.addOutput(self.photoOutput)
-                self.photoOutput.maxPhotoQualityPrioritization = .quality
+                // Don't provision the heavy Deep-Fusion/Night pipeline — this is a
+                // grab-it-while-walking reference camera; captures use .speed.
+                self.photoOutput.maxPhotoQualityPrioritization = .balanced
             }
 
             // Live frames for the Metal viewfinder.
@@ -668,7 +670,10 @@ final class CameraController: NSObject {
             if self.photoOutput.supportedFlashModes.contains(flash) {
                 settings.flashMode = flash
             }
-            settings.photoQualityPrioritization = .quality
+            // .speed = single-frame, no multi-second Deep Fusion / Night mode, so
+            // the tag sheet opens fast (and no motion blur while walking). Plenty
+            // of quality for a reference archive viewed as thumbnails / on boards.
+            settings.photoQualityPrioritization = .speed
             self.photoOutput.capturePhoto(with: settings, delegate: self)
         }
     }
