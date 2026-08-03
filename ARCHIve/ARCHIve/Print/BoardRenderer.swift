@@ -246,7 +246,8 @@ enum BoardRenderer {
                 }
                 y += row.imgH + capGap + row.capH + laid.vgap
             }
-            drawFooter(plates: plates, x: bodyX, w: availW, y: H - MB - 15 * s * mm, cg: cg)
+            drawFooter(plates: plates, x: bodyX, w: availW, y: H - MB - 15 * s * mm,
+                       sheet: widthMM > 500 ? "b1" : "a2", cg: cg)
         }
     }
 
@@ -263,12 +264,12 @@ enum BoardRenderer {
         cg.restoreGState()
     }
 
-    private static func drawFooter(plates: [BoardPlate], x: CGFloat, w: CGFloat, y: CGFloat, cg: CGContext) {
+    private static func drawFooter(plates: [BoardPlate], x: CGFloat, w: CGFloat, y: CGFloat, sheet: String, cg: CGContext) {
         let dates = plates.map { $0.date }.filter { !$0.isEmpty }.sorted()
         let range = dates.isEmpty ? "" : (dates.first == dates.last ? dates.first! : "\(dates.first!)–\(dates.last!)")
         let para = NSMutableParagraphStyle(); para.alignment = .right; para.lineHeightMultiple = 1.4
         let s = NSMutableAttributedString()
-        s.append(NSAttributedString(string: "catalogue · b1\n", attributes: [.font: semi(8.5), .foregroundColor: ink, .paragraphStyle: para]))
+        s.append(NSAttributedString(string: "catalogue · \(sheet)\n", attributes: [.font: semi(8.5), .foregroundColor: ink, .paragraphStyle: para]))
         s.append(NSAttributedString(string: "\(plates.count) plates · \(range)\n", attributes: [.font: reg(8.5), .foregroundColor: ink, .paragraphStyle: para]))
         s.append(NSAttributedString(string: String(format: "sequence 01–%02d", plates.count), attributes: [.font: reg(8.5), .foregroundColor: ink, .paragraphStyle: para]))
         s.draw(with: CGRect(x: x, y: y, width: w, height: 15 * mm), options: [.usesLineFragmentOrigin], context: nil)

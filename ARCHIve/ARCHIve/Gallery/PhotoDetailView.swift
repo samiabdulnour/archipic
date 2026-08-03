@@ -77,7 +77,7 @@ struct PhotoDetailView: View {
                     }
                     Divider()
                     Button { shareCurrent() } label: { Label("Share", systemImage: "square.and.arrow.up") }
-                        .disabled(exportingVideo)
+                        .disabled(exportingVideo || currentImage == nil)   // no empty share sheet mid-load
                     Button(role: .destructive) { confirmDelete = true } label: {
                         Label("Delete", systemImage: "trash")
                     }

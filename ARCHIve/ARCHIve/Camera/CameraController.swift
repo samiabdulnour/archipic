@@ -338,20 +338,30 @@ final class CameraController: NSObject {
             let newDevice = newPos == .back
                 ? self.bestBackDevice()
                 : AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
+            var added = false
             if let device = newDevice,
                let input = try? AVCaptureDeviceInput(device: device),
                self.session.canAddInput(input) {
                 self.session.addInput(input)
                 self.videoDevice = device
+                added = true
+            } else if let old = self.videoDevice,
+                      let input = try? AVCaptureDeviceInput(device: old),
+                      self.session.canAddInput(input) {
+                // New camera unavailable (e.g. front busy in a FaceTime call): put
+                // the current one back so we're never left with no video input.
+                self.session.addInput(input)
             }
+            let front = (added ? newPos : self.position) == .front
             // Set the geometry INSIDE the block so it commits atomically with the new
             // input — there's then no window in which the connection is still
             // mirroring (which flashed an upside-down frame).
-            self.applyConnectionGeometry(front: newPos == .front)
+            self.applyConnectionGeometry(front: front)
             self.session.commitConfiguration()
             // Re-assert afterwards too: the commit can rebuild the connections, and
             // a connection that came back with defaults would be sideways.
-            self.applyConnectionGeometry(front: newPos == .front)
+            self.applyConnectionGeometry(front: front)
+            guard added else { return }   // stayed on the current camera; nothing to advance
             // Hold the viewfinder until this camera's frames match its settled
             // geometry, so the flip is as fast as the camera and never flashes.
             self.liveFront = (newPos == .front)
@@ -405,8 +415,15 @@ final class CameraController: NSObject {
         let maxF = min(maxAvail, base * 15)
         let stops = specs.map { ZoomStop(factor: $0.factor, label: $0.label) }
 
-        // Open at 1× (the wide), not the ultra-wide's native 1.0.
-        do { try device.lockForConfiguration(); device.videoZoomFactor = base; device.unlockForConfiguration() } catch {}
+        // Open at 1× (the wide), not the ultra-wide's native 1.0. Clamp to the
+        // device's LIVE range — an out-of-range assignment throws an uncatchable
+        // NSRangeException that `catch` can't stop.
+        do {
+            try device.lockForConfiguration()
+            device.videoZoomFactor = max(device.minAvailableVideoZoomFactor,
+                                         min(base, device.maxAvailableVideoZoomFactor))
+            device.unlockForConfiguration()
+        } catch {}
 
         let published = stops.count > 1 ? stops : []
         self.onMain {
@@ -467,11 +484,15 @@ final class CameraController: NSObject {
             guard let self, let device = self.videoDevice else { return }
             do {
                 try device.lockForConfiguration()
+                // Clamp to the device's LIVE range — the cached min/max can lag it,
+                // and an out-of-range value throws an uncatchable NSRangeException.
+                let safe = max(device.minAvailableVideoZoomFactor,
+                               min(clamped, device.maxAvailableVideoZoomFactor))
                 if ramp {
-                    device.ramp(toVideoZoomFactor: clamped, withRate: 24)
+                    device.ramp(toVideoZoomFactor: safe, withRate: 24)
                 } else {
                     device.cancelVideoZoomRamp()
-                    device.videoZoomFactor = clamped
+                    device.videoZoomFactor = safe
                 }
                 device.unlockForConfiguration()
             } catch { }
@@ -754,6 +775,9 @@ extension CameraController: AVCaptureFileOutputRecordingDelegate {
         // AVFoundation signals that via the success key, so keep the clip.
         let finishedOK = error == nil
             || (error as NSError?)?.userInfo[AVErrorRecordingSuccessfullyFinishedKey] as? Bool == true
+        // A genuinely failed recording's temp is never handed to saveVideo, so
+        // remove it here rather than leaking it in tmp.
+        if !finishedOK { try? FileManager.default.removeItem(at: outputFileURL) }
         onMain {
             self.isRecording = false
             self.recordPending = false

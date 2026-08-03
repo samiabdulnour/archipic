@@ -354,7 +354,7 @@ struct GalleryView: View {
             }
             .buttonStyle(.plain)
         } else {
-            NavigationLink(value: photo) { tile(photo, selected: false) }
+            NavigationLink(value: photo.id) { tile(photo, selected: false) }
                 .buttonStyle(.plain)
                 .contextMenu { photoMenu(photo) }
         }
@@ -505,10 +505,10 @@ struct GalleryView: View {
     }
 
     private func shareSelected() {
-        // Load via PhotoImage.full (references + edits), sequentially so only a
-        // couple of bitmaps live at once, and cap the batch so Select-All over a
-        // huge library can't decode thousands of full-size images into memory.
-        let targets = Array(photos.filter { selected.contains($0.id) }.prefix(40))
+        // Load via PhotoImage.full (references + edits). The share sheet needs all
+        // the UIImages live at once, so cap the batch low — 12 full-size (2400px)
+        // bitmaps is a safe peak; 40 could hold ~1 GB and jetsam-kill the app.
+        let targets = Array(photos.filter { selected.contains($0.id) }.prefix(12))
         guard !targets.isEmpty else { return }
         Task {
             var imgs: [UIImage] = []
@@ -779,7 +779,10 @@ struct PhotoThumbnail: View {
                 } else {
                     base = await Self.thumbnail(from: photo.imageData, maxPixel: 400)
                 }
-                if let base {
+                // The photo may have been deleted during the load (e.g. a no-confirm
+                // delete in the Reference lens while an iCloud thumbnail resolves);
+                // reading a deleted SwiftData model traps, so bail if it's gone.
+                if let base, photo.modelContext != nil {
                     let out = (photo.hasEdits && !photo.isVideo) ? PhotoEdits.render(base, photo) : base
                     withAnimation(.easeOut(duration: 0.3)) { image = out }
                 }
@@ -816,7 +819,7 @@ private struct MapLens: View {
                 ForEach(photos) { photo in
                     if let lat = photo.latitude, let lon = photo.longitude {
                         Annotation("", coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon)) {
-                            NavigationLink(value: photo) {
+                            NavigationLink(value: photo.id) {
                                 PhotoThumbnail(photo: photo)
                                     .frame(width: 44, height: 44)
                                     .clipShape(RoundedRectangle(cornerRadius: 6))

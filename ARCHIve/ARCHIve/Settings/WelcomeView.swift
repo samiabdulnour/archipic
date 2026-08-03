@@ -102,6 +102,6 @@ enum AppGuide {
         .init(icon: "doc.richtext.fill", title: "Boards & Journals", tint: Palette.lemon,
               body: "Select photos in the gallery, tap Board, and lay them out as a printable catalogue poster (B1) or a chronological journal (A4). Export a PDF to print, save, or share."),
         .init(icon: "lock.icloud.fill", title: "Private & synced", tint: Palette.coral,
-              body: "Everything stays on your device and syncs through your own iCloud — no account, no ads, no tracking. Export a full backup to Files any time."),
+              body: "Everything stays on your device and syncs through your own iCloud — no account, no ads, no tracking."),
     ]
 }

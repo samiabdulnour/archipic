@@ -370,8 +370,8 @@ struct CameraView: View {
         }
     }
 
-    /// Record button (video mode): the same app mark in the app's coral red; its
-    /// inner disc morphs to a rounded square while recording.
+    /// Record button (video mode): the same app mark in the app's coral red; while
+    /// recording, its ring spins (the disc is unchanged) — the sole record signal.
     private var recordButton: some View {
         Button(action: onRecordTap) {
             CaptureMark(color: Palette.coral, recording: camera.isRecording)
@@ -510,8 +510,14 @@ struct CameraView: View {
                     flipButton.opacity(camera.isRecording ? 0.35 : 1)
                         .disabled(camera.isRecording)
                 }
-                // Hide the media toggle while recording (like the native Camera).
-                if !camera.isRecording { mediaModeToggle }
+                // Hide the media toggle while recording (like the native Camera);
+                // disable it during a self-timer countdown so the pending capture
+                // can't fire in the wrong mode.
+                if !camera.isRecording {
+                    mediaModeToggle
+                        .disabled(countdown != nil)
+                        .opacity(countdown != nil ? 0.4 : 1)
+                }
             }
         case .looks:
             HStack(spacing: 10) {
@@ -597,7 +603,10 @@ struct CameraView: View {
     private func onShutter() {
         let secs = camera.timerSeconds
         if secs > 0 {
-            Task { await runCountdown(from: secs); performCapture() }
+            // @MainActor: after the countdown await this resumes off-main otherwise,
+            // mutating @State (shutterFlash/countdown) and capture bookkeeping on a
+            // background thread.
+            Task { @MainActor in await runCountdown(from: secs); performCapture() }
         } else {
             performCapture()
         }
@@ -692,6 +701,13 @@ struct CameraView: View {
             let poster = posterFull.map { CameraController.crop($0, toRatio: cropRatio) }
             let posterData = poster?.jpegData(compressionQuality: 0.9) ?? Data()
             let localID = await PhotosLibrary.saveVideo(fileURL: url, coordinate: coord)
+            // Fallback bytes only when Photos didn't take it.
+            let movieData: Data? = localID == nil ? (try? Data(contentsOf: url)) : nil
+            // Need a playable source — a Photos reference OR the in-app bytes.
+            // If neither (Photos denied AND the file read failed), keep the temp
+            // and abort rather than saving an unplayable phantom "video" and then
+            // deleting its only copy.
+            guard localID != nil || movieData != nil else { return }
             let photo: Photo
             if let localID {
                 photo = Photo(imageData: posterData,
@@ -699,7 +715,6 @@ struct CameraView: View {
                               humanTags: prefilledTags(), project: proj,
                               assetLocalID: localID, isCameraShot: true, isVideo: true)
             } else {
-                let movieData = try? Data(contentsOf: url)
                 photo = Photo(imageData: posterData,
                               latitude: coord?.latitude, longitude: coord?.longitude,
                               humanTags: prefilledTags(), project: proj,
@@ -708,7 +723,7 @@ struct CameraView: View {
             modelContext.insert(photo)
             try? modelContext.save()
             savedCount += 1
-            try? FileManager.default.removeItem(at: url)   // temp recording no longer needed
+            try? FileManager.default.removeItem(at: url)   // source persisted → temp no longer needed
             if tagMode == .full {
                 camera.stop()
                 tagTarget = photo
@@ -1016,6 +1031,11 @@ private struct FocusExposureView: View {
     @State private var gestureStarted = false
     @State private var ignoring = false
     @State private var hideItem: DispatchWorkItem?
+    /// True while a pinch is recognized; a `@GestureState` auto-resets on end AND
+    /// cancel (a plain flag wouldn't), so a cancelled pinch can't leave stale state.
+    @GestureState private var pinching = false
+    /// Pending tap-to-focus, deferred a beat so a second finger (pinch) cancels it.
+    @State private var focusTask: Task<Void, Never>?
 
     var body: some View {
         ZStack {
@@ -1029,6 +1049,9 @@ private struct FocusExposureView: View {
         .ignoresSafeArea()
         .gesture(focusDrag)
         .simultaneousGesture(zoomMagnify)
+        // A pinch that ends OR is cancelled clears the anchor, so the next pinch
+        // never scales from a stale value.
+        .onChange(of: pinching) { _, now in if !now { pinchAnchor = nil } }
     }
 
     private var focusDrag: some Gesture {
@@ -1046,12 +1069,24 @@ private struct FocusExposureView: View {
                     // the screen tap into the window's coordinate space.
                     let lp = CGPoint(x: value.startLocation.x - focusRegion.minX,
                                      y: value.startLocation.y - focusRegion.minY)
-                    camera.focusAndExpose(atLayerPoint: lp)
-                    camera.setExposureBias(0)
-                    reveal()
+                    // Defer focus a beat: a DragGesture(minimumDistance: 0) fires on
+                    // the FIRST finger, including the first finger of a pinch, so
+                    // committing focus immediately made every pinch-to-zoom yank
+                    // focus/exposure to that point. If a second finger lands, the
+                    // pinch cancels this task instead.
+                    focusTask?.cancel()
+                    focusTask = Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 110_000_000)
+                        guard !Task.isCancelled, !pinching else { return }
+                        camera.focusAndExpose(atLayerPoint: lp)
+                        camera.setExposureBias(0)
+                        reveal()
+                    }
+                    return   // don't adjust exposure / reveal on the initial touch
                 }
-                guard !ignoring else { return }
-                // Drag up = brighter, down = darker (≈90pt per EV).
+                // Subsequent moves = single-finger drag-to-expose (up brighter,
+                // down darker, ≈90pt per EV). Skipped while pinching.
+                guard !ignoring, !pinching else { return }
                 let dy = value.location.y - value.startLocation.y
                 bias = Float(max(-2, min(2, Double(-dy) / 90)))
                 camera.setExposureBias(bias)
@@ -1066,7 +1101,9 @@ private struct FocusExposureView: View {
 
     private var zoomMagnify: some Gesture {
         MagnifyGesture()
+            .updating($pinching) { _, state, _ in state = true }
             .onChanged { value in
+                focusTask?.cancel()   // a pinch cancels a pending tap-to-focus
                 let anchor = pinchAnchor ?? camera.zoomFactor
                 if pinchAnchor == nil { pinchAnchor = anchor }
                 camera.setZoom(anchor * value.magnification)

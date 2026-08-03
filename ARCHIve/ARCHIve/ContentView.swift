@@ -16,8 +16,10 @@ struct ContentView: View {
             GalleryView()
                 .navigationTitle("")
                 .navigationBarTitleDisplayMode(.inline)
-                .navigationDestination(for: Photo.self) { photo in
-                    PhotoDetailView(photoID: photo.id)
+                // Navigate on the id String, not the live Photo — so re-evaluating
+                // the destination never reads a deleted model (an uncatchable trap).
+                .navigationDestination(for: String.self) { id in
+                    PhotoDetailView(photoID: id)
                 }
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {

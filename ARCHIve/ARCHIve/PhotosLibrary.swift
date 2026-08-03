@@ -27,6 +27,10 @@ enum PhotoImage {
             base = await PhotoThumbnail.thumbnail(from: photo.imageData, maxPixel: 2400)
         }
         guard let base else { return nil }
+        // The photo may have been deleted during the (possibly slow, iCloud)
+        // load; reading a deleted SwiftData model's properties throws an
+        // uncatchable ObjC exception, so return the raw pixels if it's gone.
+        guard photo.modelContext != nil else { return base }
         return (photo.hasEdits && !photo.isVideo) ? PhotoEdits.render(base, photo) : base
     }
 }

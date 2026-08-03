@@ -13,6 +13,8 @@
 		<string>CloudKit</string>
 	</array>
 	<key>com.apple.security.application-groups</key>
-	<array/>
+	<array>
+		<string>group.com.samiabdulnour.archive</string>
+	</array>
 </dict>
 </plist>

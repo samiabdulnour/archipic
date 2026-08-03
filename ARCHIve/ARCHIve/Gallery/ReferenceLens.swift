@@ -105,7 +105,7 @@ struct ReferenceLens: View {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 4) {
                                 ForEach(group.1.prefix(12)) { p in
-                                    NavigationLink(value: p) {
+                                    NavigationLink(value: p.id) {
                                         PhotoThumbnail(photo: p).frame(width: 96, height: 96).clipped()
                                     }.buttonStyle(.plain)
                                 }
@@ -124,7 +124,7 @@ struct ReferenceLens: View {
         return ScrollView {
             LazyVGrid(columns: columns, spacing: 2) {
                 ForEach(items) { p in
-                    NavigationLink(value: p) {
+                    NavigationLink(value: p.id) {
                         PhotoThumbnail(photo: p).aspectRatio(1, contentMode: .fill).clipped()
                             .overlay { if p.isFavorite { Rectangle().strokeBorder(Color.red, lineWidth: 2) } }
                             .overlay(alignment: .topLeading) { TileBadges(photo: p).padding(4) }
@@ -176,7 +176,7 @@ private struct CategoryHero: View {
                     Section {
                         LazyVGrid(columns: cols, spacing: 2) {
                             ForEach(items) { p in
-                                NavigationLink(value: p) {
+                                NavigationLink(value: p.id) {
                                     PhotoThumbnail(photo: p).aspectRatio(1, contentMode: .fill).clipped()
                                         .overlay { if p.isFavorite { Rectangle().strokeBorder(Color.red, lineWidth: 2) } }
                                 }.buttonStyle(.plain)

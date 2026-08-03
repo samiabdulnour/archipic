@@ -37,7 +37,10 @@ struct BoardComposerView: View {
     }
 
     private var byID: [String: Photo] { Dictionary(allPhotos.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a }) }
-    private var orderedPhotos: [Photo] { order.compactMap { byID[$0] } }
+    private var orderedPhotos: [Photo] {
+        let map = byID                       // build once, not once per id
+        return order.compactMap { map[$0] }
+    }
 
     var body: some View {
         NavigationStack {
