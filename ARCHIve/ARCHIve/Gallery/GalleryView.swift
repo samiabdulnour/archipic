@@ -45,8 +45,9 @@ struct GalleryView: View {
     @State private var selecting = false
     @State private var selected: Set<String> = []
     @State private var confirmDelete = false
-    @State private var shareItems: [UIImage] = []
+    @State private var shareItems: [Any] = []   // JPEG file URLs (with metadata)
     @State private var showShare = false
+    @AppStorage("stripGPSOnExport") private var stripGPSOnExport = false
     @State private var composerSelection: BoardSelection?   // selection to compose into a board
     @State private var showBoards = false             // saved-boards shelf
     // drag-to-paint selection
@@ -419,10 +420,12 @@ struct GalleryView: View {
     }
 
     private func shareOne(_ photo: Photo) {
-        // Via PhotoImage.full so references (camera shots) and edits are included
-        // — `imageData` is empty for references, so the old path shared nothing.
+        // Export a JPEG file with the tags embedded as metadata (references and
+        // edits included via PhotoImage.full).
         Task {
-            if let img = await PhotoImage.full(for: photo) { shareItems = [img]; showShare = true }
+            if let url = await PhotoExport.jpegURL(for: photo, includeGPS: !stripGPSOnExport) {
+                shareItems = [url]; showShare = true
+            }
         }
     }
 
@@ -505,18 +508,17 @@ struct GalleryView: View {
     }
 
     private func shareSelected() {
-        // Load via PhotoImage.full (references + edits). The share sheet needs all
-        // the UIImages live at once, so cap the batch low — 12 full-size (2400px)
-        // bitmaps is a safe peak; 40 could hold ~1 GB and jetsam-kill the app.
-        let targets = Array(photos.filter { selected.contains($0.id) }.prefix(12))
+        // Export each selection to a JPEG file (with metadata), sequentially, so
+        // only one bitmap is ever in memory — unlike holding N decoded UIImages.
+        let targets = Array(photos.filter { selected.contains($0.id) }.prefix(40))
         guard !targets.isEmpty else { return }
         Task {
-            var imgs: [UIImage] = []
+            var urls: [URL] = []
             for p in targets {
-                if let img = await PhotoImage.full(for: p) { imgs.append(img) }
+                if let url = await PhotoExport.jpegURL(for: p, includeGPS: !stripGPSOnExport) { urls.append(url) }
             }
-            guard !imgs.isEmpty else { return }
-            shareItems = imgs; showShare = true
+            guard !urls.isEmpty else { return }
+            shareItems = urls; showShare = true
         }
     }
 

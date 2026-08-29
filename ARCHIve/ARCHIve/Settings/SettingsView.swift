@@ -14,6 +14,7 @@ struct SettingsView: View {
     @AppStorage("customProjects") private var customProjectsRaw = ""
     @AppStorage("autoSuggestTags") private var autoSuggestTags = true
     @AppStorage("boardMark") private var boardMark = true
+    @AppStorage("stripGPSOnExport") private var stripGPSOnExport = false
 
     @State private var newProject = ""
 
@@ -44,6 +45,12 @@ struct SettingsView: View {
                     Toggle("Attribution mark on shared images", isOn: $boardMark)
                 } header: { header("Boards") } footer: {
                     Text("Adds a small Archipic mark in the corner when you export a board as an image (never over a photo). PDFs are unaffected.")
+                }
+                Section {
+                    Toggle("Include location in exports", isOn: Binding(
+                        get: { !stripGPSOnExport }, set: { stripGPSOnExport = !$0 }))
+                } header: { header("Exports") } footer: {
+                    Text("Shared photos carry your tags as standard metadata (keywords, caption, title, rating) readable in Lightroom or Bridge. Turn location off to strip GPS when sharing publicly.")
                 }
                 Section {
                     NavigationLink { HowToUseView() } label: { Text("How to use Archipic") }

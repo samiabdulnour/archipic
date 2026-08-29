@@ -20,7 +20,9 @@ struct PhotoDetailView: View {
     @State private var currentImage: UIImage?
     @State private var exportingVideo = false   // cropping a video for share
     @State private var shareVideoURL: URL?      // the cropped movie to share
+    @State private var shareStillURL: URL?      // the exported JPEG (with metadata) to share
     @State private var shareFailed = false      // export/download couldn't produce a file
+    @AppStorage("stripGPSOnExport") private var stripGPSOnExport = false
     /// A copied set of human tags, ready to paste onto another photo. Stored as
     /// JSON so it survives paging between photos and app relaunches.
     @AppStorage(TagClipboard.key) private var copiedTagsJSON = ""
@@ -98,8 +100,8 @@ struct PhotoDetailView: View {
         .sheet(isPresented: $showShare) {
             if current?.isVideo == true, let url = shareVideoURL {
                 ActivityView(items: [url])
-            } else if let img = currentImage {
-                ActivityView(items: [img])
+            } else if let url = shareStillURL {
+                ActivityView(items: [url])
             }
         }
         .overlay {
@@ -121,8 +123,9 @@ struct PhotoDetailView: View {
             Text("This video isn't available to share right now. If it lives in iCloud, make sure it has finished downloading, then try again.")
         }
         .onDisappear {
-            // Remove the temp export left for the share sheet so it doesn't linger.
+            // Remove the temp exports left for the share sheet so they don't linger.
             if let url = shareVideoURL { try? FileManager.default.removeItem(at: url) }
+            if let url = shareStillURL { try? FileManager.default.removeItem(at: url) }
         }
     }
 
@@ -144,7 +147,12 @@ struct PhotoDetailView: View {
                 }
             }
         } else {
-            showShare = true
+            // Export a JPEG with the tags embedded as metadata, then share the file.
+            shareStillURL = nil
+            Task {
+                let url = await PhotoExport.jpegURL(for: current, includeGPS: !stripGPSOnExport)
+                await MainActor.run { shareStillURL = url; showShare = (url != nil) }
+            }
         }
     }
 
