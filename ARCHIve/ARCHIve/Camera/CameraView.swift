@@ -64,6 +64,8 @@ struct CameraView: View {
             camera.requestAccessAndConfigure()
             motion.start()
             LocationProvider.shared.start()
+            // A Shortcut / Siri / Action-Button capture can pre-select a project.
+            if let p = QuickCapture.consumeProject() { camera.currentProject = p }
         }
         .onDisappear {
             camera.stop()
