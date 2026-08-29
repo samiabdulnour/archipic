@@ -1,102 +1,195 @@
-# archi-archive
+# Archi.vé
 
-A personal, private photo-journal app for an architect. The owner takes photos from everyday life that relate to their architectural work — site visits, references spotted in the world, exhibitions, details, whatever catches the eye — tags them with a small structured vocabulary, and browses them later by tag.
+A private photo journal for architects. The user photographs architecture they
+encounter — a façade on a walk, a joint at an exhibition, a plan in a book, a
+site in progress — tags it with a small structured vocabulary in about two taps,
+and finds it again later by what it is, when it was taken, which project it
+belongs to, or where it was found.
 
-## ⚠️ DIRECTION CHANGE — native-first for the App Store (owner directive, 2026-06-01)
+Shipped on the App Store as a free, native iPhone app. Bundle ID
+`com.samiabdulnour.archive`, Team `N6QDF49V2G`, iOS 17+.
 
-**The goal is now a high-quality, fully functional native iPhone app shipped to the App Store. The web app and GitHub Pages deployment are NO LONGER a target.** The owner explicitly lifted the constraints that were limiting app quality: the "no native iOS Swift", "plain HTML/CSS/JS only", "one or two files", and "web app is the canonical source / Capacitor syncs from it" rules below are **superseded**. Build the app in whatever interface/stack best serves quality and the native iOS experience, even if it means substantially more work (e.g. native AVFoundation camera for real flash/focus/exposure, native UI screens, native storage).
+---
 
-The product intent is unchanged — fast capture, structured two-tap tagging, the Kind/Context-derived taxonomy (see below), reliable local storage, browse-by-tag, separate `tags_human` / `tags_machine` fields. Only the *implementation constraints* are relaxed. The exact target architecture (full native rewrite vs. incremental native migration from the existing Capacitor/web build) is being decided with the owner; older sections of this file describe the previous web-only design and remain as reference for the existing behavior to preserve.
+## Product principles
 
-## Who this is for
+These are the rules the app is judged against. Anything that breaks one of them
+needs to be discussed with the owner before it is built.
 
-A single user (the owner) on their own iPhone. Not multi-user. Not public. No accounts, no sharing, no cloud sync in early stages.
+1. **Capture is fast.** Open, shoot, tag, done — usable while walking. Typing on
+   a phone on a sidewalk is the enemy, so tags are buttons, not text fields.
+2. **The vocabulary is small and fixed.** A consistent taxonomy beats free-form
+   keywords, because it is what makes the archive searchable years later.
+3. **Human tags and machine tags never merge.** `tagsHuman` is what the user
+   said; `tagsMachine` is what software guessed. Keep them separate forever so
+   intent and guesses stay distinguishable.
+4. **Edits are non-destructive.** Looks, crop, rotation, straighten and keystone
+   are stored as parameters and applied on display. The source pixels are never
+   altered.
+5. **Nothing leaves the device except to the user's own iCloud.** No accounts,
+   no ads, no analytics, no third-party SDKs, no developer server. This is a
+   promise made on the App Store listing and it constrains every feature.
+6. **Photos are never lost.** Anything touching the data model, the capture
+   path, or the store must be conservative. Ask before changing it.
 
-## Goals
+---
 
-- **Capture fast.** Open app, tap one button, take photo, tag in 2 taps, done. The whole flow should take under 10 seconds so it's usable while walking.
-- **Structured tags, not free text.** Tags are pre-defined buttons, not a keyboard field. Typing on a phone while standing on a sidewalk is the enemy.
-- **Reliable local storage.** Photos must survive closing Safari/Chrome and reopening days later. IndexedDB.
-- **Browse by tag.** Later, filter the archive by any tag or combination.
-- **Open door to image-recognition assistance.** The data model keeps human tags and future machine-suggested tags as separate fields from day one, so adding auto-suggest later is a small change, not a refactor.
+## Who it is for
 
-## Scope — in
+Working architects, architecture students, and anyone who collects visual
+references from the built world. Single-user by design: one person, their own
+archive, synced across their own devices. Not collaborative, no sharing of
+libraries, no multi-user features.
 
-- Camera capture via `<input type="file" capture="environment">` or `getUserMedia`.
-- Tag flow: a short sequence of binary/multi-choice buttons after each photo.
-- Local persistence (IndexedDB) for photos + tags.
-- Gallery view with tag filters (later stage).
-- Voice notes attached to a photo (later stage, optional).
-- Progressive Web App so it installs to the home screen (last stage).
+---
 
-## Scope — out (for now)
+## Architecture
 
-- Cloud sync, multi-device, sharing, accounts, login.
-- Editing photos (crop, filter, rotate).
-- Any backend server. The app is 100% client-side.
+Native SwiftUI, built and shipped from `ARCHIve/ARCHIve.xcodeproj`. Two targets:
+the app (`ARCHIve`) and a widget extension (`ArchiveWidgetsExtension`).
 
-## iOS app (in scope as of 2026-05-24)
+- **Persistence:** SwiftData, models `Photo` and `Board`.
+- **Sync:** CloudKit private database via
+  `ModelConfiguration(cloudKitDatabase: .automatic)`. The developer cannot read
+  any of it.
+- **Camera:** AVFoundation, hand-built viewfinder — grid, level, aspect guides,
+  tap-to-focus and exposure, pinch zoom, film-inspired colour looks, photo and
+  video modes.
+- **Location:** CoreLocation, captured with the photo so the Map lens works.
+  Requested only while capturing.
+- **Maps:** MapKit.
+- **Crash recovery:** if the SwiftData store fails to open, `ARCHIveApp` moves
+  it aside as `default.store.corrupt-<timestamp>` (never deletes it) and retries
+  once, letting CloudKit re-populate a fresh store. This exists to prevent a
+  permanent launch crash-loop that would lock the user out of their own archive.
 
-The app is also shipped to the App Store as a native iOS app via **Capacitor** — a thin wrapper around the same `index.html`, not a rewrite. Bundle ID: `com.samiabdulnour.archive`. App name: Archi.vé. See `BUILD-IOS.md` for the step-by-step build, and `APPSTORE.md` for listing copy + screenshots. Web app at `samiabdulnour.github.io/archi-ve/` stays the canonical source; Capacitor syncs from it.
+### File map
 
-Do not add native iOS Swift code, Cordova plugins, or fork the codebase. Anything iOS-specific lives in `capacitor.config.json`, `BUILD-IOS.md`, or — at submission time — the auto-generated `/ios` Xcode project (which is committed but never hand-edited).
+```
+ARCHIve/ARCHIve/
+  ARCHIveApp.swift        App entry, ModelContainer, store recovery
+  ContentView.swift       Root navigation
+  Photo.swift             Photo model + HumanTags + TagClipboard
+  PhotosLibrary.swift     Photos-library access and asset loading
+  QuickCapture.swift      Fast capture entry point
+  Palette.swift           Colour tokens
+  Camera/                 AVFoundation capture, looks, level, video, picker
+  Tagging/                Tag sheet, form, vocabulary, suggester, photo editor
+  Gallery/                Grid, library, reference lens, detail, video playback
+  Print/                  Boards: model, composer, PDF renderer, geocoder
+  Settings/               Welcome, how-to, about, backup/restore, sync monitor
+ARCHIve/ArchiveWidgets/   Home Screen, Lock Screen and Control Centre widgets
+```
 
-**Documented exception (owner-approved 2026-06-01):** one piece of hand-written native Swift is allowed — `ios/App/App/NativeMotion.swift` (a small CoreMotion plugin + a `MotionBridgeViewController`). It exists because the web DeviceMotion API inside WKWebView only delivers after a user tap, which left the camera level/icon-spin frozen on launch; CoreMotion gravity needs no permission or gesture. Do NOT delete it as part of "no native Swift" cleanup. It is wired via `Main.storyboard` (custom class `MotionBridgeViewController`) and registered in `App.xcodeproj/project.pbxproj` — these three edits to the otherwise-generated `/ios` project must be preserved across any `cap` regeneration. See memory `ios-device-motion`.
+---
 
-## Target platforms
+## Data model
 
-- **Primary:** iPhone Safari.
-- **Secondary:** iPhone Chrome.
-- Desktop browsers only need to work well enough for development/debugging.
+`Photo` (SwiftData, CloudKit-synced):
+
+- `id` — UUID string. **No `.unique` constraint** — CloudKit forbids it.
+  Uniqueness is enforced by generating UUIDs and de-duping by id on
+  restore/import.
+- `imageData` — external storage. The JPEG, or for video the poster frame.
+  Empty when the pixels live in the Photos library.
+- `assetLocalID` — set when the record is a *reference* to a photo in the
+  system Photos library rather than a copy. `isReference` derives from it.
+- `isVideo`, `videoData` — video lives in Photos where possible; `videoData` is
+  the in-app fallback when saving to Photos was not permitted.
+- `createdAt`, `latitude`, `longitude` — capture time and place.
+- `humanTagsData` / `machineTagsData` — JSON blobs. JSON rather than columns so
+  the taxonomy can evolve without a SwiftData migration and without a CloudKit
+  schema deploy for every tweak.
+- `project`, `isFavorite`, `importedAt`, `isCameraShot`, `labelImageData`
+  (a second shot of a wall label or placard, captured instead of typing it).
+- Non-destructive edits: `editLookRaw`, `editKeystone`, `editRotation`,
+  `editStraighten`, `cropX/Y/W/H`. `hasEdits` lets display skip the pipeline
+  entirely for untouched photos.
+- `searchText` — denormalised lower-cased text of every tag value, for
+  AND word-match search.
+
+`HumanTags` is a `Codable` struct, all fields optional or arrays so a
+half-tagged draft is representable.
+
+---
 
 ## Tag vocabulary
 
-Grounded in a manual scan of the owner's actual camera roll (2022–2026). After each photo, the user answers two questions, always the same two:
+Tap one picks the **type**; the following fields depend on it.
 
-### Tap 1 — **Kind** (what is the photo of?)
-- **Space** — a 3D thing you stood in or in front of: building, interior, plaza, ruin, installation.
-- **Surface** — a close-up of material or detail: facade, texture, tile, joint, carving.
-- **Page** — something flat with information: book spread, drawing, sketch, artwork on a wall, printed document.
+- **Building** — the whole thing. Typology (residential, office, public,
+  commercial, civic, hospitality, heritage, industrial, landscape), room,
+  concepts.
+- **Element** — a part of it. Element category and element (structure,
+  openings, envelope, finishes, details), materials, colours.
+- **Graphic** — a flat reference. Kind (artwork, book, drawing, plan, render,
+  model, web), visual character, plus per-kind detail fields: title, creator,
+  year, source, brand, model, contact name and company.
 
-### Tap 2 — **Context** (what was the situation?)
-- **Travel** — encountered out there on a trip, not tied to your own work (heritage sites, cities, buildings elsewhere).
-- **Exhibition** — at a biennale, gallery, museum, architecture show. Includes artworks on gallery walls.
-- **Making** — your own fabrication/installation/project in progress.
-- **Reference** — book page, printed drawing, article, study material.
+Optional across all types: author/year, note, place, free keywords, 1–5 rating.
+Fields are configurable — the user turns on only the ones they want.
 
-**3 × 4 = 12 coordinates.** Two taps per photo.
+Time and GPS come free from the phone and are never tagged by hand. Project is
+chosen separately, not part of the taxonomy.
 
-### Data model note
+`TagClipboard` copies one photo's taxonomy and pastes it onto another.
+`mergingTaxonomy(from:)` deliberately keeps the target's own place, note,
+rating, keywords and graphic details, so pasting never wipes hand-typed values.
 
-Every photo record has two tag fields:
-- `tags_human` — the user's own Kind + Context answers above.
-- `tags_machine` — reserved for future image-recognition suggestions. Empty for now. Do not merge these two fields — keep them separate so human intent and machine guesses stay distinguishable forever.
+---
 
-Place (GPS) and time (timestamp) come free from the phone — do not tag them manually. Project association is handled later via an editable project list, not a fixed value in these taps.
+## Browsing
 
-### Scope deferred
+Four lenses over the same archive: **Time**, **Reference** (grouped by what is
+in the photo), **Project**, and **Place** (map). Plus search across every tag,
+filters by type, project, favourites and minimum rating, and a pinch-resizable
+grid that remembers its preferred photos-per-row.
 
-- **Artworks in museums** are in scope — they map to `Page/Exhibition` or `Space/Exhibition`.
-- **Screenshots** (digital content saved from the phone) are a big part of how the owner archives today, but this app only accepts camera captures in Stage 1–3. Revisit after the core loop works.
+**Boards** compose any selection into a print-ready B1 poster (a justified
+gallery wall) or an A4 landscape journal, with captions drawn from the tags,
+exported as PDF.
 
-## Technical constraints
+---
 
-- **Stack: plain HTML, CSS, JavaScript.** No React, Vue, Svelte, TypeScript, build tools, bundlers, or npm dependencies unless there's a concrete reason the plain approach doesn't work. The owner is learning to code through this project — readable > clever.
-- **One or two files** in the early stages. Split into more files only when size genuinely demands it.
-- **No frameworks for storage** — use the browser's IndexedDB directly (a thin wrapper function is fine).
-- **No external fonts or CDNs** unless necessary. The app should work offline eventually.
+## Shipped so far
 
-## How to collaborate with the owner
+- **1.0** — Two-tap capture, the Building/Element/Graphic taxonomy, native
+  camera, gallery by time/reference/project/place, search and filters,
+  favourites and ratings, private iCloud sync, local backup and restore.
+- **1.3** — Video capture and playback, a new app mark (a filled disc in a
+  technical dash-dot ring) carried through the app and the widgets, a single
+  unified camera for Reference and Project capture, colour looks rebuilt from
+  measured colour, Boards, and a smoother gallery.
 
-- The owner is a complete beginner to programming. Explain what code does when adding non-trivial chunks.
-- Prefer small, working increments over big leaps.
-- Before adding a new dependency or pattern, explain the tradeoff and ask.
-- When the owner describes a bug, they describe the *symptom* — debug from that, don't assume.
-- Commit to git at the end of each working stage with a clear message.
-- **Auto-merge policy (owner preference, 2026-05-24):** when Claude pushes a PR for changes Claude wrote, Claude squash-merges it directly into `main` without waiting for manual review. The owner reviews on the live site after GitHub Pages rebuilds (~1–3 min). This means: be conservative about what you push — no speculative refactors, no breaking changes to the IndexedDB schema or `archi-archive:*` localStorage keys without explicit confirmation. Anything that touches data integrity, capture flow, or could lose photos still requires asking first.
+---
 
-## Current stage
+## Website
 
-**Stages 1–4 shipped.** Capture loop, tag taxonomy, gallery with lens/sub-tab filters, light + dark themes. Web app live at `samiabdulnour.github.io/archi-ve/`.
+`docs/` is served by GitHub Pages at **archi-ve.app** (see `docs/CNAME`):
+landing page, `privacy.html` and `support.html`. The latter two are required by
+App Store Connect and must stay reachable.
 
-**Next:** App Store submission via Capacitor. Web codebase is feature-stable; the iOS prep (manifest, icons, capacitor.config, BUILD-IOS.md, APPSTORE.md) is in place. Owner is waiting on Apple Developer Program enrolment approval, then will build on their Mac per `BUILD-IOS.md`.
+---
+
+## Working with the owner
+
+- The owner is an architect who is learning to program through this project.
+  Explain non-trivial code when adding it, in plain language.
+- Prefer small working increments over big leaps.
+- Before adding a dependency or a new pattern, explain the trade-off and ask.
+- When the owner reports a bug they describe the *symptom*. Debug from that
+  rather than assuming a cause.
+- Commit at the end of each working stage with a clear message.
+- **Auto-merge:** for changes the agent wrote, squash-merge the PR into `main`
+  without waiting for manual review. Because of this, be conservative: no
+  speculative refactors.
+- **Always ask first** before anything that touches the SwiftData schema,
+  CloudKit sync, the capture path, backup/restore, or the privacy promise.
+
+## Release
+
+See `BUILD-IOS.md` for the full procedure. In short: bump `MARKETING_VERSION`
+and `CURRENT_PROJECT_VERSION` on **both** targets, deploy the CloudKit schema to
+Production if and only if the SwiftData model changed (new keys inside the
+`humanTagsData` JSON need no deploy), archive for Any iOS Device, upload, then
+submit with a new What's New. `APPSTORE.md` holds the listing copy.
