@@ -1,0 +1,582 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Appliance": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Artwork": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: graphic",
+      "extractionState": "manual"
+    },
+    "Atrium": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Auditorium": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Bar": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Bathroom": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Beam": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Bedroom": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Bench": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Black": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: colors",
+      "extractionState": "manual"
+    },
+    "Blue": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: colors",
+      "extractionState": "manual"
+    },
+    "Book": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: graphic",
+      "extractionState": "manual"
+    },
+    "Brick": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: materials",
+      "extractionState": "manual"
+    },
+    "Brown": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: colors",
+      "extractionState": "manual"
+    },
+    "Building": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: types",
+      "extractionState": "manual"
+    },
+    "Ceiling": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Chapel": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Circulation": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: concepts",
+      "extractionState": "manual"
+    },
+    "Civic": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: typology",
+      "extractionState": "manual"
+    },
+    "Cladding": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Colorful": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: visual",
+      "extractionState": "manual"
+    },
+    "Colour": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: concepts, sections",
+      "extractionState": "manual"
+    },
+    "Column": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Commercial": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: typology",
+      "extractionState": "manual"
+    },
+    "Concept": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: sections",
+      "extractionState": "manual"
+    },
+    "Concrete": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: materials",
+      "extractionState": "manual"
+    },
+    "Contact": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: graphic",
+      "extractionState": "manual"
+    },
+    "Context": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: concepts",
+      "extractionState": "manual"
+    },
+    "Cornice": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Counter": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Curtain wall": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Dark": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: visual",
+      "extractionState": "manual"
+    },
+    "Decor": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Detail": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementcat",
+      "extractionState": "manual"
+    },
+    "Diagram": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: graphic",
+      "extractionState": "manual"
+    },
+    "Dining": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Door": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Drainage": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Drawing": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: graphic",
+      "extractionState": "manual"
+    },
+    "Earth": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: colors",
+      "extractionState": "manual"
+    },
+    "Electrical": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Element": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: sections, types",
+      "extractionState": "manual"
+    },
+    "Elevator": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Envelope": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementcat",
+      "extractionState": "manual"
+    },
+    "Escalator": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Fabric": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: materials",
+      "extractionState": "manual"
+    },
+    "Facade": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Fence": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Finish": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementcat",
+      "extractionState": "manual"
+    },
+    "Fire": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Fixture": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Floor": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Flooring": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Form": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: concepts",
+      "extractionState": "manual"
+    },
+    "Frame": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Frieze": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Furniture": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Gate": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Geometric": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: visual",
+      "extractionState": "manual"
+    },
+    "Glass": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: materials",
+      "extractionState": "manual"
+    },
+    "Graphic": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: types",
+      "extractionState": "manual"
+    },
+    "Green": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: colors",
+      "extractionState": "manual"
+    },
+    "Grey": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: colors",
+      "extractionState": "manual"
+    },
+    "Hall": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Heritage": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: typology",
+      "extractionState": "manual"
+    },
+    "Hospitality": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: typology",
+      "extractionState": "manual"
+    },
+    "HVAC": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Industrial": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: typology",
+      "extractionState": "manual"
+    },
+    "Inlay": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Joint": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Kind": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: sections",
+      "extractionState": "manual"
+    },
+    "Kitchen": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Lab": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Landscape": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementcat, typology",
+      "extractionState": "manual"
+    },
+    "Library": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Light": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: concepts, visual",
+      "extractionState": "manual"
+    },
+    "Lighting": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Living": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Lobby": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Lounge": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Materiality": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: concepts, sections",
+      "extractionState": "manual"
+    },
+    "Mechanical": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Meeting": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Metal": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: materials",
+      "extractionState": "manual"
+    },
+    "Minimal": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: visual",
+      "extractionState": "manual"
+    },
+    "Model": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: graphic",
+      "extractionState": "manual"
+    },
+    "Monochrome": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: visual",
+      "extractionState": "manual"
+    },
+    "Moulding": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Office": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: typology",
+      "extractionState": "manual"
+    },
+    "Opening": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementcat",
+      "extractionState": "manual"
+    },
+    "Orange": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: colors",
+      "extractionState": "manual"
+    },
+    "Organic": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: visual",
+      "extractionState": "manual"
+    },
+    "Ornament": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementcat",
+      "extractionState": "manual"
+    },
+    "Ornate": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: visual",
+      "extractionState": "manual"
+    },
+    "Other": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: concepts, graphic, materials, rooms, typology",
+      "extractionState": "manual"
+    },
+    "Outdoor": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Paint": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Pattern": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Patterned": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: visual",
+      "extractionState": "manual"
+    },
+    "Paving": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Plan": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: graphic",
+      "extractionState": "manual"
+    },
+    "Planting": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Plaster": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: materials",
+      "extractionState": "manual"
+    },
+    "Plumbing": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Product": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementcat",
+      "extractionState": "manual"
+    },
+    "Profile": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Public": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: typology",
+      "extractionState": "manual"
+    },
+    "Railing": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Ramp": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Red": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: colors",
+      "extractionState": "manual"
+    },
+    "Relief": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Render": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub, graphic",
+      "extractionState": "manual"
+    },
+    "Residential": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: typology",
+      "extractionState": "manual"
+    },
+    "Roof": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Room": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: sections",
+      "extractionState": "manual"
+    },
+    "Scale": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: concepts",
+      "extractionState": "manual"
+    },
+    "Section": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Service": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementcat, rooms",
+      "extractionState": "manual"
+    },
+    "Shop": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Showroom": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Skylight": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Slab": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Soffit": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Spa": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Space": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: concepts",
+      "extractionState": "manual"
+    },
+    "Stair": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Stairs": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Stone": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: materials",
+      "extractionState": "manual"
+    },
+    "Storage": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Structure": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: concepts, elementcat",
+      "extractionState": "manual"
+    },
+    "Textured": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: visual",
+      "extractionState": "manual"
+    },
+    "Tile": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub, materials",
+      "extractionState": "manual"
+    },
+    "Timber": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: materials",
+      "extractionState": "manual"
+    },
+    "Trim": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Typology": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: sections",
+      "extractionState": "manual"
+    },
+    "Vertical": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementcat",
+      "extractionState": "manual"
+    },
+    "Visual": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: sections",
+      "extractionState": "manual"
+    },
+    "Wall": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Water": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub",
+      "extractionState": "manual"
+    },
+    "Web": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: graphic",
+      "extractionState": "manual"
+    },
+    "White": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: colors",
+      "extractionState": "manual"
+    },
+    "Window": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: elementsub, rooms",
+      "extractionState": "manual"
+    },
+    "Workspace": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: rooms",
+      "extractionState": "manual"
+    },
+    "Yellow": {
+      "comment": "Tag vocabulary label (display only; stored value stays English). Group: colors",
+      "extractionState": "manual"
+    }
+  },
+  "version": "1.0"
+}

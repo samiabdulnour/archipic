@@ -120,7 +120,7 @@ struct SettingsView: View {
     // MARK: Capture flow steps
     private var captureStepsBody: some View {
         ForEach(TagVocab.types) { t in
-            NavigationLink { FlowStepsView(flow: t.id, title: t.label) } label: { Text(t.label) }
+            NavigationLink { FlowStepsView(flow: t.id, title: t.label) } label: { Text(LocalizedStringKey(t.label)) }
         }
     }
 

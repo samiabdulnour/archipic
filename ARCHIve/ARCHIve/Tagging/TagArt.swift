@@ -158,7 +158,7 @@ struct IllustratedTile<Art: View>: View {
                             .padding(5)
                     }
                 }
-                Text(label)
+                Text(LocalizedStringKey(label))   // display-localized; stored value is set separately
                     .font(.caption2)
                     .lineLimit(2).minimumScaleFactor(0.8)
                     .multilineTextAlignment(.center)
@@ -191,7 +191,7 @@ struct CompactTile<Art: View>: View {
         Button(action: action) {
             VStack(spacing: 6) {
                 art.frame(width: 27, height: 27)
-                Text(label)
+                Text(LocalizedStringKey(label))   // display-localized; stored value is set separately
                     .font(.system(size: 10.5, weight: selected ? .semibold : .medium))
                     .lineLimit(1).minimumScaleFactor(0.7)
             }

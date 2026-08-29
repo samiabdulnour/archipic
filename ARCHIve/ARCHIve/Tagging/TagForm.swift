@@ -84,7 +84,7 @@ struct TagForm: View {
                 Button { tags.type = t.id } label: {
                     HStack(spacing: 7) {
                         Image(systemName: t.symbol).font(.system(size: 15)).symbolVariant(.fill)
-                        Text(t.label).font(.system(size: 14, weight: on ? .semibold : .medium))
+                        Text(LocalizedStringKey(t.label)).font(.system(size: 14, weight: on ? .semibold : .medium))
                     }
                     .frame(maxWidth: .infinity).frame(height: 44)
                     .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -439,7 +439,9 @@ struct TagForm: View {
     // MARK: Reusable builders
 
     private func sectionLabel(_ t: String) -> some View {
-        Text(t).font(.headline)
+        // Section titles are English identifiers (also stored keys elsewhere);
+        // localize only the display.
+        Text(LocalizedStringKey(t)).font(.headline)
     }
 
     private func chipGrid(_ options: [(String, String, String?)],
