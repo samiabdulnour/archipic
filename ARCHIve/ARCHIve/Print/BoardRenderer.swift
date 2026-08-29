@@ -127,7 +127,7 @@ enum BoardRenderer {
 
     private static func writeTemp(_ data: Data, title: String?, ext: String) -> URL? {
         let safe = (title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let name = (safe.isEmpty ? "Archive Board" : safe).replacingOccurrences(of: "/", with: "-")
+        let name = (safe.isEmpty ? "Archipic Board" : safe).replacingOccurrences(of: "/", with: "-")
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(name).\(ext)")
         try? data.write(to: url)
         return url
@@ -366,7 +366,7 @@ enum BoardRenderer {
         cg.setFillColor(ink.cgColor)
         cg.fillEllipse(in: CGRect(x: cx - disc / 2, y: cy - disc / 2, width: disc, height: disc))
         cg.restoreGState()
-        let word = NSAttributedString(string: "Archi.vé", attributes: [.font: semi(11), .foregroundColor: ink])
+        let word = NSAttributedString(string: "Archipic", attributes: [.font: semi(11), .foregroundColor: ink])
         let sz = word.size()
         word.draw(at: CGPoint(x: cx + d / 2 + 2 * mm, y: cy - sz.height / 2))
     }

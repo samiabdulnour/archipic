@@ -534,7 +534,7 @@ struct GalleryView: View {
     private var emptyState: some View {
         VStack(spacing: 16) {
             Spacer()
-            Text("Archi.vé")
+            Text("Archipic")
                 .font(.system(size: 34, weight: .bold))
                 .foregroundStyle(Palette.ink)
             Text("No photos yet").foregroundStyle(Palette.ink3)

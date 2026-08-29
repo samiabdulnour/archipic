@@ -12,11 +12,11 @@ enum WidgetQuickCapture {
     }
 }
 
-/// Opens Archi.vé and jumps straight into the camera. Used by the launch widget
+/// Opens Archipic and jumps straight into the camera. Used by the launch widget
 /// and the Lock Screen / Control Center control.
 struct OpenCameraIntent: AppIntent {
     static var title: LocalizedStringResource = "Open Camera"
-    static var description = IntentDescription("Open Archi.vé and start capturing.")
+    static var description = IntentDescription("Open Archipic and start capturing.")
     static var openAppWhenRun = true
 
     @MainActor
@@ -104,7 +104,7 @@ struct ArchiveLaunchWidget: Widget {
                 .containerBackground(archiveCoral, for: .widget)
         }
         .configurationDisplayName("Capture")
-        .description("Open Archi.vé straight into the camera.")
+        .description("Open Archipic straight into the camera.")
         .supportedFamilies([.systemSmall, .accessoryCircular])
     }
 }

@@ -1,4 +1,4 @@
-# Building Archi.vé for the App Store (native SwiftUI)
+# Building Archipic for the App Store (native SwiftUI)
 
 The app is a native SwiftUI / SwiftData project at `ARCHIve/ARCHIve.xcodeproj`.
 Bundle ID: `com.samiabdulnour.archive` · Team: `N6QDF49V2G`

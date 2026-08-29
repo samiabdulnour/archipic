@@ -9,7 +9,7 @@ struct WelcomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Archi.vé")
+                    Text("Archipic")
                         .font(.system(size: 42, weight: .bold))
                         .foregroundStyle(Palette.ink)
                     Text("by Sami Abdulnour").font(.subheadline).foregroundStyle(Palette.ink3)

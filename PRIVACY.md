@@ -1,8 +1,8 @@
-# Privacy Policy — Archi.vé
+# Privacy Policy — Archipic
 
 _Last updated: 15 June 2026_
 
-Archi.vé is a private photo journal for architects, created by Sami Abdulnour
+Archipic is a private photo journal for architects, created by Sami Abdulnour
 ("we", "the developer"). This policy explains how the app handles your
 information. In short: **we don't collect it.**
 
@@ -20,7 +20,7 @@ information. In short: **we don't collect it.**
   cannot access it.**
 
 ## What we collect
-- **Nothing.** Archi.vé has no developer server, no user accounts, no
+- **Nothing.** Archipic has no developer server, no user accounts, no
   advertising, no analytics, and no third-party tracking or SDKs. We do not
   receive, see, or transmit your photos, tags, location, or any other data.
 

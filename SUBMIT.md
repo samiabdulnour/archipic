@@ -1,4 +1,4 @@
-# Archi.vé — App Store submission runbook
+# Archipic — App Store submission runbook
 
 The app is **submission-ready**: it archives and signs for distribution, has the
 app icon (light/dark/tinted), CloudKit entitlements, usage strings, and a
@@ -35,8 +35,8 @@ If you skip this, the app works locally but **sync silently fails** for users.
 
 https://appstoreconnect.apple.com → **Apps → +**
 - Platform: iOS
-- Name: **Archi.vé** (must be unique App Store-wide — have a backup like
-  "Archi.vé Journal" in case it's taken)
+- Name: **Archipic** (must be unique App Store-wide — have a backup like
+  "Archipic Journal" in case it's taken)
 - Primary language, Bundle ID: **com.samiabdulnour.archive**, SKU: e.g. `archive-001`.
 
 ## 3. Archive & upload the build
@@ -67,7 +67,7 @@ In App Store Connect, the app's **1.0** version page:
 
 ## 5. App Privacy **[you]**
 
-App Store Connect → **App Privacy**. Archi.vé is private:
+App Store Connect → **App Privacy**. Archipic is private:
 - **Data collection: None.** Photos and tags stay on device and sync to the
   user's **own** iCloud (CloudKit private database) — that is *not* "data
   collected by the developer." You can answer **"Data Not Collected."**

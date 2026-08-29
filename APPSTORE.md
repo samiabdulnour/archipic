@@ -1,4 +1,4 @@
-# App Store listing — Archi.vé (native app)
+# App Store listing — Archipic (native app)
 
 Paste-ready copy and metadata for App Store Connect. Fields map 1:1 to the
 listing form. Updated for the **native SwiftUI app** (SwiftData + private
@@ -10,7 +10,7 @@ iCloud/CloudKit sync, Apple Maps) — not the old web build.
 
 | Field | Value |
 | --- | --- |
-| **App name** (≤30) | Archi.vé |
+| **App name** (≤30) | Archipic |
 | **Subtitle** (≤30) | Architect's photo archive |
 | **Bundle ID** | com.samiabdulnour.archive |
 | **SKU** | archive-ios-001 |
@@ -23,10 +23,10 @@ iCloud/CloudKit sync, Apple Maps) — not the old web build.
 
 ## Description (≤4000 chars) — paste as-is
 
-Archi.vé is a private photo journal for architects.
+Archipic is a private photo journal for architects.
 
 You notice architecture everywhere — a façade on a walk, a joint at an
-exhibition, a plan in a book, a model on a desk. Archi.vé turns that habit into
+exhibition, a plan in a book, a model on a desk. Archipic turns that habit into
 a structured, searchable archive. Take the photo, answer two quick prompts, and
 it files itself.
 
@@ -143,7 +143,7 @@ Store Connect itself doesn't take captions.)
 
 **Notes to reviewer:**
 
-Archi.vé is a single-user, on-device photo journal built in native SwiftUI.
+Archipic is a single-user, on-device photo journal built in native SwiftUI.
 There is no login or account. Photos and tags are stored locally with SwiftData
 and synced only to the user's own private iCloud (CloudKit private database) —
 no developer server, no analytics, no third-party SDKs. The map uses Apple
@@ -154,7 +154,7 @@ capturing a photo (location is stored on the photo to enable the Map view).
 
 ## Version 1.3 — What's New
 
-Video comes to Archi.vé — plus a visual refresh and a lot of polish.
+Video comes to Archipic — plus a visual refresh and a lot of polish.
 
 VIDEO
 Capture video as easily as stills. Switch the camera between Photo and Video,

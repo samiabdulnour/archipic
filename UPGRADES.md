@@ -1,4 +1,4 @@
-# Archi.vé — upgrade brief
+# Archipic — upgrade brief
 
 A backlog for Claude Code, ordered by leverage. The goal behind all of it: the
 app is excellent but invisible, because nothing it produces ever leaves the
@@ -38,7 +38,7 @@ batch several tasks into one PR.
 **Why.** Half of how architects collect references today is saving images from
 Instagram, Pinterest, a browser, or a PDF. Right now those can only enter the
 archive by going through Photos and then importing. A share extension makes
-Archi.vé the destination for any image on the phone, which is the single biggest
+Archipic the destination for any image on the phone, which is the single biggest
 increase in how often the app gets used.
 
 **Build.**
@@ -65,7 +65,7 @@ archive is intact after upgrading.
 
 **Why.** Boards already produce a print-ready PDF. That PDF is the only thing
 this app makes that a person would ever post publicly, and it is the only
-mechanism by which a stranger finds out Archi.vé exists. Treat it as the growth
+mechanism by which a stranger finds out Archipic exists. Treat it as the growth
 surface.
 
 **Build.**
@@ -110,7 +110,7 @@ capture-to-tag-sheet time is unchanged.
 ## 4. Metadata on export (IPTC / XMP)
 
 **Why.** Architects finish work in InDesign, Lightroom and Bridge. If the tags
-survive an export, Archi.vé becomes part of a professional workflow instead of
+survive an export, Archipic becomes part of a professional workflow instead of
 a place data goes to die. It is also the honest version of a lock-in-free app.
 
 **Build.**
@@ -141,7 +141,7 @@ the icon and waiting for launch is most of that time.
   "capture into project X".
 - Check `ArchiveWidgetsControl.swift` first — a Control Centre control already
   exists and the intent should be shared, not duplicated.
-- Add an intent for "add last photo from Photos to Archi.vé" if it is cheap.
+- Add an intent for "add last photo from Photos to Archipic" if it is cheap.
 
 **Done when.** Holding the Action Button opens the viewfinder from a locked
 phone, and a Shortcut can capture directly into a named project.
@@ -212,7 +212,7 @@ These matter more than any of the above but do not belong in a PR:
 - Fix `docs/index.html` — the "Download on the App Store" button is still
   `href="#"`.
 - Rename on the store to include a searchable keyword, e.g.
-  `Archi.vé: Architecture Archive` (30 chars). Keep `CFBundleDisplayName` as
-  `Archi.vé`.
+  `Archipic: Architecture Archive` (30 chars). Keep `CFBundleDisplayName` as
+  `Archipic`.
 - Shoot an App Preview video: capture, two taps, gallery, Board.
 - Replace the AI-generated screenshots in `AppStoreScreenshots/` with real ones.

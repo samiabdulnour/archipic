@@ -2,7 +2,7 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
-/// Lock Screen / Control Center / Action Button control that opens Archi.vé
+/// Lock Screen / Control Center / Action Button control that opens Archipic
 /// straight into the camera. (iOS 18+.)
 @available(iOS 18.0, *)
 struct ArchiveWidgetsControl: ControlWidget {
@@ -12,7 +12,7 @@ struct ArchiveWidgetsControl: ControlWidget {
                 Label("Capture", image: "ArchiveMark")   // the app mark (template asset)
             }
         }
-        .displayName("Archi.vé Camera")
-        .description("Open Archi.vé and start capturing.")
+        .displayName("Archipic Camera")
+        .description("Open Archipic and start capturing.")
     }
 }

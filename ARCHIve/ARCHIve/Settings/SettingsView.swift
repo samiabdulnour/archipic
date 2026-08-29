@@ -30,7 +30,7 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section { launchBody } header: { header("On launch") } footer: {
-                    Text("Choose what Archi.vé opens to.")
+                    Text("Choose what Archipic opens to.")
                 }
                 Section { projectsBody } header: { header("Projects") }
                 Section { appearanceBody } header: { header("Appearance") }
@@ -43,11 +43,11 @@ struct SettingsView: View {
                 Section {
                     Toggle("Attribution mark on shared images", isOn: $boardMark)
                 } header: { header("Boards") } footer: {
-                    Text("Adds a small Archi.vé mark in the corner when you export a board as an image (never over a photo). PDFs are unaffected.")
+                    Text("Adds a small Archipic mark in the corner when you export a board as an image (never over a photo). PDFs are unaffected.")
                 }
                 Section {
-                    NavigationLink { HowToUseView() } label: { Text("How to use Archi.vé") }
-                    NavigationLink { AboutView() } label: { Text("About Archi.vé") }
+                    NavigationLink { HowToUseView() } label: { Text("How to use Archipic") }
+                    NavigationLink { AboutView() } label: { Text("About Archipic") }
                 }
             }
             .scrollContentBackground(.hidden)

@@ -31,7 +31,7 @@ enum BackupManager {
 
     struct RestoreResult { let added: Int; let missingReferences: Int }
 
-    static let folderName = "Archi.vé Backup"
+    static let folderName = "Archipic Backup"
 
     /// Builds a self-contained backup folder and returns its URL. Reference pixels
     /// are resolved from Photos (capped at 3072 px so backing up a large library

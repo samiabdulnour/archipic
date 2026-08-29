@@ -1,4 +1,4 @@
-# Archi.vé
+# Archipic
 
 A private photo journal for architects. The user photographs architecture they
 encounter — a façade on a walk, a joint at an exhibition, a plan in a book, a
