@@ -20,6 +20,7 @@ struct BoardComposerView: View {
     @State private var showPreview = false
     @State private var showAddPhotos = false
     @State private var confirmDelete = false
+    @AppStorage("boardMark") private var boardMark = true   // attribution mark on image export
 
     /// New board from a gallery selection.
     init(photos: [Photo]) {
@@ -103,6 +104,12 @@ struct BoardComposerView: View {
                             .disabled(order.isEmpty || working)
                         Button { Task { await export() } } label: { Label("Export PDF", systemImage: "square.and.arrow.up") }
                             .disabled(order.isEmpty || working)
+                        Menu {
+                            ForEach(BoardImageSize.allCases) { size in
+                                Button(size.label) { Task { await exportImage(size) } }
+                            }
+                        } label: { Label("Export image", systemImage: "photo") }
+                            .disabled(order.isEmpty || working)
                         if existing != nil {
                             Divider()
                             Button(role: .destructive) { confirmDelete = true } label: {
@@ -166,6 +173,16 @@ struct BoardComposerView: View {
         guard !working else { return }   // no overlapping exports (shared Geocoder, memory)
         working = true
         let url = await BoardRenderer.makePDF(photos: orderedPhotos, layout: layout, title: title)
+        working = false
+        if let url { shareURL = url; showShare = true }
+    }
+
+    /// Export the board as a social-sized image (with the attribution mark per the
+    /// Settings toggle) and hand it to the share sheet.
+    private func exportImage(_ size: BoardImageSize) async {
+        guard !working else { return }
+        working = true
+        let url = await BoardRenderer.makeImage(photos: orderedPhotos, size: size, mark: boardMark, title: title)
         working = false
         if let url { shareURL = url; showShare = true }
     }

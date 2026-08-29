@@ -27,6 +27,26 @@ enum BoardLayout: String, CaseIterable, Identifiable {
     }
 }
 
+/// Shareable image sizes for social export (px). The layout fills the aspect.
+enum BoardImageSize: String, CaseIterable, Identifiable {
+    case square, portrait, story
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .square:   return "Square · 1:1"
+        case .portrait: return "Portrait · 4:5"
+        case .story:    return "Story · 9:16"
+        }
+    }
+    var pixels: CGSize {
+        switch self {
+        case .square:   return CGSize(width: 1080, height: 1080)
+        case .portrait: return CGSize(width: 1080, height: 1350)
+        case .story:    return CGSize(width: 1080, height: 1920)
+        }
+    }
+}
+
 /// One plate on a board: the image plus the caption fields (mapped from a Photo).
 struct BoardPlate {
     let image: UIImage?
@@ -58,6 +78,33 @@ enum BoardRenderer {
     /// Loads each photo's pixels, builds plates, renders the chosen layout to a PDF
     /// in the temporary directory, and returns its URL. Order is preserved.
     @MainActor static func makePDF(photos: [Photo], layout: BoardLayout, title: String? = nil) async -> URL? {
+        let plates = await buildPlates(photos)
+        guard !plates.isEmpty else { return nil }
+        let data: Data
+        switch layout {
+        case .posterB1:  data = posterPDF(plates, widthMM: 700, heightMM: 1000)
+        case .posterA2:  data = posterPDF(plates, widthMM: 420, heightMM: 594)
+        case .journalA4: data = journalPDF(plates)
+        }
+        return writeTemp(data, title: title, ext: "pdf")
+    }
+
+    /// Render the board as a shareable IMAGE at a social size, with an optional
+    /// attribution mark. Same justified-wall layout as the poster, at the target
+    /// aspect (never letterboxed).
+    @MainActor static func makeImage(photos: [Photo], size: BoardImageSize,
+                                     mark: Bool, title: String? = nil) async -> URL? {
+        let plates = await buildPlates(photos)
+        guard !plates.isEmpty else { return nil }
+        let image = posterImage(plates, pixel: size.pixels, mark: mark)
+        guard let data = image.jpegData(compressionQuality: 0.92) else { return nil }
+        return writeTemp(data, title: title, ext: "jpg")
+    }
+
+    /// Load each photo's pixels (downsampled + JPEG'd to keep peak memory low),
+    /// fill in a geocoded city for captions when missing, and map to plates —
+    /// order preserved. Shared by the PDF and image exporters.
+    @MainActor private static func buildPlates(_ photos: [Photo]) async -> [BoardPlate] {
         var plates: [BoardPlate] = []
         for p in photos {
             // Auto-fill the city from GPS for captions, when it's missing (sequential
@@ -75,16 +122,13 @@ enum BoardRenderer {
                 plates.append(plate(for: p, image: small))
             }
         }
-        guard !plates.isEmpty else { return nil }
-        let data: Data
-        switch layout {
-        case .posterB1:  data = posterPDF(plates, widthMM: 700, heightMM: 1000)
-        case .posterA2:  data = posterPDF(plates, widthMM: 420, heightMM: 594)
-        case .journalA4: data = journalPDF(plates)
-        }
+        return plates
+    }
+
+    private static func writeTemp(_ data: Data, title: String?, ext: String) -> URL? {
         let safe = (title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let name = (safe.isEmpty ? "Archive Board" : safe).replacingOccurrences(of: "/", with: "-")
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(name).pdf")
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(name).\(ext)")
         try? data.write(to: url)
         return url
     }
@@ -116,9 +160,9 @@ enum BoardRenderer {
 
     // MARK: Caption (the shared .ccap language)
 
-    private static func caption(_ p: BoardPlate) -> NSAttributedString {
+    private static func caption(_ p: BoardPlate, scale: CGFloat = 1) -> NSAttributedString {
         let para = NSMutableParagraphStyle(); para.lineHeightMultiple = 1.22
-        let cap: CGFloat = 6.6
+        let cap: CGFloat = 6.6 * scale
         var lines: [(String, UIFont, UIColor)] = [(p.typology, semi(cap), ink)]
         if !p.secondary.isEmpty { lines.append((p.secondary, reg(cap), muted)) }
         if !p.materials.isEmpty { lines.append((p.materials, reg(cap), muted)) }
@@ -132,8 +176,8 @@ enum BoardRenderer {
         }
         return s
     }
-    private static func capHeight(_ p: BoardPlate, _ w: CGFloat) -> CGFloat {
-        ceil(caption(p).boundingRect(with: CGSize(width: w, height: .greatestFiniteMagnitude),
+    private static func capHeight(_ p: BoardPlate, _ w: CGFloat, scale: CGFloat = 1) -> CGFloat {
+        ceil(caption(p, scale: scale).boundingRect(with: CGSize(width: w, height: .greatestFiniteMagnitude),
               options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).height)
     }
 
@@ -154,7 +198,13 @@ enum BoardRenderer {
     /// tallest caption in the row (measured at each photo's actual width).
     private struct WallRow { let photos: [WallPhoto]; let imgH: CGFloat; let capH: CGFloat }
 
-    static func posterPDF(_ plates: [BoardPlate], widthMM: CGFloat = 700, heightMM: CGFloat = 1000) -> Data {
+    /// Lay out the justified wall and draw it into `cg` (a PDF or bitmap context of
+    /// size widthMM×heightMM in points). `footer` fills the reserved bottom band —
+    /// the poster's catalogue line, a social attribution mark, or nothing. Shared
+    /// by posterPDF and posterImage so there is exactly ONE layout.
+    private static func drawPoster(_ plates: [BoardPlate], widthMM: CGFloat, heightMM: CGFloat,
+                                   captionScale: CGFloat, cg: CGContext,
+                                   footer: (_ x: CGFloat, _ w: CGFloat, _ y: CGFloat) -> Void) {
         let W = widthMM * mm, H = heightMM * mm
         let s = widthMM / 700                       // scale margins/footer with page size
         let MT = 32 * s * mm, MS = 30 * s * mm, MB = 28 * s * mm, FOOT = 16 * s * mm
@@ -163,7 +213,7 @@ enum BoardRenderer {
 
         // Build each caption's attributed string once; measuring only re-flows to
         // width (the binary search measures many times).
-        let captions = plates.map(caption)
+        let captions = plates.map { caption($0, scale: captionScale) }
         func capH(_ i: Int, _ w: CGFloat) -> CGFloat {
             ceil(captions[i].boundingRect(with: CGSize(width: w, height: .greatestFiniteMagnitude),
                   options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).height)
@@ -224,30 +274,56 @@ enum BoardRenderer {
         }
         let laid = wall(best)
 
+        UIColor.white.setFill(); cg.fill(CGRect(x: 0, y: 0, width: W, height: H))
+        var y = bodyY
+        for row in laid.rows {
+            var x = bodyX
+            for p in row.photos {
+                // Centre each photo on the row's mid-line; caption hangs below it.
+                let py = y + (row.imgH - p.h) / 2
+                let imgRect = CGRect(x: x, y: py, width: p.w, height: p.h)
+                drawCover(plates[p.idx].image, in: imgRect, cg)
+                hair.setStroke()
+                let o = UIBezierPath(rect: imgRect.insetBy(dx: 0.15 * mm, dy: 0.15 * mm)); o.lineWidth = 0.3 * mm; o.stroke()
+                captions[p.idx].draw(with: CGRect(x: x, y: py + p.h + capGap, width: p.w, height: row.capH + 4),
+                                     options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
+                x += p.w + laid.hgap
+            }
+            y += row.imgH + capGap + row.capH + laid.vgap
+        }
+        footer(bodyX, availW, H - MB - 15 * s * mm)
+    }
+
+    static func posterPDF(_ plates: [BoardPlate], widthMM: CGFloat = 700, heightMM: CGFloat = 1000) -> Data {
+        let W = widthMM * mm, H = heightMM * mm
         let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: W, height: H))
         return renderer.pdfData { ctx in
             ctx.beginPage()
             let cg = ctx.cgContext
-            UIColor.white.setFill(); cg.fill(CGRect(x: 0, y: 0, width: W, height: H))
-
-            var y = bodyY
-            for row in laid.rows {
-                var x = bodyX
-                for p in row.photos {
-                    // Centre each photo on the row's mid-line; caption hangs below it.
-                    let py = y + (row.imgH - p.h) / 2
-                    let imgRect = CGRect(x: x, y: py, width: p.w, height: p.h)
-                    drawCover(plates[p.idx].image, in: imgRect, cg)
-                    hair.setStroke()
-                    let o = UIBezierPath(rect: imgRect.insetBy(dx: 0.15 * mm, dy: 0.15 * mm)); o.lineWidth = 0.3 * mm; o.stroke()
-                    captions[p.idx].draw(with: CGRect(x: x, y: py + p.h + capGap, width: p.w, height: row.capH + 4),
-                                         options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
-                    x += p.w + laid.hgap
-                }
-                y += row.imgH + capGap + row.capH + laid.vgap
+            drawPoster(plates, widthMM: widthMM, heightMM: heightMM, captionScale: 1, cg: cg) { x, w, y in
+                drawFooter(plates: plates, x: x, w: w, y: y, sheet: widthMM > 500 ? "b1" : "a2", cg: cg)
             }
-            drawFooter(plates: plates, x: bodyX, w: availW, y: H - MB - 15 * s * mm,
-                       sheet: widthMM > 500 ? "b1" : "a2", cg: cg)
+        }
+    }
+
+    /// Render the justified wall to a bitmap of exactly `pixel` px at that aspect,
+    /// with an optional attribution mark in the reserved bottom band. Same layout
+    /// as the poster, never letterboxed.
+    static func posterImage(_ plates: [BoardPlate], pixel: CGSize, mark: Bool) -> UIImage {
+        // A social canvas is far smaller than a B1 sheet, so the print-tiny 6.6pt
+        // caption would be unreadable — use a narrower page (photos stay bold) and
+        // enlarge the caption. Height follows the target aspect.
+        let widthMM: CGFloat = 300
+        let heightMM = widthMM * (pixel.height / pixel.width)
+        let W = widthMM * mm
+        let fmt = UIGraphicsImageRendererFormat.default()
+        fmt.scale = pixel.width / W        // → exactly pixel.width px wide
+        fmt.opaque = true
+        return UIGraphicsImageRenderer(size: CGSize(width: W, height: heightMM * mm), format: fmt).image { ctx in
+            let cg = ctx.cgContext
+            drawPoster(plates, widthMM: widthMM, heightMM: heightMM, captionScale: 1.7, cg: cg) { x, w, y in
+                if mark { drawAttribution(x: x, w: w, y: y, cg: cg) }
+            }
         }
     }
 
@@ -273,6 +349,26 @@ enum BoardRenderer {
         s.append(NSAttributedString(string: "\(plates.count) plates · \(range)\n", attributes: [.font: reg(8.5), .foregroundColor: ink, .paragraphStyle: para]))
         s.append(NSAttributedString(string: String(format: "sequence 01–%02d", plates.count), attributes: [.font: reg(8.5), .foregroundColor: ink, .paragraphStyle: para]))
         s.draw(with: CGRect(x: x, y: y, width: w, height: 15 * mm), options: [.usesLineFragmentOrigin], context: nil)
+    }
+
+    /// Social-export attribution: the app mark + wordmark in the reserved bottom
+    /// band (never over a photo). Ink on the white ground, like the app icon.
+    private static func drawAttribution(x: CGFloat, w: CGFloat, y: CGFloat, cg: CGContext) {
+        let d = 6.0 * mm
+        let cx = x + d / 2, cy = y + d / 2
+        let lw = d * 0.05, ring = d - lw, disc = ring * 0.911
+        let c = CGFloat.pi * ring, rl = c / 9, dot = lw * 0.5, long = 0.46 * rl, gap = (rl - long - 2 * dot) / 3
+        cg.saveGState()
+        cg.setStrokeColor(ink.cgColor); cg.setLineWidth(lw); cg.setLineCap(.round)
+        cg.setLineDash(phase: 0, lengths: [long, gap, dot, gap, dot, gap])
+        cg.strokeEllipse(in: CGRect(x: cx - ring / 2, y: cy - ring / 2, width: ring, height: ring))
+        cg.setLineDash(phase: 0, lengths: [])
+        cg.setFillColor(ink.cgColor)
+        cg.fillEllipse(in: CGRect(x: cx - disc / 2, y: cy - disc / 2, width: disc, height: disc))
+        cg.restoreGState()
+        let word = NSAttributedString(string: "Archi.vé", attributes: [.font: semi(11), .foregroundColor: ink])
+        let sz = word.size()
+        word.draw(at: CGPoint(x: cx + d / 2 + 2 * mm, y: cy - sz.height / 2))
     }
 
     // MARK: Journal (A4-landscape spread = 2× A5, chronological flow)
