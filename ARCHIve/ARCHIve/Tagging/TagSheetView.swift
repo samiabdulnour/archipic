@@ -71,6 +71,9 @@ struct TagSheetView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text("Suggested").font(.caption2.weight(.semibold)).foregroundStyle(Palette.ink3)
                 Text(TagSuggester.summary(s)).font(.subheadline.weight(.medium)).foregroundStyle(Palette.ink)
+                if let detail = ocrDetail(s) {
+                    Text(detail).font(.caption2).foregroundStyle(Palette.ink3).lineLimit(1)
+                }
             }
             Spacer()
             Button("Apply") { applySuggestion(s) }
@@ -92,7 +95,18 @@ struct TagSheetView: View {
         if tags.typology == nil { tags.typology = s.typology }
         if tags.elementCategory == nil { tags.elementCategory = s.elementCategory }
         if tags.graphicKind == nil { tags.graphicKind = s.graphicKind }
+        // OCR'd graphic details — only fill empties, never overwrite what's typed.
+        if (tags.title ?? "").isEmpty { tags.title = s.title }
+        if (tags.creator ?? "").isEmpty { tags.creator = s.creator }
+        if (tags.year ?? "").isEmpty { tags.year = s.year }
         withAnimation { suggestion = nil }
+    }
+
+    /// The text OCR pulled from a graphic, for the banner's second line.
+    private func ocrDetail(_ s: HumanTags) -> String? {
+        let parts = [s.title.map { "“\($0)”" }, s.creator, s.year]
+            .compactMap { $0 }.filter { !$0.isEmpty }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     /// "One by one" session header: progress + an exit out of the whole run.
