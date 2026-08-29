@@ -53,6 +53,7 @@ struct ContentView: View {
         // (preferredColorScheme(nil) doesn't reliably clear on a sheet).
         .onAppear {
             Settings.applyAppearance(appearance)
+            ReviewPrompt.noteFirstUseIfNeeded()
             if QuickCapture.consumeCameraRequest() { showCamera = true }
         }
         // Lock Screen control / widget tapped while the app was already running:

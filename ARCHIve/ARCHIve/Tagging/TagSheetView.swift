@@ -19,6 +19,7 @@ struct TagSheetView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.requestReview) private var requestReview
     @State private var tags = HumanTags()
     @State private var project = ""
     @State private var showFullscreen = false
@@ -237,6 +238,13 @@ struct TagSheetView: View {
         }
         photo.labelImageData = labelImage?.jpegData(compressionQuality: 0.85)
         try? modelContext.save()
+        // Tagging the 50th photo is a genuine success moment — a milestone in a
+        // maturing archive. Only for a single save (not mid-batch), gated to
+        // once per version by ReviewPrompt.
+        if progress == nil, batchPhotos == nil,
+           let total = try? modelContext.fetchCount(FetchDescriptor<Photo>()), total >= 50 {
+            ReviewPrompt.ask(requestReview)
+        }
         finish()
     }
 

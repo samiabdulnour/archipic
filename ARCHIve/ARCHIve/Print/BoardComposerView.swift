@@ -7,6 +7,7 @@ import PDFKit
 struct BoardComposerView: View {
     @Environment(\.modelContext) private var ctx
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.requestReview) private var requestReview
     @Query private var allPhotos: [Photo]
 
     private let existing: Board?
@@ -129,7 +130,11 @@ struct BoardComposerView: View {
                         .padding(22).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
                 }
             }
-            .sheet(isPresented: $showShare) { if let shareURL { ActivityView(items: [shareURL]) } }
+            .sheet(isPresented: $showShare, onDismiss: {
+                // Exporting a board is a genuine success moment — ask for a review
+                // once the share sheet closes (gated to once per version).
+                ReviewPrompt.ask(requestReview)
+            }) { if let shareURL { ActivityView(items: [shareURL]) } }
             .sheet(isPresented: $showPreview) { if let previewURL { BoardPreviewSheet(url: previewURL) } }
             .sheet(isPresented: $showAddPhotos) {
                 BoardPhotoPicker(excluding: Set(order)) { ids in
