@@ -1006,7 +1006,8 @@ private struct LevelOverlay: View {
             .frame(width: 120, height: 2)
             .rotationEffect(.degrees(-angle))
             .shadow(color: .black.opacity(0.4), radius: 1)
-            .animation(.linear(duration: 0.05), value: angle)
+            // ~2 frames at 60 Hz: bridges samples smoothly without trailing lag.
+            .animation(.linear(duration: 1.0 / 30.0), value: angle)
             .allowsHitTesting(false)
     }
 }

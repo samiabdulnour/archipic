@@ -28,11 +28,13 @@ final class MotionLevel {
 
     private let manager = CMMotionManager()
     private var smoothed: Double = 0
-    private let ema = 0.18   // smoothing factor, matches web
+    // Smoothing factor per update. Lower = smoother. Tuned for 60 Hz (~185 ms
+    // time constant) so the level glides like the native camera's.
+    private let ema = 0.10
 
     func start() {
         guard manager.isDeviceMotionAvailable, !manager.isDeviceMotionActive else { return }
-        manager.deviceMotionUpdateInterval = 1.0 / 30.0
+        manager.deviceMotionUpdateInterval = 1.0 / 60.0
         manager.startDeviceMotionUpdates(to: .main) { [weak self] motion, _ in
             guard let self, let g = motion?.gravity else { return }
             self.update(gx: g.x, gy: g.y, gz: g.z)
