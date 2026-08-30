@@ -24,8 +24,24 @@ enum GalleryLens: String, CaseIterable, Identifiable {
     }
 }
 
+/// Presents the Board composer full-screen (iPad) or as a sheet (iPhone). Full
+/// screen gives the composer a regular width so its two-pane layout appears — a
+/// page sheet stays compact and would hide it.
+private struct ComposerPresenter: ViewModifier {
+    @Binding var selection: BoardSelection?
+    let fullScreen: Bool
+    func body(content: Content) -> some View {
+        if fullScreen {
+            content.fullScreenCover(item: $selection) { sel in BoardComposerView(photos: sel.photos) }
+        } else {
+            content.sheet(item: $selection) { sel in BoardComposerView(photos: sel.photos) }
+        }
+    }
+}
+
 struct GalleryView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.horizontalSizeClass) private var hSize
     @Query(sort: \Photo.createdAt, order: .reverse) private var photos: [Photo]
 
     /// The active lens. Owned by the host (ContentView) so an iPad sidebar can
@@ -195,7 +211,10 @@ struct GalleryView: View {
             Button("Cancel", role: .cancel) {}
         } message: { Text("This can't be undone.") }
         .sheet(isPresented: $showShare) { ActivityView(items: shareItems) }
-        .sheet(item: $composerSelection) { sel in BoardComposerView(photos: sel.photos) }
+        // iPad presents the composer full-screen so its two-pane layout has room
+        // (a page sheet reports a compact width and would stay single-column);
+        // iPhone keeps the sheet.
+        .modifier(ComposerPresenter(selection: $composerSelection, fullScreen: hSize == .regular))
         .sheet(isPresented: $showBoards) { BoardsListView() }
         .sheet(isPresented: $showSettings) { SettingsView() }
         .fullScreenCover(item: $editTarget) { photo in

@@ -22,6 +22,11 @@ struct BoardComposerView: View {
     @State private var showAddPhotos = false
     @State private var confirmDelete = false
     @AppStorage("boardMark") private var boardMark = true   // attribution mark on image export
+    @Environment(\.horizontalSizeClass) private var hSize
+    // iPad live preview (right pane)
+    @State private var livePDF: URL?
+    @State private var renderingPreview = false
+    @State private var previewVersion = 0   // bumps each render so the PDF view reloads the same-named temp file
 
     /// New board from a gallery selection.
     init(photos: [Photo]) {
@@ -46,6 +51,7 @@ struct BoardComposerView: View {
 
     var body: some View {
         NavigationStack {
+            HStack(spacing: 0) {
             List {
                 Section {
                     TextField("Board title", text: $title)
@@ -92,6 +98,14 @@ struct BoardComposerView: View {
                         order = resolved + unresolved
                     }
                 }
+            }
+            .frame(maxWidth: hSize == .regular ? 380 : .infinity)
+            // iPad: a live board preview sits beside the editing list, updating a
+            // beat after you reorder, retitle or switch layout.
+            if hSize == .regular {
+                Divider()
+                livePreviewPane
+            }
             }
             .environment(\.editMode, .constant(.active))   // always-on drag handles + delete
             .navigationTitle(existing == nil ? "New board" : "Edit board")
@@ -146,6 +160,48 @@ struct BoardComposerView: View {
                 Button("Cancel", role: .cancel) {}
             } message: { Text("This removes the board only — your photos stay in the archive.") }
         }
+    }
+
+    /// The right-hand live preview (iPad): the rendered board PDF, re-rendered a
+    /// beat after the order, layout or title changes. Reuses makePDF, so it's the
+    /// exact thing Export produces and handles both poster and journal layouts.
+    private var livePreviewPane: some View {
+        ZStack {
+            Palette.tile
+            if let livePDF {
+                // .id(previewVersion) forces a reload each render — makePDF reuses
+                // the same temp filename, so the URL alone never signals a change.
+                PDFKitView(url: livePDF).id(previewVersion).ignoresSafeArea(edges: .bottom)
+            } else if order.isEmpty {
+                Text("Add photos to preview").font(.callout).foregroundStyle(.secondary)
+            } else {
+                ProgressView()
+            }
+            if renderingPreview {
+                ProgressView().padding(10)
+                    .background(.regularMaterial, in: Circle())
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .padding(12)
+            }
+        }
+        .task(id: previewToken) { await renderPreview() }
+    }
+
+    /// One value that changes whenever anything affecting the render changes, so a
+    /// single `.task(id:)` cancels the in-flight render and starts a fresh one.
+    private var previewToken: String { "\(layout.rawValue)|\(title)|\(order.joined(separator: ","))" }
+
+    private func renderPreview() async {
+        guard !order.isEmpty else { livePDF = nil; return }
+        renderingPreview = true
+        defer { renderingPreview = false }
+        // Debounce: let rapid reorders / typing settle before the heavier render.
+        try? await Task.sleep(for: .milliseconds(400))
+        if Task.isCancelled { return }
+        let url = await BoardRenderer.makePDF(photos: orderedPhotos, layout: layout, title: title)
+        if Task.isCancelled { return }
+        livePDF = url
+        previewVersion &+= 1
     }
 
     private func plateTitle(_ p: Photo) -> String {
