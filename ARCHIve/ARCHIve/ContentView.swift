@@ -40,12 +40,16 @@ struct ContentView: View {
         .onAppear {
             Settings.applyAppearance(appearance)
             ReviewPrompt.noteFirstUseIfNeeded()
+            ShareInbox.drain(into: modelContext)   // import anything shared while we were away
             if QuickCapture.consumeCameraRequest() { showCamera = true }
         }
         // Lock Screen control / widget tapped while the app was already running:
-        // open the camera when we come back to the foreground.
+        // open the camera when we come back to the foreground. Also drain the
+        // Share extension's inbox (the user may have shared into it meanwhile).
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active && QuickCapture.consumeCameraRequest() { showCamera = true }
+            guard phase == .active else { return }
+            ShareInbox.drain(into: modelContext)
+            if QuickCapture.consumeCameraRequest() { showCamera = true }
         }
         .onChange(of: appearance) { _, newValue in Settings.applyAppearance(newValue) }
     }
