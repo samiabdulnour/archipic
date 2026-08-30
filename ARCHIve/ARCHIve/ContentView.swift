@@ -6,14 +6,56 @@ struct ContentView: View {
     @Query private var photos: [Photo]
     @State private var showCamera = false
     @State private var didAutoOpen = false
+    @State private var lens: GalleryLens = .time   // lifted here so an iPad sidebar can drive it
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.horizontalSizeClass) private var hSize
     @AppStorage("appearance") private var appearance = "auto"
     @AppStorage("welcomed") private var welcomed = false
     @AppStorage("launchScreen") private var launchScreen = "camera"   // camera | gallery
 
     var body: some View {
+        Group {
+            if hSize == .regular {
+                // iPad: lenses live in a sidebar, the grid fills the detail pane.
+                NavigationSplitView {
+                    lensSidebar
+                } detail: {
+                    galleryStack(showsLensPicker: false)
+                }
+            } else {
+                // iPhone (compact): unchanged — the in-view lens picker sits atop
+                // the grid in a single navigation stack.
+                galleryStack(showsLensPicker: true)
+            }
+        }
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraView()
+        }
+        .fullScreenCover(isPresented: Binding(get: { !welcomed }, set: { welcomed = !$0 })) {
+            WelcomeView { welcomed = true; showCamera = true }
+        }
+        // Drive appearance at the window level so it applies everywhere —
+        // including sheets — and Auto cleanly reverts to the system setting
+        // (preferredColorScheme(nil) doesn't reliably clear on a sheet).
+        .onAppear {
+            Settings.applyAppearance(appearance)
+            ReviewPrompt.noteFirstUseIfNeeded()
+            if QuickCapture.consumeCameraRequest() { showCamera = true }
+        }
+        // Lock Screen control / widget tapped while the app was already running:
+        // open the camera when we come back to the foreground.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active && QuickCapture.consumeCameraRequest() { showCamera = true }
+        }
+        .onChange(of: appearance) { _, newValue in Settings.applyAppearance(newValue) }
+    }
+
+    /// The gallery in its own navigation stack, with the camera button and the
+    /// destination wired. Shared by the compact (iPhone) and iPad-detail paths.
+    @ViewBuilder
+    private func galleryStack(showsLensPicker: Bool) -> some View {
         NavigationStack {
-            GalleryView()
+            GalleryView(lens: $lens, showsLensPicker: showsLensPicker)
                 .navigationTitle("")
                 .navigationBarTitleDisplayMode(.inline)
                 // Navigate on the id String, not the live Photo — so re-evaluating
@@ -42,26 +84,18 @@ struct ContentView: View {
                     }
                 }
         }
-        .fullScreenCover(isPresented: $showCamera) {
-            CameraView()
+    }
+
+    /// iPad sidebar: the four lenses, natively highlighted, driving `lens`.
+    private var lensSidebar: some View {
+        List(selection: Binding(get: { Optional(lens) },
+                                set: { if let v = $0 { lens = v } })) {
+            ForEach(GalleryLens.allCases) { l in
+                Label(l.rawValue, systemImage: l.symbol).tag(l)
+            }
         }
-        .fullScreenCover(isPresented: Binding(get: { !welcomed }, set: { welcomed = !$0 })) {
-            WelcomeView { welcomed = true; showCamera = true }
-        }
-        // Drive appearance at the window level so it applies everywhere —
-        // including sheets — and Auto cleanly reverts to the system setting
-        // (preferredColorScheme(nil) doesn't reliably clear on a sheet).
-        .onAppear {
-            Settings.applyAppearance(appearance)
-            ReviewPrompt.noteFirstUseIfNeeded()
-            if QuickCapture.consumeCameraRequest() { showCamera = true }
-        }
-        // Lock Screen control / widget tapped while the app was already running:
-        // open the camera when we come back to the foreground.
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active && QuickCapture.consumeCameraRequest() { showCamera = true }
-        }
-        .onChange(of: appearance) { _, newValue in Settings.applyAppearance(newValue) }
+        .navigationTitle("Archipic")
+        .listStyle(.sidebar)
     }
 
     #if targetEnvironment(simulator)

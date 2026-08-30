@@ -28,7 +28,12 @@ struct GalleryView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Photo.createdAt, order: .reverse) private var photos: [Photo]
 
-    @State private var lens: GalleryLens = .time
+    /// The active lens. Owned by the host (ContentView) so an iPad sidebar can
+    /// drive it; on iPhone the host still owns it and the in-view picker sets it.
+    @Binding var lens: GalleryLens
+    /// The in-view lens picker is shown on iPhone (compact); on iPad the split
+    /// view's sidebar provides it instead, so it's hidden here.
+    var showsLensPicker: Bool = true
     @State private var search = ""
 
     // Filters
@@ -143,7 +148,7 @@ struct GalleryView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            lensPicker
+            if showsLensPicker { lensPicker }
             if photos.isEmpty {
                 emptyState
             } else {
