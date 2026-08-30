@@ -66,11 +66,13 @@ struct CameraView: View {
             LocationProvider.shared.start()
             // A Shortcut / Siri / Action-Button capture can pre-select a project.
             if let p = QuickCapture.consumeProject() { camera.currentProject = p }
+            lockToPortrait()   // the viewfinder is portrait-only (see AppOrientation)
         }
         .onDisappear {
             camera.stop()
             motion.stop()
             LocationProvider.shared.stop()
+            releaseOrientation()
         }
         .fullScreenCover(item: $tagTarget, onDismiss: { camera.start() }) { photo in
             TagSheetView(photo: photo) { tagTarget = nil }
@@ -85,6 +87,24 @@ struct CameraView: View {
                 camera.currentProject = n.isEmpty ? nil : n
             }
         }
+    }
+
+    /// Pin the app to portrait while the viewfinder is up (iPad can otherwise be
+    /// landscape), and snap the interface to portrait now if it was landscape.
+    private func lockToPortrait() {
+        AppOrientation.cameraActive = true
+        guard let scene = UIApplication.shared.connectedScenes
+            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene else { return }
+        scene.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
+        scene.keyWindow?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+    }
+
+    /// Let the app rotate freely again after the camera closes (iPad).
+    private func releaseOrientation() {
+        AppOrientation.cameraActive = false
+        guard let scene = UIApplication.shared.connectedScenes
+            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene else { return }
+        scene.keyWindow?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
     }
 
     private func updateScreenSize(_ geo: GeometryProxy) {

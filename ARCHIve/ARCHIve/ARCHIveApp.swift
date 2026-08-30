@@ -1,9 +1,29 @@
 import SwiftUI
 import SwiftData
 import Foundation
+import UIKit
+
+/// App-wide orientation policy. iPad reviews and composes in any orientation,
+/// but the camera is a portrait-only viewfinder (its AVFoundation connections
+/// are locked to portrait), so it pins the whole app to portrait while it's on
+/// screen. iPhone stays portrait everywhere.
+enum AppOrientation {
+    /// Set while the camera is presented (see CameraView). Read on the main
+    /// thread by UIKit via AppDelegate; no cross-thread access.
+    static var cameraActive = false
+}
+
+final class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication,
+                     supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        if AppOrientation.cameraActive { return .portrait }
+        return UIDevice.current.userInterfaceIdiom == .pad ? .allButUpsideDown : .portrait
+    }
+}
 
 @main
 struct ARCHIveApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     // SwiftData container holding the photo archive, mirrored to the user's
     // private iCloud (CloudKit) so it syncs across their devices and is backed
     // up automatically.
