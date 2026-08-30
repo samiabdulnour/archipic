@@ -227,6 +227,7 @@ private struct PhotoPage: View {
                 .padding(.horizontal, 16)
             }
             .padding(.bottom, 28)
+            .readableWidth()
         }
         .task(id: "\(photo.id)#\(refresh)") {
             image = await PhotoImage.full(for: photo)

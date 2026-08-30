@@ -57,6 +57,7 @@ struct WelcomeView: View {
                 .padding(.top, 6)
             }
             .padding(24)
+            .readableWidth()
         }
         .background(Palette.paper.ignoresSafeArea())
     }

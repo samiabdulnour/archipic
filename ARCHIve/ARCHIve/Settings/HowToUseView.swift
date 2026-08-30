@@ -29,6 +29,7 @@ struct HowToUseView: View {
                 }
             }
             .padding(16)
+            .readableWidth()
         }
         .background(Palette.paper.ignoresSafeArea())
         .navigationTitle("How to use")

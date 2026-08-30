@@ -55,6 +55,7 @@ struct AboutView: View {
                 }
             }
             .padding(24)
+            .readableWidth()
         }
         .background(Palette.paper.ignoresSafeArea())
         .navigationTitle("About")
