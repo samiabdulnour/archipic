@@ -28,12 +28,14 @@ Archipic is a private photo journal for architects.
 You notice architecture everywhere — a façade on a walk, a joint at an
 exhibition, a plan in a book, a model on a desk. Archipic turns that habit into
 a structured, searchable archive. Take the photo, answer two quick prompts, and
-it files itself.
+it files itself. On iPhone and iPad.
 
 CAPTURE IN SECONDS
 A focused camera built for the street: tap the shutter, two taps to tag, done —
 fast enough to use while walking. A native viewfinder with grid, level,
-aspect-ratio guides, tap-to-focus and exposure, and pinch zoom.
+aspect-ratio guides, tap-to-focus and exposure, pinch zoom, and film-inspired
+colour looks. Add a Capture action to your Action Button or Siri and you're in
+the viewfinder without even opening the app.
 
 STRUCTURED TAGS, NOT TYPING
 Every photo is filed with a small, consistent vocabulary instead of a keyboard:
@@ -42,16 +44,27 @@ Every photo is filed with a small, consistent vocabulary instead of a keyboard:
 - Element — structure, openings, envelope, finishes, details and more.
 - Graphic — artwork, book, drawing, plan, render, model, web and more.
 Add materials, concepts, a rating, keywords, author/year, or a project — only
-the fields you want (configurable).
+the fields you want. Can't remember which category something is under? Type its
+name and Archipic takes you straight to it.
+
+GET REFERENCES IN
+Save straight from Safari, Instagram, Photos or a PDF — share an image to
+Archipic, pick its kind, and it's in your archive.
 
 FIND IT AGAIN
 Browse by Time, by Reference (what's in the photo), by Project, or by Place on a
 map. Search across every tag. Filter by type, project, favourites, or minimum
 rating. Pinch the grid to resize it.
 
-REFERENCE VS PROJECT
-Reference for things found out in the world; Project for a site shoot — pick the
-project once and capture a whole sequence into it.
+BOARDS
+Compose any selection into a print-ready poster — a justified gallery wall — or
+an A4 journal, exported as PDF, or as a square, portrait or story image ready to
+share.
+
+WORKS WITH YOUR TOOLS
+Exported photos carry your tags as standard metadata — keywords, caption, title
+and rating — so they open correctly in Lightroom, Bridge and InDesign. Your
+capture date and location come along too (location is optional per share).
 
 PRIVATE BY DESIGN
 Your photos and tags are yours. They're stored on your device and sync through
@@ -64,16 +77,20 @@ Designed for working architects, by an architect.
 
 ## Promotional text (≤170, editable without a new build)
 
-Snap any reference, tag it in two taps, and find it again by what it is or where
-you found it. Private, and synced across your devices through your own iCloud.
+Snap or share any reference, tag it in two taps, and find it by what it is or
+where you found it. Now on iPad. Private, synced through your own iCloud.
 
 ---
 
 ## Keywords (≤100, comma-separated, NO spaces)
 
 ```
-architecture,reference,photo,archive,journal,tag,catalog,site,exhibition,material,facade,detail,design
+architecture,reference,photo,moodboard,material,facade,detail,archive,journal,ipad,tag,design
 ```
+
+(93 chars. The previous list was 102 — over Apple's 100-char cap. Dropped
+`catalog`, `site`, `exhibition`; added `moodboard` and `ipad`. Tweak freely,
+just keep it ≤100 with no spaces.)
 
 ---
 
@@ -116,8 +133,15 @@ Run the questionnaire; everything is "None" → **4+**.
 
 Apple requires **6.9" iPhone** screenshots (e.g. iPhone 16 Pro Max,
 **1320 × 2868 px**). A 6.5" set (1242 × 2688) is optional but nice.
+
+**New in 1.4 — iPad screenshots are now required.** Because the app is now
+universal, App Store Connect won't let you submit without an **iPad 13"** set
+(**2064 × 2752 px**, portrait). Two or three is enough — show the split view
+(sidebar + grid) and the two-pane Board composer; they're the reason to be on
+iPad. Capture from an iPad simulator the same way.
+
 Capture in the Simulator (**Device → … → Screenshots**, or ⌘S) or AirDrop from
-your phone. Suggested set (6):
+your phone. Suggested iPhone set (6):
 
 1. **Camera viewfinder** — aspect guide, level, mode pill. → "Capture in ten seconds."
 2. **Tagging** — Building → Typology/Room tiles mid-tag. → "Two taps. Filed."
@@ -149,6 +173,48 @@ and synced only to the user's own private iCloud (CloudKit private database) —
 no developer server, no analytics, no third-party SDKs. The map uses Apple
 MapKit. Camera and location permissions are used only while the user is actively
 capturing a photo (location is stored on the photo to enable the Map view).
+
+---
+
+## Version 1.4 — What's New
+
+Archipic comes to iPad, opens up to the rest of your apps, and gets quicker to
+file.
+
+NOW ON IPAD
+A proper big-screen archive. The four lenses move into a sidebar, the grid fills
+the page, and the Board composer becomes two panes — your photos on one side, a
+live poster preview on the other. Portrait and landscape.
+
+SAVE FROM ANYWHERE
+Found a façade on Instagram, a plan in Safari, a detail in Photos? Share the
+image straight to Archipic, pick Building, Element or Graphic, and it's filed —
+ready to finish tagging later.
+
+CAPTURE WITHOUT OPENING THE APP
+A new "Capture in Archipic" action for Shortcuts, Siri and the Action Button.
+Hold the button and you're in the viewfinder — optionally filing straight into a
+named project.
+
+FIND ANY TAG BY NAME
+Not sure which category a fence lives under? Tap the new search button and type
+it — Archipic jumps straight to the tag, wherever it's filed, so the vocabulary
+that makes your archive searchable stays consistent.
+
+SUGGESTIONS FROM THE PHOTO
+Photograph a book page or a wall label and Archipic reads it on-device, offering
+the title, author and year for one-tap confirmation. Nothing leaves your phone.
+
+YOUR TAGS TRAVEL
+Shared photos now carry their tags as standard metadata — keywords, caption,
+title and rating — so they open correctly in Lightroom, Bridge and InDesign.
+Keep or strip the location per share.
+
+SHAREABLE BOARDS
+Export a Board as a square, portrait or story image, not just a PDF — ready to
+post.
+
+Plus a smoother camera level, faster capture, and fixes throughout.
 
 ---
 
@@ -196,8 +262,29 @@ private iCloud sync, and local backup/restore.
 
 ---
 
-## Pre-submit TODOs (listing-specific)
-- [ ] Publish a **Privacy Policy URL** (host `PRIVACY.md`) and a **Support URL**.
-- [ ] Capture the **6.9"** screenshots (and 6.5" if you want).
-- [ ] Fill contact email/phone in App Review Information.
-- [ ] (Separate, see CLOUDKIT.md) Deploy CloudKit schema to **Production**.
+## Pre-submit checklist — Version 1.4
+
+**Version bump (do it on BOTH targets — app + widget):**
+- [ ] `MARKETING_VERSION` 1.3 → **1.4**
+- [ ] `CURRENT_PROJECT_VERSION` 5 → **6**
+
+**Listing:**
+- [ ] Paste the **Version 1.4 — What's New** (above) into App Store Connect.
+- [ ] Update the **Description**, **Promotional text** and **Keywords** (above).
+- [ ] Confirm the store **name is "Archipic"** (renamed from Archi.vé — same
+      bundle id, so this is an update, not a new app).
+- [ ] **iPad 13" screenshots** (2064 × 2752) — now required, plus the 6.9"
+      iPhone set.
+
+**Build / data:**
+- [ ] **CloudKit schema deploy — most likely NOT needed.** 1.4 added no new
+      SwiftData columns (new tag data lives inside the `humanTagsData` JSON; the
+      Share extension writes photos through the existing `Photo` model). Confirm
+      the model is unchanged since 1.3; deploy to Production only if it changed.
+- [ ] App Privacy answers are **unchanged — still "Data Not Collected"** (no
+      analytics or SDKs added; OCR runs on-device, exports and Shortcuts are
+      local).
+
+**Standing (unchanged from before):**
+- [ ] Privacy Policy URL + Support URL reachable (archi-ve.app).
+- [ ] Contact email/phone filled in App Review Information.
