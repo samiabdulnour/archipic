@@ -19,6 +19,7 @@ struct TagForm: View {
     @State private var labelPickerItem: PhotosPickerItem?
     @State private var showFullscreenLabel = false
     @State private var placeSuggestions: [String] = []
+    @State private var tagSearch = ""
 
     private var flow: String { tags.type ?? "building" }
     private func enabled(_ step: String) -> Bool { Settings.flowEnabled(flow, step) }
@@ -34,17 +35,22 @@ struct TagForm: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            typePicker
-            switch tags.type {
-            case "building": buildingSections
-            case "element":  elementSections
-            case "graphic":  graphicSections
-            default:
-                Text("Pick a category above.")
-                    .font(.subheadline).foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity).padding(.top, 8)
+            tagSearchField
+            if tagSearch.isEmpty {
+                typePicker
+                switch tags.type {
+                case "building": buildingSections
+                case "element":  elementSections
+                case "graphic":  graphicSections
+                default:
+                    Text("Pick a category above.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity).padding(.top, 8)
+                }
+                if tags.type != nil { extrasSection }
+            } else {
+                tagSearchResults
             }
-            if tags.type != nil { extrasSection }
         }
         .onChange(of: labelPickerItem) { _, item in
             guard let item else { return }
@@ -73,6 +79,63 @@ struct TagForm: View {
             seen.insert(name); out.append(name)
         }
         return out.sorted()
+    }
+
+    // MARK: Tag search — find any tag by name, whatever category it sits under
+
+    private var tagSearchField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass").font(.system(size: 14)).foregroundStyle(Palette.ink3)
+            TextField("Find a tag (e.g. Fence)", text: $tagSearch)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                .font(.system(size: 15))
+            if !tagSearch.isEmpty {
+                Button { tagSearch = "" } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(Palette.ink3)
+                }.buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 12).padding(.vertical, 9)
+        .background(Palette.paperElev, in: Capsule())
+        .overlay(Capsule().strokeBorder(Palette.hairline, lineWidth: 0.5))
+    }
+
+    @ViewBuilder private var tagSearchResults: some View {
+        let hits = TagVocab.search(tagSearch)
+        if hits.isEmpty {
+            Text("No matching tag. The vocabulary is a fixed set — try a broader word, or pick a category above.")
+                .font(.subheadline).foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12)
+        } else {
+            VStack(spacing: 0) {
+                ForEach(hits) { hit in
+                    Button { apply(hit) } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: hit.symbol).font(.system(size: 15)).frame(width: 24)
+                                .foregroundStyle(Palette.ink2)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(LocalizedStringKey(hit.label)).font(.system(size: 15)).foregroundStyle(Palette.ink)
+                                Text(hit.context).font(.caption).foregroundStyle(Palette.ink3)
+                            }
+                            Spacer(minLength: 0)
+                            Image(systemName: "arrow.up.left").font(.system(size: 12)).foregroundStyle(Palette.ink3)
+                        }
+                        .padding(.vertical, 10).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    if hit.id != hits.last?.id { Divider() }
+                }
+            }
+        }
+    }
+
+    /// Apply a found tag — sets its canonical value and the matching Kind, then
+    /// closes the search so the normal form returns with the tag selected.
+    private func apply(_ hit: TagVocab.Hit) {
+        TagVocab.apply(hit, to: &tags)
+        tagSearch = ""
+        UISelectionFeedbackGenerator().selectionChanged()
     }
 
     /// Building / Element / Graphic — custom toggle matching the tag buttons:

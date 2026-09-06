@@ -226,6 +226,97 @@ enum TagVocab {
     }
 }
 
+// MARK: - Tag search
+//
+// A flat, searchable index over the whole fixed vocabulary so a tag can be found
+// by typing its name — regardless of which category it's filed under (e.g.
+// "fence" lives under Element · Landscape). Tapping a hit sets the *canonical*
+// stored value, so the archive stays consistent; nothing new is ever stored.
+extension TagVocab {
+    struct Hit: Identifiable, Hashable {
+        let label: String     // canonical English label (also the search key)
+        let context: String   // where it lives, e.g. "Element · Landscape"
+        let symbol: String
+        let kind: Kind
+        var id: String { "\(context)|\(label)" }
+
+        enum Kind: Hashable {
+            case typology(String)
+            case concept(id: String)
+            case element(category: String, item: String)
+            case material(String)
+            case colour(id: String)
+            case graphicKind(id: String)
+            case visual(String)
+        }
+    }
+
+    /// Every searchable term. Rooms are intentionally omitted — they only make
+    /// sense once a typology is chosen, so they surface in that flow instead.
+    static let searchIndex: [Hit] = {
+        var hits: [Hit] = []
+        for t in typology {
+            hits.append(Hit(label: t, context: "Building · Typology", symbol: symbol("typology", t), kind: .typology(t)))
+        }
+        for c in concepts {
+            hits.append(Hit(label: c.label, context: "Building · Concept", symbol: symbol("concept", c.id), kind: .concept(id: c.id)))
+        }
+        for entry in elementCategories {
+            for item in entry.items {
+                hits.append(Hit(label: item, context: "Element · \(entry.category)", symbol: symbol("elementsub", item), kind: .element(category: entry.category, item: item)))
+            }
+        }
+        for m in materials {
+            hits.append(Hit(label: m, context: "Material", symbol: symbol("material", m), kind: .material(m)))
+        }
+        for c in colors {
+            hits.append(Hit(label: c.label, context: "Colour", symbol: "circle.fill", kind: .colour(id: c.id)))
+        }
+        for k in graphicKinds {
+            hits.append(Hit(label: k.label, context: "Graphic · Kind", symbol: symbol("graphic", k.id), kind: .graphicKind(id: k.id)))
+        }
+        for v in visual {
+            hits.append(Hit(label: v, context: "Graphic · Visual", symbol: symbol("visual", v), kind: .visual(v)))
+        }
+        return hits
+    }()
+
+    /// Search the vocabulary, ranked: exact match, then prefix, then contains,
+    /// then a match on the category name (so "landscape" lists its elements).
+    static func search(_ query: String) -> [Hit] {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else { return [] }
+        func score(_ h: Hit) -> Int {
+            let l = h.label.lowercased()
+            if l == q { return 0 }
+            if l.hasPrefix(q) { return 1 }
+            if l.contains(q) { return 2 }
+            if h.context.lowercased().contains(q) { return 3 }
+            return Int.max
+        }
+        var scored: [(hit: Hit, rank: Int)] = []
+        for h in searchIndex {
+            let r = score(h)
+            if r != Int.max { scored.append((h, r)) }
+        }
+        scored.sort { $0.rank != $1.rank ? $0.rank < $1.rank : $0.hit.label < $1.hit.label }
+        return scored.map { $0.hit }
+    }
+
+    /// Apply a hit's canonical value(s) to the tags, choosing the Kind for it.
+    static func apply(_ hit: Hit, to t: inout HumanTags) {
+        switch hit.kind {
+        case .typology(let v):        t.type = "building"; t.typology = v
+        case .concept(let id):        t.type = "building"; if !t.concepts.contains(id) { t.concepts.append(id) }
+        case .element(let cat, let i): t.type = "element"; t.elementCategory = cat; t.element = i
+        case .material(let m):        if !t.materials.contains(m) { t.materials.append(m) }
+        case .colour(let id):         if !t.colors.contains(id) { t.colors.append(id) }
+        case .graphicKind(let id):    t.type = "graphic"; t.graphicKind = id
+        case .visual(let v):          t.type = "graphic"; if !t.visual.contains(v) { t.visual.append(v) }
+        }
+    }
+}
+
 extension Color {
     /// Build a Color from a 6-digit hex string (no leading #).
     init(hex: String) {
