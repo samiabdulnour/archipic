@@ -63,6 +63,11 @@ struct BoardComposerView: View {
                     }
                     Text(layout.blurb).font(.caption).foregroundStyle(.secondary)
                 }
+                // iPhone: show the board itself, live — so "what will this look
+                // like?" is answered without tapping. iPad shows it in pane two.
+                if hSize != .regular {
+                    Section { previewCard.listRowInsets(EdgeInsets()) }
+                }
                 Section {
                     Button { showAddPhotos = true } label: {
                         Label("Add photos", systemImage: "plus.circle.fill")
@@ -108,13 +113,16 @@ struct BoardComposerView: View {
             }
             }
             .environment(\.editMode, .constant(.active))   // always-on drag handles + delete
+            // Drive the live render for BOTH sizes — the iPhone card and the iPad
+            // pane each just display `livePDF`.
+            .task(id: previewToken) { await renderPreview() }
             .navigationTitle(existing == nil ? "New board" : "Edit board")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
-                // Preview / Export moved to the bottom action bar, where they're
-                // visible instead of hidden in a menu. ⋯ keeps only the
-                // destructive action, so it appears only for a saved board.
+                // The board is on screen now, so there's no Preview button. Export
+                // gets its own share icon instead of hiding in a menu, and ⋯ keeps
+                // only the destructive action (saved boards only).
                 if existing != nil {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {
@@ -124,12 +132,22 @@ struct BoardComposerView: View {
                         } label: { Image(systemName: "ellipsis.circle") }
                     }
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button { Task { await export() } } label: { Label("Export PDF", systemImage: "doc.richtext") }
+                        Menu {
+                            ForEach(BoardImageSize.allCases) { size in
+                                Button(size.label) { Task { await exportImage(size) } }
+                            }
+                        } label: { Label("Export image", systemImage: "photo") }
+                    } label: { Image(systemName: "square.and.arrow.up") }
+                    .disabled(order.isEmpty || working)
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button(existing == nil ? "Save" : "Done") { save() }
                         .fontWeight(.semibold).disabled(order.isEmpty)
                 }
             }
-            .safeAreaInset(edge: .bottom) { actionBar }
             .overlay {
                 if working {
                     VStack(spacing: 12) { ProgressView(); Text("Composing…").font(.subheadline) }
@@ -154,33 +172,46 @@ struct BoardComposerView: View {
         }
     }
 
-    /// The board's primary actions, kept visible at the bottom rather than tucked
-    /// into the ⋯ menu — mirroring the gallery's selection bar.
-    private var actionBar: some View {
-        HStack {
-            Spacer()
-            Button { Task { await preview() } } label: {
-                Label("Preview", systemImage: "eye")
+    /// The sheet is portrait for posters, landscape for the journal — give each
+    /// enough height that the fitted page stays legible.
+    private var previewCardHeight: CGFloat { layout == .journalA4 ? 250 : 330 }
+
+    /// iPhone: the live board, inline in the form. Tapping opens the same
+    /// full-screen preview the old Preview button did — so the button isn't
+    /// needed, because the answer it gave is already on screen.
+    private var previewCard: some View {
+        Button { Task { await preview() } } label: {
+            ZStack {
+                Palette.tile
+                if let livePDF {
+                    // .id(previewVersion) forces a reload each render — makePDF
+                    // reuses one temp filename, so the URL never signals a change.
+                    PDFKitView(url: livePDF, fitPage: true).id(previewVersion)
+                        .allowsHitTesting(false)      // let the button take the tap
+                } else if order.isEmpty {
+                    Text("Add photos to preview").font(.callout).foregroundStyle(.secondary)
+                } else {
+                    ProgressView()
+                }
+                if renderingPreview {
+                    ProgressView().padding(8)
+                        .background(.regularMaterial, in: Circle())
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                        .padding(10)
+                }
             }
-            .disabled(order.isEmpty || working)
-            Spacer()
-            Menu {
-                Button { Task { await export() } } label: { Label("Export PDF", systemImage: "doc.richtext") }
-                Menu {
-                    ForEach(BoardImageSize.allCases) { size in
-                        Button(size.label) { Task { await exportImage(size) } }
-                    }
-                } label: { Label("Export image", systemImage: "photo") }
-            } label: {
-                Label("Export", systemImage: "square.and.arrow.up")
+            .frame(height: previewCardHeight)
+            .overlay(alignment: .bottomTrailing) {
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Palette.ink2)
+                    .padding(7)
+                    .background(.regularMaterial, in: Circle())
+                    .padding(10)
             }
-            .disabled(order.isEmpty || working)
-            Spacer()
         }
-        .font(.body.weight(.semibold))
-        .tint(Palette.coral)
-        .padding(.horizontal, 24).padding(.vertical, 12)
-        .background(.bar)
+        .buttonStyle(.plain)
+        .disabled(order.isEmpty || working)
     }
 
     /// The right-hand live preview (iPad): the rendered board PDF, re-rendered a
@@ -205,7 +236,6 @@ struct BoardComposerView: View {
                     .padding(12)
             }
         }
-        .task(id: previewToken) { await renderPreview() }
     }
 
     /// One value that changes whenever anything affecting the render changes, so a
@@ -306,10 +336,18 @@ private struct BoardPreviewSheet: View {
 /// A zoomable PDF view (PDFKit) for previewing a rendered board.
 private struct PDFKitView: UIViewRepresentable {
     let url: URL
+    /// Fit one whole page in the view (for the small inline card). The default
+    /// scrolling mode is kept for the full-screen preview, so a multi-page
+    /// journal can still be paged through there.
+    var fitPage = false
     func makeUIView(context: Context) -> PDFView {
         let v = PDFView()
         v.autoScales = true
         v.backgroundColor = .systemGray6
+        if fitPage {
+            v.displayMode = .singlePage
+            v.displaysPageBreaks = false
+        }
         v.document = PDFDocument(url: url)
         return v
     }
