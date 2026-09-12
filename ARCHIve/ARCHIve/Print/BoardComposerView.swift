@@ -112,32 +112,24 @@ struct BoardComposerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
-                // The ⋯ menu holds the secondary actions; Save is its own button.
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button { Task { await preview() } } label: { Label("Preview", systemImage: "eye") }
-                            .disabled(order.isEmpty || working)
-                        Button { Task { await export() } } label: { Label("Export PDF", systemImage: "square.and.arrow.up") }
-                            .disabled(order.isEmpty || working)
+                // Preview / Export moved to the bottom action bar, where they're
+                // visible instead of hidden in a menu. ⋯ keeps only the
+                // destructive action, so it appears only for a saved board.
+                if existing != nil {
+                    ToolbarItem(placement: .topBarTrailing) {
                         Menu {
-                            ForEach(BoardImageSize.allCases) { size in
-                                Button(size.label) { Task { await exportImage(size) } }
-                            }
-                        } label: { Label("Export image", systemImage: "photo") }
-                            .disabled(order.isEmpty || working)
-                        if existing != nil {
-                            Divider()
                             Button(role: .destructive) { confirmDelete = true } label: {
                                 Label("Delete board", systemImage: "trash")
                             }
-                        }
-                    } label: { Image(systemName: "ellipsis.circle") }
+                        } label: { Image(systemName: "ellipsis.circle") }
+                    }
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button(existing == nil ? "Save" : "Done") { save() }
                         .fontWeight(.semibold).disabled(order.isEmpty)
                 }
             }
+            .safeAreaInset(edge: .bottom) { actionBar }
             .overlay {
                 if working {
                     VStack(spacing: 12) { ProgressView(); Text("Composing…").font(.subheadline) }
@@ -160,6 +152,35 @@ struct BoardComposerView: View {
                 Button("Cancel", role: .cancel) {}
             } message: { Text("This removes the board only — your photos stay in the archive.") }
         }
+    }
+
+    /// The board's primary actions, kept visible at the bottom rather than tucked
+    /// into the ⋯ menu — mirroring the gallery's selection bar.
+    private var actionBar: some View {
+        HStack {
+            Spacer()
+            Button { Task { await preview() } } label: {
+                Label("Preview", systemImage: "eye")
+            }
+            .disabled(order.isEmpty || working)
+            Spacer()
+            Menu {
+                Button { Task { await export() } } label: { Label("Export PDF", systemImage: "doc.richtext") }
+                Menu {
+                    ForEach(BoardImageSize.allCases) { size in
+                        Button(size.label) { Task { await exportImage(size) } }
+                    }
+                } label: { Label("Export image", systemImage: "photo") }
+            } label: {
+                Label("Export", systemImage: "square.and.arrow.up")
+            }
+            .disabled(order.isEmpty || working)
+            Spacer()
+        }
+        .font(.body.weight(.semibold))
+        .tint(Palette.coral)
+        .padding(.horizontal, 24).padding(.vertical, 12)
+        .background(.bar)
     }
 
     /// The right-hand live preview (iPad): the rendered board PDF, re-rendered a
