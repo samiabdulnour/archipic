@@ -134,12 +134,20 @@ struct BoardComposerView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        Button { Task { await export() } } label: { Label("Export PDF", systemImage: "doc.richtext") }
-                        Menu {
-                            ForEach(BoardImageSize.allCases) { size in
-                                Button(size.label) { Task { await exportImage(size) } }
+                        if let px = layout.exportPixels {
+                            // Social layouts are already a size — export straight off.
+                            Button { Task { await exportImage(pixels: px) } } label: {
+                                Label("Export image", systemImage: "photo")
                             }
-                        } label: { Label("Export image", systemImage: "photo") }
+                            Button { Task { await export() } } label: { Label("Export PDF", systemImage: "doc.richtext") }
+                        } else {
+                            Button { Task { await export() } } label: { Label("Export PDF", systemImage: "doc.richtext") }
+                            Menu {
+                                ForEach(BoardImageSize.allCases) { size in
+                                    Button(size.label) { Task { await exportImage(size) } }
+                                }
+                            } label: { Label("Export image", systemImage: "photo") }
+                        }
                     } label: { Image(systemName: "square.and.arrow.up") }
                     .disabled(order.isEmpty || working)
                 }
@@ -174,7 +182,7 @@ struct BoardComposerView: View {
 
     /// The sheet is portrait for posters, landscape for the journal — give each
     /// enough height that the fitted page stays legible.
-    private var previewCardHeight: CGFloat { layout == .journalA4 ? 250 : 330 }
+    private var previewCardHeight: CGFloat { layout == .journalA4 ? 250 : (layout.isSocial ? 300 : 330) }
 
     /// iPhone: the live board, inline in the form. Tapping opens the same
     /// full-screen preview the old Preview button did — so the button isn't
@@ -240,7 +248,7 @@ struct BoardComposerView: View {
 
     /// One value that changes whenever anything affecting the render changes, so a
     /// single `.task(id:)` cancels the in-flight render and starts a fresh one.
-    private var previewToken: String { "\(layout.rawValue)|\(title)|\(order.joined(separator: ","))" }
+    private var previewToken: String { "\(layout.rawValue)|\(boardMark)|\(title)|\(order.joined(separator: ","))" }
 
     private func renderPreview() async {
         guard !order.isEmpty else { livePDF = nil; return }
@@ -249,7 +257,7 @@ struct BoardComposerView: View {
         // Debounce: let rapid reorders / typing settle before the heavier render.
         try? await Task.sleep(for: .milliseconds(400))
         if Task.isCancelled { return }
-        let url = await BoardRenderer.makePDF(photos: orderedPhotos, layout: layout, title: title)
+        let url = await BoardRenderer.makePDF(photos: orderedPhotos, layout: layout, title: title, mark: boardMark)
         if Task.isCancelled { return }
         livePDF = url
         previewVersion &+= 1
@@ -284,13 +292,23 @@ struct BoardComposerView: View {
     private func export() async {
         guard !working else { return }   // no overlapping exports (shared Geocoder, memory)
         working = true
-        let url = await BoardRenderer.makePDF(photos: orderedPhotos, layout: layout, title: title)
+        let url = await BoardRenderer.makePDF(photos: orderedPhotos, layout: layout, title: title, mark: boardMark)
         working = false
         if let url { shareURL = url; showShare = true }
     }
 
     /// Export the board as a social-sized image (with the attribution mark per the
     /// Settings toggle) and hand it to the share sheet.
+    /// A social layout already defines its own pixel size, so it exports directly
+    /// rather than asking which size to use.
+    private func exportImage(pixels: CGSize) async {
+        guard !working else { return }
+        working = true
+        let url = await BoardRenderer.makeImage(photos: orderedPhotos, pixels: pixels, mark: boardMark, title: title)
+        working = false
+        if let url { shareURL = url; showShare = true }
+    }
+
     private func exportImage(_ size: BoardImageSize) async {
         guard !working else { return }
         working = true
@@ -304,7 +322,7 @@ struct BoardComposerView: View {
     private func preview() async {
         guard !working else { return }
         working = true
-        let url = await BoardRenderer.makePDF(photos: orderedPhotos, layout: layout, title: title)
+        let url = await BoardRenderer.makePDF(photos: orderedPhotos, layout: layout, title: title, mark: boardMark)
         working = false
         if let url { previewURL = url; showPreview = true }
     }

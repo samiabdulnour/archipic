@@ -1,15 +1,19 @@
 import UIKit
 import SwiftUI
 
-/// Which printed artefact to render from a selection (size + layout).
+/// Which artefact to render from a selection (sheet size + layout). Print
+/// sheets export as PDF; the social canvases are small, caption-enlarged sheets
+/// that export as an image sized for a feed post.
 enum BoardLayout: String, CaseIterable, Identifiable {
-    case posterB1, posterA2, journalA4
+    case posterB1, posterA2, journalA4, socialSquare, socialPortrait
     var id: String { rawValue }
     var label: String {
         switch self {
         case .posterB1: return "Poster · B1"
         case .posterA2: return "Poster · A2"
         case .journalA4: return "Journal · A4"
+        case .socialSquare: return "Post · 1:1"
+        case .socialPortrait: return "Post · 4:5"
         }
     }
     var blurb: String {
@@ -17,12 +21,41 @@ enum BoardLayout: String, CaseIterable, Identifiable {
         case .posterB1: return "Big justified wall catalogue (700×1000 mm)"
         case .posterA2: return "Justified wall catalogue (420×594 mm)"
         case .journalA4: return "Chronological diary, A4 landscape spreads"
+        case .socialSquare: return "Square post for Instagram (1080×1080 px)"
+        case .socialPortrait: return "Tall feed post — fills more of the screen (1080×1350 px)"
         }
     }
     var icon: String {
         switch self {
         case .posterB1, .posterA2: return "rectangle.portrait"
         case .journalA4: return "book"
+        case .socialSquare: return "square"
+        case .socialPortrait: return "rectangle.portrait"
+        }
+    }
+
+    /// Social canvases render small with enlarged captions and export as an
+    /// image; print sheets render at true size and export as PDF.
+    var isSocial: Bool { self == .socialSquare || self == .socialPortrait }
+
+    /// The sheet to draw, in mm. Social canvases reuse the 300 mm page the image
+    /// export is tuned for, so the preview matches the exported file.
+    var sheetMM: CGSize? {
+        switch self {
+        case .posterB1: return CGSize(width: 700, height: 1000)
+        case .posterA2: return CGSize(width: 420, height: 594)
+        case .socialSquare: return CGSize(width: 300, height: 300)
+        case .socialPortrait: return CGSize(width: 300, height: 375)
+        case .journalA4: return nil          // paginated, drawn by journalPDF
+        }
+    }
+
+    /// Pixel size of the image export, for the social canvases.
+    var exportPixels: CGSize? {
+        switch self {
+        case .socialSquare: return CGSize(width: 1080, height: 1080)
+        case .socialPortrait: return CGSize(width: 1080, height: 1350)
+        default: return nil
         }
     }
 }
@@ -77,14 +110,17 @@ enum BoardRenderer {
 
     /// Loads each photo's pixels, builds plates, renders the chosen layout to a PDF
     /// in the temporary directory, and returns its URL. Order is preserved.
-    @MainActor static func makePDF(photos: [Photo], layout: BoardLayout, title: String? = nil) async -> URL? {
+    @MainActor static func makePDF(photos: [Photo], layout: BoardLayout, title: String? = nil,
+                                   mark: Bool = false) async -> URL? {
         let plates = await buildPlates(photos)
         guard !plates.isEmpty else { return nil }
         let data: Data
-        switch layout {
-        case .posterB1:  data = posterPDF(plates, widthMM: 700, heightMM: 1000)
-        case .posterA2:  data = posterPDF(plates, widthMM: 420, heightMM: 594)
-        case .journalA4: data = journalPDF(plates)
+        if layout == .journalA4 {
+            data = journalPDF(plates)               // paginated, its own renderer
+        } else {
+            guard let sheet = layout.sheetMM else { return nil }
+            data = posterPDF(plates, widthMM: sheet.width, heightMM: sheet.height,
+                             social: layout.isSocial, mark: mark)
         }
         return writeTemp(data, title: title, ext: "pdf")
     }
@@ -94,9 +130,14 @@ enum BoardRenderer {
     /// aspect (never letterboxed).
     @MainActor static func makeImage(photos: [Photo], size: BoardImageSize,
                                      mark: Bool, title: String? = nil) async -> URL? {
+        await makeImage(photos: photos, pixels: size.pixels, mark: mark, title: title)
+    }
+
+    @MainActor static func makeImage(photos: [Photo], pixels: CGSize,
+                                     mark: Bool, title: String? = nil) async -> URL? {
         let plates = await buildPlates(photos)
         guard !plates.isEmpty else { return nil }
-        let image = posterImage(plates, pixel: size.pixels, mark: mark)
+        let image = posterImage(plates, pixel: pixels, mark: mark)
         guard let data = image.jpegData(compressionQuality: 0.92) else { return nil }
         return writeTemp(data, title: title, ext: "jpg")
     }
@@ -294,14 +335,23 @@ enum BoardRenderer {
         footer(bodyX, availW, H - MB - 15 * s * mm)
     }
 
-    static func posterPDF(_ plates: [BoardPlate], widthMM: CGFloat = 700, heightMM: CGFloat = 1000) -> Data {
+    static func posterPDF(_ plates: [BoardPlate], widthMM: CGFloat = 700, heightMM: CGFloat = 1000,
+                          social: Bool = false, mark: Bool = false) -> Data {
         let W = widthMM * mm, H = heightMM * mm
         let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: W, height: H))
         return renderer.pdfData { ctx in
             ctx.beginPage()
             let cg = ctx.cgContext
-            drawPoster(plates, widthMM: widthMM, heightMM: heightMM, captionScale: 1, cg: cg) { x, w, y in
-                drawFooter(plates: plates, x: x, w: w, y: y, sheet: widthMM > 500 ? "b1" : "a2", cg: cg)
+            // A social canvas is a fraction of a B1 sheet, so print-size captions
+            // would be unreadable — enlarge them exactly as the image export does,
+            // and carry the attribution mark rather than the print footer.
+            drawPoster(plates, widthMM: widthMM, heightMM: heightMM,
+                       captionScale: social ? 1.7 : 1, cg: cg) { x, w, y in
+                if social {
+                    if mark { drawAttribution(x: x, w: w, y: y, cg: cg) }
+                } else {
+                    drawFooter(plates: plates, x: x, w: w, y: y, sheet: widthMM > 500 ? "b1" : "a2", cg: cg)
+                }
             }
         }
     }
