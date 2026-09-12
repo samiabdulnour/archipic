@@ -13,7 +13,6 @@ struct SettingsView: View {
     @AppStorage("launchScreen") private var launchScreen = "camera"
     @AppStorage("customProjects") private var customProjectsRaw = ""
     @AppStorage("autoSuggestTags") private var autoSuggestTags = true
-    @AppStorage("boardMark") private var boardMark = true
     @AppStorage("stripGPSOnExport") private var stripGPSOnExport = false
 
     @State private var newProject = ""
@@ -40,11 +39,6 @@ struct SettingsView: View {
                     Toggle("Suggest tags from the photo", isOn: $autoSuggestTags)
                 } header: { header("Smart tagging") } footer: {
                     Text("Uses on-device image recognition (Apple Vision) to suggest a Kind when you tag. Nothing leaves your device; you always confirm.")
-                }
-                Section {
-                    Toggle("Attribution mark on shared images", isOn: $boardMark)
-                } header: { header("Boards") } footer: {
-                    Text("Adds a small Archipic mark in the corner when you export a board as an image (never over a photo). PDFs are unaffected.")
                 }
                 Section {
                     Toggle("Include location in exports", isOn: Binding(

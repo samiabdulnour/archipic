@@ -3,9 +3,9 @@ import SwiftUI
 
 /// Which artefact to render from a selection (sheet size + layout). Print
 /// sheets export as PDF; the social canvases are small, caption-enlarged sheets
-/// that export as an image sized for a feed post.
+/// sized for a feed post or a story.
 enum BoardLayout: String, CaseIterable, Identifiable {
-    case posterB1, posterA2, journalA4, socialSquare, socialPortrait
+    case posterB1, posterA2, journalA4, socialSquare, socialPortrait, socialStory
     var id: String { rawValue }
     var label: String {
         switch self {
@@ -14,6 +14,7 @@ enum BoardLayout: String, CaseIterable, Identifiable {
         case .journalA4: return "Journal · A4"
         case .socialSquare: return "Post · 1:1"
         case .socialPortrait: return "Post · 4:5"
+        case .socialStory: return "Story · 9:16"
         }
     }
     var blurb: String {
@@ -23,6 +24,7 @@ enum BoardLayout: String, CaseIterable, Identifiable {
         case .journalA4: return "Chronological diary, A4 landscape spreads"
         case .socialSquare: return "Square post for Instagram (1080×1080 px)"
         case .socialPortrait: return "Tall feed post — fills more of the screen (1080×1350 px)"
+        case .socialStory: return "Full-screen story or reel (1080×1920 px)"
         }
     }
     var icon: String {
@@ -31,12 +33,13 @@ enum BoardLayout: String, CaseIterable, Identifiable {
         case .journalA4: return "book"
         case .socialSquare: return "square"
         case .socialPortrait: return "rectangle.portrait"
+        case .socialStory: return "iphone"
         }
     }
 
-    /// Social canvases render small with enlarged captions and export as an
-    /// image; print sheets render at true size and export as PDF.
-    var isSocial: Bool { self == .socialSquare || self == .socialPortrait }
+    /// Social canvases render small with enlarged captions, so photos stay bold
+    /// and captions readable at feed size.
+    var isSocial: Bool { self == .socialSquare || self == .socialPortrait || self == .socialStory }
 
     /// The sheet to draw, in mm. Social canvases reuse the 300 mm page the image
     /// export is tuned for, so the preview matches the exported file.
@@ -46,36 +49,21 @@ enum BoardLayout: String, CaseIterable, Identifiable {
         case .posterA2: return CGSize(width: 420, height: 594)
         case .socialSquare: return CGSize(width: 300, height: 300)
         case .socialPortrait: return CGSize(width: 300, height: 375)
+        case .socialStory: return CGSize(width: 300, height: 533.33)
         case .journalA4: return nil          // paginated, drawn by journalPDF
         }
     }
 
-    /// Pixel size of the image export, for the social canvases.
-    var exportPixels: CGSize? {
+    /// Pixel size of the image export. Every layout has one, so Export needs no
+    /// separate size picker — the layout you composed for *is* the size.
+    var exportPixels: CGSize {
         switch self {
+        case .posterB1: return CGSize(width: 1400, height: 2000)
+        case .posterA2: return CGSize(width: 1400, height: 1980)
+        case .journalA4: return CGSize(width: 2000, height: 1414)
         case .socialSquare: return CGSize(width: 1080, height: 1080)
         case .socialPortrait: return CGSize(width: 1080, height: 1350)
-        default: return nil
-        }
-    }
-}
-
-/// Shareable image sizes for social export (px). The layout fills the aspect.
-enum BoardImageSize: String, CaseIterable, Identifiable {
-    case square, portrait, story
-    var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .square:   return "Square · 1:1"
-        case .portrait: return "Portrait · 4:5"
-        case .story:    return "Story · 9:16"
-        }
-    }
-    var pixels: CGSize {
-        switch self {
-        case .square:   return CGSize(width: 1080, height: 1080)
-        case .portrait: return CGSize(width: 1080, height: 1350)
-        case .story:    return CGSize(width: 1080, height: 1920)
+        case .socialStory: return CGSize(width: 1080, height: 1920)
         }
     }
 }
@@ -110,8 +98,7 @@ enum BoardRenderer {
 
     /// Loads each photo's pixels, builds plates, renders the chosen layout to a PDF
     /// in the temporary directory, and returns its URL. Order is preserved.
-    @MainActor static func makePDF(photos: [Photo], layout: BoardLayout, title: String? = nil,
-                                   mark: Bool = false) async -> URL? {
+    @MainActor static func makePDF(photos: [Photo], layout: BoardLayout, title: String? = nil) async -> URL? {
         let plates = await buildPlates(photos)
         guard !plates.isEmpty else { return nil }
         let data: Data
@@ -120,7 +107,7 @@ enum BoardRenderer {
         } else {
             guard let sheet = layout.sheetMM else { return nil }
             data = posterPDF(plates, widthMM: sheet.width, heightMM: sheet.height,
-                             social: layout.isSocial, mark: mark)
+                             social: layout.isSocial)
         }
         return writeTemp(data, title: title, ext: "pdf")
     }
@@ -128,23 +115,14 @@ enum BoardRenderer {
     /// Render the board as a shareable IMAGE at a social size, with an optional
     /// attribution mark. Same justified-wall layout as the poster, at the target
     /// aspect (never letterboxed).
-    @MainActor static func makeImage(photos: [Photo], size: BoardImageSize,
-                                     mark: Bool, title: String? = nil) async -> URL? {
-        await makeImage(photos: photos, pixels: size.pixels, mark: mark, title: title)
-    }
-
-    @MainActor static func makeImage(photos: [Photo], pixels: CGSize,
-                                     mark: Bool, title: String? = nil) async -> URL? {
+    @MainActor static func makeImage(photos: [Photo], pixels: CGSize, title: String? = nil) async -> URL? {
         let plates = await buildPlates(photos)
         guard !plates.isEmpty else { return nil }
-        let image = posterImage(plates, pixel: pixels, mark: mark)
+        let image = posterImage(plates, pixel: pixels)
         guard let data = image.jpegData(compressionQuality: 0.92) else { return nil }
         return writeTemp(data, title: title, ext: "jpg")
     }
 
-    /// Load each photo's pixels (downsampled + JPEG'd to keep peak memory low),
-    /// fill in a geocoded city for captions when missing, and map to plates —
-    /// order preserved. Shared by the PDF and image exporters.
     @MainActor private static func buildPlates(_ photos: [Photo]) async -> [BoardPlate] {
         var plates: [BoardPlate] = []
         for p in photos {
@@ -336,7 +314,7 @@ enum BoardRenderer {
     }
 
     static func posterPDF(_ plates: [BoardPlate], widthMM: CGFloat = 700, heightMM: CGFloat = 1000,
-                          social: Bool = false, mark: Bool = false) -> Data {
+                          social: Bool = false) -> Data {
         let W = widthMM * mm, H = heightMM * mm
         let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: W, height: H))
         return renderer.pdfData { ctx in
@@ -348,7 +326,7 @@ enum BoardRenderer {
             drawPoster(plates, widthMM: widthMM, heightMM: heightMM,
                        captionScale: social ? 1.7 : 1, cg: cg) { x, w, y in
                 if social {
-                    if mark { drawAttribution(x: x, w: w, y: y, cg: cg) }
+                    // Social sheets carry no footer — the board is the whole post.
                 } else {
                     drawFooter(plates: plates, x: x, w: w, y: y, sheet: widthMM > 500 ? "b1" : "a2", cg: cg)
                 }
@@ -359,7 +337,7 @@ enum BoardRenderer {
     /// Render the justified wall to a bitmap of exactly `pixel` px at that aspect,
     /// with an optional attribution mark in the reserved bottom band. Same layout
     /// as the poster, never letterboxed.
-    static func posterImage(_ plates: [BoardPlate], pixel: CGSize, mark: Bool) -> UIImage {
+    static func posterImage(_ plates: [BoardPlate], pixel: CGSize) -> UIImage {
         // A social canvas is far smaller than a B1 sheet, so the print-tiny 6.6pt
         // caption would be unreadable — use a narrower page (photos stay bold) and
         // enlarge the caption. Height follows the target aspect.
@@ -371,9 +349,7 @@ enum BoardRenderer {
         fmt.opaque = true
         return UIGraphicsImageRenderer(size: CGSize(width: W, height: heightMM * mm), format: fmt).image { ctx in
             let cg = ctx.cgContext
-            drawPoster(plates, widthMM: widthMM, heightMM: heightMM, captionScale: 1.7, cg: cg) { x, w, y in
-                if mark { drawAttribution(x: x, w: w, y: y, cg: cg) }
-            }
+            drawPoster(plates, widthMM: widthMM, heightMM: heightMM, captionScale: 1.7, cg: cg) { _, _, _ in }
         }
     }
 
@@ -403,24 +379,6 @@ enum BoardRenderer {
 
     /// Social-export attribution: the app mark + wordmark in the reserved bottom
     /// band (never over a photo). Ink on the white ground, like the app icon.
-    private static func drawAttribution(x: CGFloat, w: CGFloat, y: CGFloat, cg: CGContext) {
-        let d = 6.0 * mm
-        let cx = x + d / 2, cy = y + d / 2
-        let lw = d * 0.05, ring = d - lw, disc = ring * 0.911
-        let c = CGFloat.pi * ring, rl = c / 9, dot = lw * 0.5, long = 0.46 * rl, gap = (rl - long - 2 * dot) / 3
-        cg.saveGState()
-        cg.setStrokeColor(ink.cgColor); cg.setLineWidth(lw); cg.setLineCap(.round)
-        cg.setLineDash(phase: 0, lengths: [long, gap, dot, gap, dot, gap])
-        cg.strokeEllipse(in: CGRect(x: cx - ring / 2, y: cy - ring / 2, width: ring, height: ring))
-        cg.setLineDash(phase: 0, lengths: [])
-        cg.setFillColor(ink.cgColor)
-        cg.fillEllipse(in: CGRect(x: cx - disc / 2, y: cy - disc / 2, width: disc, height: disc))
-        cg.restoreGState()
-        let word = NSAttributedString(string: "Archipic", attributes: [.font: semi(11), .foregroundColor: ink])
-        let sz = word.size()
-        word.draw(at: CGPoint(x: cx + d / 2 + 2 * mm, y: cy - sz.height / 2))
-    }
-
     // MARK: Journal (A4-landscape spread = 2× A5, chronological flow)
 
     private struct JBlock { let isDivider: Bool; let month: String; let rec: BoardPlate? }
