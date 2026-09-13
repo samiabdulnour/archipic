@@ -25,7 +25,6 @@ struct BoardComposerView: View {
     // iPad live preview (right pane)
     @State private var livePDF: URL?
     @State private var renderingPreview = false
-    @State private var previewVersion = 0   // bumps each render so the PDF view reloads the same-named temp file
 
     /// New board from a gallery selection.
     init(photos: [Photo]) {
@@ -133,16 +132,17 @@ struct BoardComposerView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        // The layout already fixes the size, so there's nothing to
-                        // pick — only which file you want. Lead with the one that
-                        // suits the sheet you composed.
-                        let image = Button { Task { await exportImage(pixels: layout.exportPixels) } } label: {
-                            Label("Export image", systemImage: "photo")
+                        // Only the social canvases have an image form; a poster or the
+                        // paginated journal exports as PDF. The layout fixes the size,
+                        // so there's nothing to pick — just which file you want.
+                        if let px = layout.exportPixels {
+                            Button { Task { await exportImage(pixels: px) } } label: {
+                                Label("Export image", systemImage: "photo")
+                            }
                         }
-                        let pdf = Button { Task { await export() } } label: {
+                        Button { Task { await export() } } label: {
                             Label("Export PDF", systemImage: "doc.richtext")
                         }
-                        if layout.isSocial { image; pdf } else { pdf; image }
                     } label: { Image(systemName: "square.and.arrow.up") }
                     .disabled(order.isEmpty || working)
                 }
@@ -194,9 +194,7 @@ struct BoardComposerView: View {
             ZStack {
                 Palette.tile
                 if let livePDF {
-                    // .id(previewVersion) forces a reload each render — makePDF
-                    // reuses one temp filename, so the URL never signals a change.
-                    PDFKitView(url: livePDF, fitPage: true).id(previewVersion)
+                    PDFKitView(url: livePDF, fitPage: true)
                         .allowsHitTesting(false)      // let the button take the tap
                 } else if order.isEmpty {
                     Text("Add photos to preview").font(.callout).foregroundStyle(.secondary)
@@ -231,9 +229,7 @@ struct BoardComposerView: View {
         ZStack {
             Palette.tile
             if let livePDF {
-                // .id(previewVersion) forces a reload each render — makePDF reuses
-                // the same temp filename, so the URL alone never signals a change.
-                PDFKitView(url: livePDF).id(previewVersion).ignoresSafeArea(edges: .bottom)
+                PDFKitView(url: livePDF).ignoresSafeArea(edges: .bottom)
             } else if order.isEmpty {
                 Text("Add photos to preview").font(.callout).foregroundStyle(.secondary)
             } else {
@@ -259,10 +255,14 @@ struct BoardComposerView: View {
         // Debounce: let rapid reorders / typing settle before the heavier render.
         try? await Task.sleep(for: .milliseconds(400))
         if Task.isCancelled { return }
-        let url = await BoardRenderer.makePDF(photos: orderedPhotos, layout: layout, title: title)
-        if Task.isCancelled { return }
+        // geocode: false — reverse-geocoding WRITES a city into the photo's human
+        // tags, so it must stay on explicit Preview/Export, not fire merely because
+        // the composer is open.
+        let url = await BoardRenderer.makePDF(photos: orderedPhotos, layout: layout,
+                                              title: title, geocode: false)
+        if Task.isCancelled { BoardRenderer.discardTemp(url); return }
+        BoardRenderer.discardTemp(livePDF)        // retire the previous render
         livePDF = url
-        previewVersion &+= 1
     }
 
     private func plateTitle(_ p: Photo) -> String {
@@ -299,8 +299,8 @@ struct BoardComposerView: View {
         if let url { shareURL = url; showShare = true }
     }
 
-    /// Export the board as a social-sized image (with the attribution mark per the
-    /// Settings toggle) and hand it to the share sheet.
+    /// Export the board as an image at the layout's own size, and hand it to the
+    /// share sheet.
     /// Every layout defines its own pixel size, so the image exports directly
     /// rather than asking which size to use.
     private func exportImage(pixels: CGSize) async {

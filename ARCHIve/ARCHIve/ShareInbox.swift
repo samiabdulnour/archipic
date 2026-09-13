@@ -27,19 +27,20 @@ enum ShareInbox {
               let files = try? fm.contentsOfDirectory(at: inbox, includingPropertiesForKeys: nil)
         else { return }
 
-        var inserted = false
-        // Drive off the .json sidecars: it's written last, so its presence means
-        // the matching .jpg is fully on disk.
+        // Drive off the .json sidecars: it's written last, and atomically, so its
+        // presence means the matching .jpg is fully on disk.
         for json in files where json.pathExtension == "json" {
             let id = json.deletingPathExtension().lastPathComponent
             let jpg = inbox.appendingPathComponent("\(id).jpg")
 
-            defer { try? fm.removeItem(at: json); try? fm.removeItem(at: jpg) }
-
             guard let imageData = try? Data(contentsOf: jpg), !imageData.isEmpty,
                   let metaData = try? Data(contentsOf: json),
                   let meta = try? JSONSerialization.jsonObject(with: metaData) as? [String: Any]
-            else { continue }   // corrupt/orphaned — the defer cleans it up
+            else {
+                // Corrupt or orphaned: there's nothing to save, so binning it is safe.
+                try? fm.removeItem(at: json); try? fm.removeItem(at: jpg)
+                continue
+            }
 
             let importedAt = (meta["importedAt"] as? TimeInterval)
                 .map { Date(timeIntervalSince1970: $0) } ?? Date()
@@ -54,9 +55,31 @@ enum ShareInbox {
                               importedAt: importedAt,
                               isCameraShot: false)
             context.insert(photo)
-            inserted = true
+
+            // Commit BEFORE deleting the source. Deleting first meant a failed save
+            // — or being killed mid-drain — destroyed the only copy of the photo.
+            // Now a failure just leaves the item for the next launch to retry.
+            do {
+                try context.save()
+                try? fm.removeItem(at: json)
+                try? fm.removeItem(at: jpg)
+            } catch {
+                context.delete(photo)   // drop the pending insert so a retry can't duplicate
+                return                  // saving is failing; leave the rest for next time
+            }
         }
 
-        if inserted { try? context.save() }
+        // Sweep images whose sidecar never arrived (extension killed mid-write).
+        // Age-guarded so this can't race an extension that is writing right now.
+        let cutoff = Date().addingTimeInterval(-3600)
+        for jpg in files where jpg.pathExtension == "jpg" {
+            let sidecar = jpg.deletingPathExtension().appendingPathExtension("json")
+            guard !fm.fileExists(atPath: sidecar.path),
+                  let modified = try? jpg.resourceValues(forKeys: [.contentModificationDateKey])
+                      .contentModificationDate,
+                  modified < cutoff
+            else { continue }
+            try? fm.removeItem(at: jpg)
+        }
     }
 }

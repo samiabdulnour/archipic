@@ -54,16 +54,15 @@ enum BoardLayout: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Pixel size of the image export. Every layout has one, so Export needs no
-    /// separate size picker — the layout you composed for *is* the size.
-    var exportPixels: CGSize {
+    /// Pixel size of the image export — social canvases only. `posterImage` draws
+    /// the 300 mm caption-enlarged sheet, which is the right artefact for a feed
+    /// post but NOT for a poster or the paginated journal; those export as PDF.
+    var exportPixels: CGSize? {
         switch self {
-        case .posterB1: return CGSize(width: 1400, height: 2000)
-        case .posterA2: return CGSize(width: 1400, height: 1980)
-        case .journalA4: return CGSize(width: 2000, height: 1414)
         case .socialSquare: return CGSize(width: 1080, height: 1080)
         case .socialPortrait: return CGSize(width: 1080, height: 1350)
         case .socialStory: return CGSize(width: 1080, height: 1920)
+        case .posterB1, .posterA2, .journalA4: return nil
         }
     }
 }
@@ -98,8 +97,9 @@ enum BoardRenderer {
 
     /// Loads each photo's pixels, builds plates, renders the chosen layout to a PDF
     /// in the temporary directory, and returns its URL. Order is preserved.
-    @MainActor static func makePDF(photos: [Photo], layout: BoardLayout, title: String? = nil) async -> URL? {
-        let plates = await buildPlates(photos)
+    @MainActor static func makePDF(photos: [Photo], layout: BoardLayout, title: String? = nil,
+                                   geocode: Bool = true) async -> URL? {
+        let plates = await buildPlates(photos, geocode: geocode)
         guard !plates.isEmpty else { return nil }
         let data: Data
         if layout == .journalA4 {
@@ -123,12 +123,12 @@ enum BoardRenderer {
         return writeTemp(data, title: title, ext: "jpg")
     }
 
-    @MainActor private static func buildPlates(_ photos: [Photo]) async -> [BoardPlate] {
+    @MainActor private static func buildPlates(_ photos: [Photo], geocode: Bool = true) async -> [BoardPlate] {
         var plates: [BoardPlate] = []
         for p in photos {
             // Auto-fill the city from GPS for captions, when it's missing (sequential
             // so CLGeocoder is happy; cached; never overwrites a hand-typed place).
-            if (p.humanTags.place ?? "").isEmpty, let lat = p.latitude, let lon = p.longitude,
+            if geocode, (p.humanTags.place ?? "").isEmpty, let lat = p.latitude, let lon = p.longitude,
                let city = await Geocoder.shared.city(latitude: lat, longitude: lon) {
                 var t = p.humanTags; t.place = city; p.humanTags = t
             }
@@ -147,9 +147,24 @@ enum BoardRenderer {
     private static func writeTemp(_ data: Data, title: String?, ext: String) -> URL? {
         let safe = (title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let name = (safe.isEmpty ? "Archipic Board" : safe).replacingOccurrences(of: "/", with: "-")
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(name).\(ext)")
-        try? data.write(to: url)
+        // A fresh directory per render, so the nice filename is kept for the share
+        // sheet while no two renders ever share a path — the live preview rewrites
+        // constantly and must never truncate a file an export is still reading.
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("Boards/\(UUID().uuidString)", isDirectory: true)
+        guard (try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)) != nil
+        else { return nil }
+        let url = dir.appendingPathComponent("\(name).\(ext)")
+        // Report failure instead of handing back a URL to a file that isn't there.
+        guard (try? data.write(to: url, options: .atomic)) != nil else { return nil }
         return url
+    }
+
+    /// Delete a temp render (and its unique folder). Used to retire the previous
+    /// live-preview file so they don't accumulate while composing.
+    static func discardTemp(_ url: URL?) {
+        guard let url else { return }
+        try? FileManager.default.removeItem(at: url.deletingLastPathComponent())
     }
 
     /// Scale an image's long side down to `maxPixel` (no-op if already smaller),

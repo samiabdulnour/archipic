@@ -3,6 +3,9 @@ import SwiftData
 import AVFoundation
 
 struct CameraView: View {
+    /// Pre-selected project from a Shortcuts / Siri / Action-Button capture.
+    var initialProject: String? = nil
+
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Photo.createdAt, order: .reverse) private var allPhotos: [Photo]
@@ -65,7 +68,7 @@ struct CameraView: View {
             motion.start()
             LocationProvider.shared.start()
             // A Shortcut / Siri / Action-Button capture can pre-select a project.
-            if let p = QuickCapture.consumeProject() { camera.currentProject = p }
+            if let p = initialProject { camera.currentProject = p }
             lockToPortrait()   // the viewfinder is portrait-only (see AppOrientation)
         }
         .onDisappear {

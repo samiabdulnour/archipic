@@ -44,11 +44,14 @@ final class ShareViewController: UIViewController {
         guard !providers.isEmpty else { completion([]); return }
 
         var images = [UIImage?](repeating: nil, count: providers.count)
+        let lock = NSLock()                 // completions arrive on arbitrary queues
         let group = DispatchGroup()
         for (i, provider) in providers.enumerated() {
             group.enter()
             provider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier) { data, _ in
-                if let data, let img = UIImage(data: data) { images[i] = img }
+                if let data, let img = UIImage(data: data) {
+                    lock.lock(); images[i] = img; lock.unlock()
+                }
                 group.leave()
             }
         }
@@ -64,17 +67,30 @@ final class ShareViewController: UIViewController {
         try? FileManager.default.createDirectory(at: inbox, withIntermediateDirectories: true)
 
         let now = Date().timeIntervalSince1970
+        var saved = 0
         for image in images {
-            guard let jpeg = Self.jpeg(image) else { continue }
-            let id = UUID().uuidString
-            // Image first, then the JSON — the app only drains items whose .json
-            // exists, so a half-written item is never picked up.
-            try? jpeg.write(to: inbox.appendingPathComponent("\(id).jpg"))
-            let meta: [String: Any] = ["type": type, "importedAt": now]
-            if let data = try? JSONSerialization.data(withJSONObject: meta) {
-                try? data.write(to: inbox.appendingPathComponent("\(id).json"))
+            // One image at a time, drained each pass — several full-size encodes
+            // alive at once is what gets a share extension jetsammed.
+            autoreleasepool {
+                guard let jpeg = Self.jpeg(image) else { return }
+                let id = UUID().uuidString
+                let jpg = inbox.appendingPathComponent("\(id).jpg")
+                let json = inbox.appendingPathComponent("\(id).json")
+                // The .json is the app's signal that the .jpg is complete, so write
+                // the image atomically FIRST and only advertise it if that worked —
+                // otherwise the app would find a sidecar with no image and bin both.
+                guard (try? jpeg.write(to: jpg, options: .atomic)) != nil else { return }
+                let meta: [String: Any] = ["type": type, "importedAt": now]
+                guard let data = try? JSONSerialization.data(withJSONObject: meta),
+                      (try? data.write(to: json, options: .atomic)) != nil else {
+                    try? FileManager.default.removeItem(at: jpg)   // don't strand an orphan
+                    return
+                }
+                saved += 1
             }
         }
+        // Never report success for a photo we didn't actually store.
+        guard saved > 0 else { cancel(); return }
         extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
     }
 
@@ -88,7 +104,10 @@ final class ShareViewController: UIViewController {
         guard longSide > maxSide else { return image.jpegData(compressionQuality: 0.9) }
         let scale = maxSide / longSide
         let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
-        return UIGraphicsImageRenderer(size: size)
+        let fmt = UIGraphicsImageRendererFormat.default()
+        fmt.scale = image.scale   // don't 3× the pixels — the extension budget is ~120 MB
+        fmt.opaque = true
+        return UIGraphicsImageRenderer(size: size, format: fmt)
             .image { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
             .jpegData(compressionQuality: 0.9)
     }

@@ -11,11 +11,19 @@ enum QuickCapture {
 
     private static var defaults: UserDefaults? { UserDefaults(suiteName: appGroup) }
 
-    /// Returns true once if the camera was requested, then clears the flag.
-    static func consumeCameraRequest() -> Bool {
-        guard let d = defaults, d.bool(forKey: pendingKey) else { return false }
+    /// A pending "open the camera" request, with the project it was made for.
+    struct Request { let project: String? }
+
+    /// Returns the pending request once, clearing BOTH keys together. They must be
+    /// consumed atomically: leaving the project behind meant a later, unrelated
+    /// camera open (toolbar, widget, launch preference) silently filed its shot
+    /// into a project the user chose minutes ago.
+    static func consumeCameraRequest() -> Request? {
+        guard let d = defaults, d.bool(forKey: pendingKey) else { return nil }
         d.set(false, forKey: pendingKey)
-        return true
+        let project = d.string(forKey: projectKey)
+        d.removeObject(forKey: projectKey)
+        return Request(project: (project?.isEmpty == false) ? project : nil)
     }
 
     /// Request the camera from an in-app AppIntent (Shortcuts / Siri / Action
@@ -28,10 +36,4 @@ enum QuickCapture {
         if p.isEmpty { d.removeObject(forKey: projectKey) } else { d.set(p, forKey: projectKey) }
     }
 
-    /// The project the camera should pre-select, consumed once.
-    static func consumeProject() -> String? {
-        guard let d = defaults, let p = d.string(forKey: projectKey), !p.isEmpty else { return nil }
-        d.removeObject(forKey: projectKey)
-        return p
-    }
 }

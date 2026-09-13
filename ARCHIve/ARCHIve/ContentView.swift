@@ -7,6 +7,7 @@ struct ContentView: View {
     @State private var showCamera = false
     @State private var didAutoOpen = false
     @State private var lens: GalleryLens = .time   // lifted here so an iPad sidebar can drive it
+    @State private var pendingProject: String?    // carried from a Shortcuts/Siri capture request
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var hSize
     @AppStorage("appearance") private var appearance = "auto"
@@ -29,7 +30,7 @@ struct ContentView: View {
             }
         }
         .fullScreenCover(isPresented: $showCamera) {
-            CameraView()
+            CameraView(initialProject: pendingProject)
         }
         .fullScreenCover(isPresented: Binding(get: { !welcomed }, set: { welcomed = !$0 })) {
             WelcomeView { welcomed = true; showCamera = true }
@@ -41,7 +42,9 @@ struct ContentView: View {
             Settings.applyAppearance(appearance)
             ReviewPrompt.noteFirstUseIfNeeded()
             ShareInbox.drain(into: modelContext)   // import anything shared while we were away
-            if QuickCapture.consumeCameraRequest() { showCamera = true }
+            if let request = QuickCapture.consumeCameraRequest() {
+                pendingProject = request.project; showCamera = true
+            }
         }
         // Lock Screen control / widget tapped while the app was already running:
         // open the camera when we come back to the foreground. Also drain the
@@ -49,7 +52,9 @@ struct ContentView: View {
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             ShareInbox.drain(into: modelContext)
-            if QuickCapture.consumeCameraRequest() { showCamera = true }
+            if let request = QuickCapture.consumeCameraRequest() {
+                pendingProject = request.project; showCamera = true
+            }
         }
         .onChange(of: appearance) { _, newValue in Settings.applyAppearance(newValue) }
     }
