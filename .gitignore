@@ -29,3 +29,6 @@ ios/Pods/
 .vscode/
 .idea/
 *.swp
+
+# Release archives and exported builds
+build/
