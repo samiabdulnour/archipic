@@ -33,7 +33,6 @@ information. In short: **we don't collect it.**
 
 ## Your control
 - You can delete any photo, or all photos, at any time in the app.
-- You can export a full backup to the Files app.
 - Deleting the app removes its on-device data. iCloud-synced data can be removed
   from your iCloud settings.
 

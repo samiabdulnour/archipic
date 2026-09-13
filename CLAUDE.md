@@ -77,7 +77,7 @@ ARCHIve/ARCHIve/
   Tagging/                Tag sheet, form, vocabulary, suggester, photo editor
   Gallery/                Grid, library, reference lens, detail, video playback
   Print/                  Boards: model, composer, PDF renderer, geocoder
-  Settings/               Welcome, how-to, about, backup/restore, sync monitor
+  Settings/               Welcome, how-to, about, sync monitor
 ARCHIve/ArchiveWidgets/   Home Screen, Lock Screen and Control Centre widgets
 ```
 
@@ -88,8 +88,7 @@ ARCHIve/ArchiveWidgets/   Home Screen, Lock Screen and Control Centre widgets
 `Photo` (SwiftData, CloudKit-synced):
 
 - `id` — UUID string. **No `.unique` constraint** — CloudKit forbids it.
-  Uniqueness is enforced by generating UUIDs and de-duping by id on
-  restore/import.
+  Uniqueness is enforced by generating UUIDs and de-duping by id on import.
 - `imageData` — external storage. The JPEG, or for video the poster frame.
   Empty when the pixels live in the Photos library.
 - `assetLocalID` — set when the record is a *reference* to a photo in the
@@ -155,7 +154,7 @@ exported as PDF.
 
 - **1.0** — Two-tap capture, the Building/Element/Graphic taxonomy, native
   camera, gallery by time/reference/project/place, search and filters,
-  favourites and ratings, private iCloud sync, local backup and restore.
+  favourites and ratings, and private iCloud sync.
 - **1.3** — Video capture and playback, a new app mark (a filled disc in a
   technical dash-dot ring) carried through the app and the widgets, a single
   unified camera for Reference and Project capture, colour looks rebuilt from
@@ -184,7 +183,7 @@ App Store Connect and must stay reachable.
   without waiting for manual review. Because of this, be conservative: no
   speculative refactors.
 - **Always ask first** before anything that touches the SwiftData schema,
-  CloudKit sync, the capture path, backup/restore, or the privacy promise.
+  CloudKit sync, the capture path, or the privacy promise.
 
 ## Release
 

@@ -106,8 +106,9 @@ you **Archive**. (Only if you ever switch to *manual* signing would you set
 - **First sync after installing on a new device** can take a while for a big
   archive.
 - Sync needs network; offline captures sync later automatically.
-- The **manual backup** (Settings → Backup → "Back up all photos") still works
-  independently as a portable, off-iCloud copy — good before reinstalls.
+- **iCloud is the only copy off the device.** The manual backup/restore feature
+  was removed in 1.4, so a user who turns iCloud off has exactly one copy of
+  their archive. Photos can still be saved individually to the Photos library.
 
 ---
 

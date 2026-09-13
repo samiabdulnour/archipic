@@ -29,7 +29,7 @@ batch several tasks into one PR.
 - **Adding a field to the SwiftData model means a CloudKit schema deploy before
   release.** Prefer adding keys inside the `humanTagsData` JSON blob, which
   needs no deploy. Say explicitly in the PR description which of the two you did.
-- Ask before touching capture, backup/restore, or the store.
+- Ask before touching capture, sync, or the store.
 
 ---
 
@@ -114,7 +114,7 @@ survive an export, Archipic becomes part of a professional workflow instead of
 a place data goes to die. It is also the honest version of a lock-in-free app.
 
 **Build.**
-- When exporting photos (single, multi-select, and the full backup), write tags
+- When exporting photos (single and multi-select), write tags
   into the image metadata: `IPTC:Keywords` from the flattened taxonomy plus
   free keywords, `IPTC:Caption-Abstract` from the note, `XMP:Title`,
   `XMP:Creator` and `XMP:Rating`, and preserve GPS and the original capture date.

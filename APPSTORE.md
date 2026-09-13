@@ -70,7 +70,7 @@ location when you share.
 PRIVATE BY DESIGN
 Your photos and tags are yours. They're stored on your device and sync through
 your own iCloud across your devices — no accounts, no ads, no analytics, no
-third-party servers. You can export a full backup to Files at any time.
+third-party servers.
 
 Designed for working architects, by an architect.
 
@@ -259,7 +259,7 @@ And dozens of fixes across video recording, capture speed, and stability.
 First release. Fast two-tap capture, the architecture tag taxonomy
 (Building / Element / Graphic), a native camera, gallery browsing by time,
 reference, project and place, search and filters, favourites and ratings,
-private iCloud sync, and local backup/restore.
+and private iCloud sync.
 
 ---
 
