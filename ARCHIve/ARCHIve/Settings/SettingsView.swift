@@ -16,6 +16,10 @@ struct SettingsView: View {
     @AppStorage("stripGPSOnExport") private var stripGPSOnExport = false
 
     @State private var newProject = ""
+    @State private var backingUp = false
+    @State private var backupURL: URL?
+    @State private var showBackupShare = false
+    @State private var backupFailed = false
 
     private var derivedProjects: [String] {
         var seen = Set<String>(); var out: [String] = []
@@ -46,6 +50,9 @@ struct SettingsView: View {
                 } header: { header("Exports") } footer: {
                     Text("Shared photos carry your tags as standard metadata (keywords, caption, title, rating) readable in Lightroom or Bridge. Turn location off to strip GPS when sharing publicly.")
                 }
+                Section { backupBody } header: { header("Backup") } footer: {
+                    Text("Writes every photo, video and tag into a folder you can save to Files or a cloud drive — your archive, readable without Archipic.")
+                }
                 Section {
                     NavigationLink { HowToUseView() } label: { Text("How to use Archipic") }
                     NavigationLink { AboutView() } label: { Text("About Archipic") }
@@ -56,12 +63,49 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+            .sheet(isPresented: $showBackupShare) {
+                if let backupURL { ActivityView(items: [backupURL]) }
+            }
+            .alert("Couldn't build the backup", isPresented: $backupFailed) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Something went wrong writing the backup folder. If your device is low on storage, free some space and try again.")
+            }
         }
         .tint(Palette.coral)
         // Appearance is driven at the window level (Settings.applyAppearance),
         // so the sheet — and Auto — update correctly without a per-sheet
         // preferredColorScheme override.
         .onChange(of: appearance) { _, new in Settings.applyAppearance(new) }
+    }
+
+    // MARK: Backup
+    //
+    // Export only. `BackupManager.restore` exists but stays unwired until it can be
+    // tested against a populated archive — it writes to the store, and a half-working
+    // restore is worse than none.
+    @ViewBuilder private var backupBody: some View {
+        Button {
+            Task { await exportBackup() }
+        } label: {
+            if backingUp {
+                HStack(spacing: 8) { ProgressView(); Text("Preparing backup…") }
+            } else {
+                Label("Export backup", systemImage: "arrow.down.doc")
+            }
+        }
+        .disabled(backingUp || photos.isEmpty)
+    }
+
+    private func exportBackup() async {
+        backingUp = true
+        defer { backingUp = false }
+        do {
+            backupURL = try await BackupManager.makeBackup(photos)
+            showBackupShare = true
+        } catch {
+            backupFailed = true
+        }
     }
 
     private func header(_ t: String) -> some View {

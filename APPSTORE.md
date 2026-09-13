@@ -70,7 +70,7 @@ location when you share.
 PRIVATE BY DESIGN
 Your photos and tags are yours. They're stored on your device and sync through
 your own iCloud across your devices — no accounts, no ads, no analytics, no
-third-party servers.
+third-party servers. You can export a full backup to Files at any time.
 
 Designed for working architects, by an architect.
 
