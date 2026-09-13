@@ -48,7 +48,7 @@ the fields you want. Can't remember which category something is under? Type its
 name and Archipic takes you straight to it.
 
 GET REFERENCES IN
-Save straight from Safari, Instagram, Photos or a PDF — share an image to
+Save straight from Photos, Files, Messages or a screenshot — share an image to
 Archipic, pick its kind, and it's in your archive.
 
 FIND IT AGAIN
@@ -64,12 +64,13 @@ share.
 WORKS WITH YOUR TOOLS
 Exported photos carry your tags as standard metadata — keywords, caption, title
 and rating — so they open correctly in Lightroom, Bridge and InDesign. Your
-capture date and location come along too (location is optional per share).
+capture date comes along too, and a single setting keeps or strips the
+location when you share.
 
 PRIVATE BY DESIGN
 Your photos and tags are yours. They're stored on your device and sync through
 your own iCloud across your devices — no accounts, no ads, no analytics, no
-third-party servers. You can also export a full backup to Files at any time.
+third-party servers.
 
 Designed for working architects, by an architect.
 
@@ -186,10 +187,10 @@ A proper big-screen archive. The four lenses move into a sidebar, the grid fills
 the page, and the Board composer becomes two panes — your photos on one side, a
 live poster preview on the other. Portrait and landscape.
 
-SAVE FROM ANYWHERE
-Found a façade on Instagram, a plan in Safari, a detail in Photos? Share the
-image straight to Archipic, pick Building, Element or Graphic, and it's filed —
-ready to finish tagging later.
+SAVE FROM THE SHARE SHEET
+A façade in your camera roll, a plan someone sent you, a screenshot you grabbed?
+Share the image straight to Archipic, pick Building, Element or Graphic, and it's
+filed — ready to finish tagging later.
 
 CAPTURE WITHOUT OPENING THE APP
 A new "Capture in Archipic" action for Shortcuts, Siri and the Action Button.
