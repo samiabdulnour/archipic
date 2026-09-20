@@ -13,49 +13,48 @@ FRAME = "M3.5 3.5H20.5V20.5H3.5Z"
 HATCH = ("M-21 24L3 0M-18 24L6 0M-15 24L9 0M-12 24L12 0M-9 24L15 0M-6 24L18 0M-3 24L21 0"
          "M0 24L24 0M3 24L27 0M6 24L30 0M9 24L33 0M12 24L36 0M15 24L39 0M18 24L42 0M21 24L45 0")
 
+# A sparser hatch drawn with the light pen and always visible, for the simplified cut bars.
+HATCH4 = ("M-22 24L2 0M-18 24L6 0M-14 24L10 0M-10 24L14 0M-6 24L18 0M-2 24L22 0M2 24L26 0"
+          "M6 24L30 0M10 24L34 0M14 24L38 0M18 24L42 0M22 24L46 0")
+
 def dots(pts, r):
     return "".join(f"M{x-r:.2f} {y}a{r} {r} 0 1 0 {2*r} 0a{r} {r} 0 1 0 {-2*r} 0" for x, y in pts)
 
 def squares(pts, h):
     return "".join(f"M{x-h} {y-h}h{2*h}v{2*h}h{-2*h}z" for x, y in pts)
 
-DOOR = [("b", "M9.18 5.73A10.5 10.5 0 0 1 17.27 13.82"),
-        ("c", "M2.75 16H7V20H2.75M21.25 16H17.5V20H21.25M7 16V5.5")]
-PSTAIR = [("b", "M6.6 7V17M10.2 7V17M13.8 7V17M17.4 7V17"),
-          ("b", "M4.8 12H19M16.9 10L19 12L16.9 14"),
-          ("c", "M3 7H21V17H3Z")]
+# Simplified at the owner's request (rev D): one idea per icon, nothing else.
+WALL  = {"hclip": "M8.5 3H15.5V21H8.5Z", "els": [("c", "M8.5 3H15.5V21H8.5Z")]}   # a cut wall: tall hatched bar
+SLAB  = {"hclip": "M3 9H21V15H3Z",       "els": [("c", "M3 9H21V15H3Z")]}         # a cut slab: flat hatched bar
+STAIR = {"els": [("c", "M3 19.5H7.5V15H12V10.5H16.5V6H21")]}                      # the steps, and only the steps
+DOOR  = {"els": [("b", "M8.41 7.17A11 11 0 0 1 17.33 16.09"),                     # leaf, swing, and the wall it opens in
+                 ("c", "M3 18H6.5M17.5 18H21M6.5 18V7")]}
 
 ICONS = {
   # ---- elements, SECTION set (rev B)
-  "s-wall":   {"clip": "M9.5 3.5H14.5V18H18V21H6V18H9.5Z",
-               "els": [("b", "M3 15H6.5M17.5 15H21"), ("c", "M9.5 3.5H14.5V18H18V21H6V18H9.5Z")]},
+  "s-wall": WALL,
   "s-column": {"els": [("a", "M12 1.5V20"), ("b", "M4 21.25H20"),
                        ("c", "M7.5 3.5H16.5M7.5 18H16.5M10 3.5V18M14 3.5V18")]},
   "s-beam":   {"clip": "M4 4.5H20V8H14.25V16H20V19.5H4V16H9.75V8H4Z",
                "els": [("a", "M12 2V22"), ("c", "M4 4.5H20V8H14.25V16H20V19.5H4V16H9.75V8H4Z")]},
-  "s-slab":   {"clip": "M3 5.5H21V9H3Z",
-               "els": [("b", "M7 11.5V20.75M17 11.5V20.75M3 20.75H21"), ("c", "M3 5.5H21V9H3Z")]},
-  "s-stair":  {"clip": "M3.5 20.5V16H8.5V11.5H13.5V7H20.5V10.04L8.88 20.5Z",
-               "els": [("b", "M4 11.55L13.78 2.75H21"),
-                       ("c", "M3.5 20.5V16H8.5V11.5H13.5V7H20.5V10.04L8.88 20.5Z")]},
-  "s-door":   {"clip": "M3 16H7V20H3ZM17.5 16H21V20H17.5Z", "els": DOOR},
+  "s-slab": SLAB,
+  "s-stair": STAIR,
+  "s-door": DOOR,
   "s-window": {"els": [("b", "M12 3.5V20.5M5 9.5H19"), ("c", "M5 3.5H19V20.5H5ZM3.25 20.5H20.75")]},
   "s-roof":   {"clip": "M2.5 13.5L12 4L21.5 13.5H16.6L12 8.9L7.4 13.5Z",
                "els": [("b", "M6.5 15.75V20.75M17.5 15.75V20.75"),
                        ("c", "M2.5 13.5L12 4L21.5 13.5H16.6L12 8.9L7.4 13.5Z")]},
 
   # ---- elements, PLAN set (new): everything as it appears on a floor plan
-  "p-wall":   {"clip": "M4 4H21.25V8.5H8.5V21.25H4Z",
-               "els": [("c", "M21.25 4H4V21.25M21.25 8.5H8.5V21.25")]},
+  "p-wall": WALL,
   "p-column": {"clip": "M8.5 8.5H15.5V15.5H8.5Z",
                "els": [("b", "M12 2.5V6M12 18V21.5M2.5 12H6M18 12H21.5"), ("c", "M8.5 8.5H15.5V15.5H8.5Z")]},
   "p-beam":   {"clip": "M3 9.5H7.5V14.5H3ZM16.5 9.5H21V14.5H16.5Z",
                "els": [("raw", '<path class="b" stroke-dasharray="1.6 1.9" d="M9.2 10.6H15M9.2 13.4H15"/>'),
                        ("c", "M3 9.5H7.5V14.5H3ZM16.5 9.5H21V14.5H16.5Z")]},
-  "p-slab":   {"els": [("b", "M6 8h2.4v2.4h-2.4zM15.6 8h2.4v2.4h-2.4zM6 13.6h2.4v2.4h-2.4zM15.6 13.6h2.4v2.4h-2.4z"),
-                       ("c", "M3.5 5.5H20.5V18.5H3.5Z")]},
-  "p-stair":  {"els": PSTAIR},
-  "p-door":   {"clip": "M3 16H7V20H3ZM17.5 16H21V20H17.5Z", "els": DOOR},
+  "p-slab": SLAB,
+  "p-stair": STAIR,
+  "p-door": DOOR,
   "p-window": {"clip": "M2.75 9H7.5V15H2.75ZM16.5 9H21.25V15H16.5Z",
                "els": [("b", "M7.5 9H16.5M7.5 12H16.5M7.5 15H16.5"),
                        ("c", "M2.75 9H7.5V15H2.75M21.25 9H16.5V15H21.25")]},
@@ -83,67 +82,58 @@ ICONS = {
                                 "M-15 0L9 24M-10 0L14 24M-5 0L19 24M0 0L24 24M5 0L29 24M10 0L34 24M15 0L39 24"), ("c", FRAME)]},
   "m-other":    {"els": [("d", dots([(8,12),(12,12),(16,12)], .95)), ("c", FRAME)]},
 
-  # ---- rooms: furniture in plan, which is how a drawing says what a room is for
-  "r-outdoor":   {"els": [("raw", '<circle class="b" cx="18.2" cy="18.2" r="3"/><circle class="c" cx="10" cy="10" r="6"/>'),
-                          ("d", dots([(10,10)], .9) + dots([(18.2,18.2)], .6))]},
-  "r-lobby":     {"els": [("b", "M7.76 7.76L16.24 16.24M16.24 7.76L7.76 16.24"),
-                          ("raw", '<circle class="c" cx="12" cy="12" r="6"/>'), ("c", "M2.5 12H6M18 12H21.5")]},
-  "r-hall":      {"els": [("d", squares([(8,8.7),(12,8.7),(16,8.7),(8,15.3),(12,15.3),(16,15.3)], .8)),
-                          ("c", "M3.5 5H20.5V19H3.5Z")]},
-  "r-living":    {"els": [("b", "M6.5 12.5V7H17.5V12.5"), ("b", "M8.5 15.5H15.5V19.5H8.5Z"), ("c", "M4 4.5H20V12.5H4Z")]},
-  "r-bedroom":   {"els": [("b", "M7 5.5H11V8.5H7ZM13 5.5H17V8.5H13ZM5 11.5H19"), ("c", "M5 3.5H19V20.5H5Z")]},
-  "r-workspace": {"els": [("b", "M9 7.75H15"), ("raw", '<circle class="b" cx="12" cy="16" r="2.5"/>'),
-                          ("b", "M8.4 17.2A3.9 3.9 0 0 0 15.6 17.2"), ("c", "M3.5 4.5H20.5V11H3.5Z")]},
-  "r-kitchen":   {"els": [("raw", '<circle class="b" cx="7" cy="10.4" r="1"/><circle class="b" cx="10.4" cy="10.4" r="1"/>'
-                                  '<circle class="b" cx="7" cy="13.6" r="1"/><circle class="b" cx="10.4" cy="13.6" r="1"/>'),
-                          ("b", "M13.6 10H18.2V14H13.6Z"), ("c", "M3.5 7H20.5V17H3.5Z")]},
-  "r-bathroom":  {"els": [("raw", '<rect class="b" x="6" y="9.5" width="12" height="5" rx="2.5"/>'),
-                          ("d", dots([(8.3,12)], .7)),
-                          ("raw", '<rect class="c" x="3.5" y="7" width="17" height="10" rx="2"/>')]},
-  "r-dining":    {"els": [("b", "M9.8 3.5H14.2V5.5H9.8ZM9.8 18.5H14.2V20.5H9.8ZM3.5 9.8H5.5V14.2H3.5ZM18.5 9.8H20.5V14.2H18.5Z"),
-                          ("raw", '<circle class="c" cx="12" cy="12" r="4.2"/>')]},
-  "r-meeting":   {"els": [("b", "M6.8 5H9.2V6.8H6.8ZM10.8 5H13.2V6.8H10.8ZM14.8 5H17.2V6.8H14.8Z"
-                                "M6.8 17.2H9.2V19H6.8ZM10.8 17.2H13.2V19H10.8ZM14.8 17.2H17.2V19H14.8Z"),
-                          ("raw", '<rect class="c" x="5" y="9" width="14" height="6" rx="3"/>')]},
-  "r-auditorium":{"els": [("b", "M7.5 4.5H16.5V7H7.5Z"),
-                          ("c", "M7.5 9.86A7 7 0 0 0 11.03 11.43M12.97 11.43A7 7 0 0 0 16.5 9.86"
-                                "M5.25 12.54A10.5 10.5 0 0 0 10.54 14.9M13.46 14.9A10.5 10.5 0 0 0 18.75 12.54"
-                                "M3 15.22A14 14 0 0 0 10.05 18.36M13.95 18.36A14 14 0 0 0 21 15.22")]},
-  "r-library":   {"els": [("b", "M7.75 4V8.5M12 4V8.5M16.25 4V8.5M7.75 15.5V20M12 15.5V20M16.25 15.5V20"),
-                          ("c", "M3.5 4H20.5V8.5H3.5ZM3.5 15.5H20.5V20H3.5Z")]},
-  "r-shop":      {"els": [("b", "M3.5 17H12.5V20.5H3.5Z"), ("d", dots([(10.4,18.75)], .7)),
-                          ("c", "M3.5 3.5H7.5V14H3.5ZM10 3.5H14V14H10ZM16.5 3.5H20.5V14H16.5Z")]},
-  "r-showroom":  {"els": [("raw", '<circle class="b" cx="6.5" cy="7" r="1.3"/><circle class="b" cx="17.5" cy="9.5" r="1.3"/>'
-                                  '<circle class="b" cx="10.5" cy="17.5" r="1.3"/>'),
-                          ("c", "M3.5 4H9.5V10H3.5ZM14.5 6.5H20.5V12.5H14.5ZM7.5 14.5H13.5V20.5H7.5Z")]},
-  "r-bar":       {"els": [("b", "M3.5 3.25H20.5"),
-                          ("raw", '<circle class="b" cx="6.5" cy="15.5" r="1.7"/><circle class="b" cx="12" cy="15.5" r="1.7"/>'
-                                  '<circle class="b" cx="17.5" cy="15.5" r="1.7"/>'),
-                          ("c", "M3.5 6.5H20.5V11H3.5Z")]},
-  "r-spa":       {"els": [("b", "M7.5 10.6c1.5-1.2 3 1.2 4.5 0s3-1.2 4.5 0M7.5 13.8c1.5-1.2 3 1.2 4.5 0s3-1.2 4.5 0"),
-                          ("raw", '<rect class="c" x="3.5" y="6" width="17" height="12" rx="5.5"/>')]},
-  "r-lab":       {"els": [("b", "M3.5 12H20.5"),
-                          ("raw", '<circle class="b" cx="8" cy="5" r="1.4"/><circle class="b" cx="16" cy="5" r="1.4"/>'
-                                  '<circle class="b" cx="8" cy="19" r="1.4"/><circle class="b" cx="16" cy="19" r="1.4"/>'),
-                          ("c", "M3.5 8.75H20.5V15.25H3.5Z")]},
-  "r-mechanical":{"els": [("raw", '<circle class="b" cx="9" cy="12" r="3.3"/>'),
-                          ("b", "M9 8.7V15.3M5.7 12H12.3M14.5 9H20.5M14.5 15H20.5"), ("c", "M3.5 5.5H14.5V18.5H3.5Z")]},
-  "r-chapel":    {"els": [("b", "M9 12.5H15M9 15H15M9 17.5H15"), ("d", dots([(12,8.2)], .8)),
-                          ("c", "M6 20.5V9.5A6 6 0 0 1 18 9.5V20.5Z")]},
-  "r-storage":   {"clip": "M3.5 3.5H20.5V20.5H16.5V7.5H7.5V20.5H3.5Z",
-                  "els": [("b", "M9.5 11.5H14.5V16.5H9.5ZM9.5 11.5L14.5 16.5M14.5 11.5L9.5 16.5"),
-                          ("c", "M3.5 3.5H20.5V20.5H16.5V7.5H7.5V20.5H3.5Z")]},
-  "r-service":   {"els": [("b", "M4.5 4.5L19.5 19.5M19.5 4.5L4.5 19.5"), ("c", "M4.5 4.5H19.5V19.5H4.5Z")]},
-  "r-stairs":    {"els": PSTAIR},
-  "r-atrium":    {"els": [("b", "M8 8H16V16H8ZM8 16L16 8"), ("c", FRAME)]},
-  "r-lounge":    {"els": [("raw", '<rect class="b" x="7" y="14.5" width="10" height="5" rx="2.5"/>'),
-                          ("raw", '<rect class="c" x="3.5" y="4.5" width="6" height="6" rx="1.6"/>'
-                                  '<rect class="c" x="14.5" y="4.5" width="6" height="6" rx="1.6"/>')]},
-  "r-window":    {"clip": "M2.75 14.5H6.5V19H2.75ZM17.5 14.5H21.25V19H17.5Z",
-                  "els": [("b", "M6.5 14.5H17.5M6.5 16.75H17.5M6.5 19H17.5M7 5H17V11H7Z"), ("d", dots([(10,8),(14,8)], .8)),
-                          ("c", "M2.75 14.5H6.5V19H2.75M21.25 14.5H17.5V19H21.25")]},
-  "r-counter":   {"clip": "M3.5 6.5H20.5V17.5H16V11H3.5Z",
-                  "els": [("raw", '<circle class="b" cx="9" cy="15.75" r="1.7"/>'), ("c", "M3.5 6.5H20.5V17.5H16V11H3.5Z")]},
+  # ---- rooms (rev D): recognisable objects, like the icons they replace, in the outline style.
+  # Furniture-in-plan was tried in rev C and did not read; the owner preferred the old pictograms.
+  "r-outdoor":   {"els": [("b", "M4 20.75H20"),
+                          ("raw", '<circle class="c" cx="12" cy="9.5" r="6"/>'), ("c", "M12 15.5V20.5")]},
+  "r-lobby":     {"els": [("b", "M12 4V20.5M10.2 11.5V14M13.8 11.5V14M3 20.5H21"), ("c", "M4.5 20.5V4H19.5V20.5")]},
+  "r-hall":      {"els": [("b", "M8.5 20.5V11A3.5 3.5 0 0 1 15.5 11V20.5M3 20.5H21"),
+                          ("c", "M5 20.5V10A7 7 0 0 1 19 10V20.5")]},
+  "r-living":    {"els": [("b", "M6 14.5H18M5.5 18.5V20.5M18.5 18.5V20.5"),
+                          ("c", "M3 18.5V12.5A1.5 1.5 0 0 1 6 12.5V8A1.5 1.5 0 0 1 7.5 6.5H16.5A1.5 1.5 0 0 1 18 8V12.5A1.5 1.5 0 0 1 21 12.5V18.5Z")]},
+  "r-bedroom":   {"els": [("raw", '<rect class="b" x="5.75" y="8.75" width="5.5" height="3.25" rx="1.4"/>'),
+                          ("c", "M3.5 5.5V20.5M3.5 17.5H20.5V20.5M3.5 12.5H17A3.5 3.5 0 0 1 20.5 16V17.5")]},
+  "r-workspace": {"els": [("b", "M8.5 9H15.5M8.5 12H13"), ("c", "M5.5 5.5H18.5V15.5H5.5ZM2.75 18.75H21.25")]},
+  "r-kitchen":   {"els": [("b", "M6.5 8.25H17.5M11 5.75H13"),
+                          ("c", "M5 10.5H19V17A3 3 0 0 1 16 20H8A3 3 0 0 1 5 17ZM5 13H3M19 13H21")]},
+  "r-bathroom":  {"els": [("b", "M7.5 19V21M16.5 19V21M6 11V6.5A2 2 0 0 1 10 6.5"),
+                          ("c", "M3 11H21V14A5 5 0 0 1 16 19H8A5 5 0 0 1 3 14Z")]},
+  "r-dining":    {"els": [("c", "M5.5 3.5V8A2.5 2.5 0 0 0 10.5 8V3.5M8 3.5V20.5M16 20.5V3.5C19 5 19.5 9 19 12.5H16")]},
+  "r-meeting":   {"els": [("raw", '<circle class="b" cx="5" cy="10.5" r="2"/><circle class="b" cx="19" cy="10.5" r="2"/>'),
+                          ("b", "M2.5 18.5A3.5 3.5 0 0 1 5.5 14.9M21.5 18.5A3.5 3.5 0 0 0 18.5 14.9"),
+                          ("raw", '<circle class="c" cx="12" cy="8" r="2.75"/>'),
+                          ("c", "M6.5 20V18.5A5.5 5.5 0 0 1 17.5 18.5V20")]},
+  "r-auditorium":{"els": [("b", "M6 15.5V19.5M12 15.5V19.5M18 15.5V19.5"),
+                          ("c", "M3.5 15.5V9A2.5 2.5 0 0 1 8.5 9V15.5M9.5 15.5V9A2.5 2.5 0 0 1 14.5 9V15.5"
+                                "M15.5 15.5V9A2.5 2.5 0 0 1 20.5 9V15.5M2.75 15.5H21.25")]},
+  "r-library":   {"els": [("b", "M3.5 8.5H7M10.5 8.5H14"),
+                          ("c", "M3.5 5H7V19.5H3.5ZM7 7.5H10.5V19.5H7ZM10.5 5H14V19.5H10.5ZM14.6 19.5L17.1 6.5H20.5L18 19.5Z")]},
+  "r-shop":      {"els": [("b", "M8 5L7.4 10.5M12 5V10.5M16 5L16.6 10.5M13.5 20.5V14H17V20.5M7 13.5H11V17.5H7Z"),
+                          ("c", "M3.5 5H20.5L21.5 10.5H2.5ZM4.5 10.5V20.5H19.5V10.5")]},
+  "r-showroom":  {"els": [("b", "M7.5 14.5V4H16.5V14.5"),
+                          ("c", "M12 6.5L14.5 9.5L12 12.5L9.5 9.5ZM6 14.5H18V20.5H6Z")]},
+  "r-bar":       {"els": [("b", "M7.4 8H16.6"), ("c", "M4.5 5H19.5L12 13ZM12 13V20M8 20.25H16")]},
+  "r-spa":       {"els": [("b", "M4 20.5c1.6-1.3 3.2 1.3 4.8 0s3.2-1.3 4.8 0s3.2 1.3 4.8 0"),
+                          ("c", "M12 3.5C12 3.5 6.5 9 6.5 12.5A5.5 5.5 0 0 0 17.5 12.5C17.5 9 12 3.5 12 3.5Z")]},
+  "r-lab":       {"els": [("b", "M7.4 15.5H16.6"), ("d", dots([(10.5,18)], .6) + dots([(13.3,17.5)], .5)),
+                          ("c", "M9.5 3.5H14.5M10.5 3.5V9.5L5 19A1.2 1.2 0 0 0 6 20.75H18A1.2 1.2 0 0 0 19 19L13.5 9.5V3.5")]},
+  "r-mechanical":{"els": [("b", "M12 12C10 9 10.5 5.8 12 5.2C13.5 5.8 14 9 12 12M12 12C15.6 11.77 18.12 13.8 17.89 15.4C16.62 16.4 13.6 15.23 12 12"
+                                "M12 12C10.4 15.23 7.38 16.4 6.11 15.4C5.88 13.8 8.4 11.77 12 12"),
+                          ("d", dots([(12,12)], 1.2)), ("raw", '<circle class="c" cx="12" cy="12" r="8.25"/>')]},
+  "r-chapel":    {"els": [("b", "M12 2.5V7M10.4 4.1H13.6M10 20.5V16.5A2 2 0 0 1 14 16.5V20.5"),
+                          ("c", "M5.5 20.5V12L12 7L18.5 12V20.5Z")]},
+  "r-storage":   {"els": [("b", "M10 14H14"), ("c", "M3 6H21V10H3ZM4.5 10V20H19.5V10")]},
+  "r-service":   {"els": [("raw", '<circle class="c" cx="6.2" cy="17.8" r="2.3"/>'),
+                          ("c", "M7.8 16.2L15.3 8.7M20.35 7.12A3 3 0 1 1 16.88 3.65")]},
+  "r-stairs": STAIR,
+  "r-atrium":    {"els": [("b", "M7.5 7.25V10.5M12 4V10.5M16.5 7.25V10.5M3 20.5H21M3.75 10.5H20.25"),
+                          ("c", "M4.5 20.5V10.5M19.5 20.5V10.5M3 10.5L12 4L21 10.5")]},
+  "r-lounge":    {"els": [("b", "M8 14.5H16M7.5 18.5V20.5M16.5 18.5V20.5"),
+                          ("c", "M5 18.5V12.5A1.5 1.5 0 0 1 8 12.5V7.5A2 2 0 0 1 10 5.5H14A2 2 0 0 1 16 7.5V12.5A1.5 1.5 0 0 1 19 12.5V18.5Z")]},
+  "r-window":    {"els": [("raw", '<circle class="b" cx="12" cy="9" r="1.7"/>'),
+                          ("b", "M8.8 17V15.2A3.2 3.2 0 0 1 15.2 15.2V17M5.5 9.5L8 7M3 20.25H21"), ("c", "M3 5H21V17H3Z")]},
+  "r-counter":   {"els": [("b", "M2.75 20.5H21.25M5.5 11H10"),
+                          ("c", "M3.5 20.5V8H12.5V12H20.5V20.5")]},
   "r-other":     {"els": [("d", dots([(6.5,12),(12,12),(17.5,12)], 1.2))]},
 }
 
@@ -151,7 +141,11 @@ def symbol(name, spec):
     out = []
     if "clip" in spec:
         out.append(f'<clipPath id="cp-{name}"><path d="{spec["clip"]}"/></clipPath>')
+    if "hclip" in spec:
+        out.append(f'<clipPath id="cp-{name}"><path d="{spec["hclip"]}"/></clipPath>')
     out.append(f'<symbol id="i-{name}" viewBox="0 0 24 24">')
+    if "hclip" in spec:
+        out.append(f'<use href="#hatch4" class="b" clip-path="url(#cp-{name})"/>')
     if "clip" in spec:
         out.append(f'<use href="#hatch" class="x" clip-path="url(#cp-{name})"/>')
     for kind, d in spec["els"]:
@@ -221,13 +215,13 @@ MOCKS = "".join([
     mock("Element", "Section set", el("s-"), "ic", 2),
     mock("Element", "Plan set", el("p-"), "ic", 2),
     mock("Room", "Now: system symbols", res("r-"), "sf", 1),
-    mock("Room", "Proposed: furniture in plan", res("r-"), "ic", 1),
+    mock("Room", "Proposed: objects in outline", res("r-"), "ic", 1),
     mock("Materiality", "Now: system symbols", mat("m-"), "sf", 0),
     mock("Materiality", "Proposed: hatch swatches", mat("m-"), "ic", 0),
 ])
 
 TEMPLATE = io.open(os.path.join(HERE, "template.html"), encoding="utf-8").read()
-html = (TEMPLATE.replace("__SFCSS__", sf_css()).replace("__HATCH__", HATCH).replace("__FRAME__", FRAME)
+html = (TEMPLATE.replace("__SFCSS__", sf_css()).replace("__HATCH__", HATCH).replace("__HATCH4__", HATCH4).replace("__FRAME__", FRAME)
         .replace("__SYMBOLS__", SYMBOLS).replace("__MATRIX__", matrix_rows)
         .replace("__ROOMS__", room_pairs).replace("__MATERIALS__", mat_pairs).replace("__MOCKS__", MOCKS))
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
