@@ -267,7 +267,8 @@ and private iCloud sync.
 
 **Version bump (do it on BOTH targets — app + widget):**
 - [ ] `MARKETING_VERSION` 1.3 → **1.4**
-- [ ] `CURRENT_PROJECT_VERSION` 5 → **6**
+- [ ] `CURRENT_PROJECT_VERSION` 5 → **7** (build 6 was uploaded but never submitted; 7 adds the
+      camera orientation, zoom readout and project rename/delete fixes)
 
 **Listing:**
 - [ ] Paste the **Version 1.4 — What's New** (above) into App Store Connect.
