@@ -16,6 +16,8 @@ struct SettingsView: View {
     @AppStorage("stripGPSOnExport") private var stripGPSOnExport = false
 
     @State private var newProject = ""
+    @State private var renamingProject: String?
+    @State private var deletingProject: String?
 
     private var derivedProjects: [String] {
         var seen = Set<String>(); var out: [String] = []
@@ -32,7 +34,9 @@ struct SettingsView: View {
                 Section { launchBody } header: { header("On launch") } footer: {
                     Text("Choose what Archipic opens to.")
                 }
-                Section { projectsBody } header: { header("Projects") }
+                Section { projectsBody } header: { header("Projects") } footer: {
+                    Text("Swipe a project, or touch and hold it, to rename or delete it. Deleting a project never deletes photos — it only removes the label.")
+                }
                 Section { appearanceBody } header: { header("Appearance") }
                 Section { captureStepsBody } header: { header("Capture flow steps") }
                 Section {
@@ -58,6 +62,7 @@ struct SettingsView: View {
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
         .tint(Palette.coral)
+        .projectAdminDialogs(renaming: $renamingProject, deleting: $deletingProject, photos: photos)
         // Appearance is driven at the window level (Settings.applyAppearance),
         // so the sheet — and Auto — update correctly without a per-sheet
         // preferredColorScheme override.
@@ -74,12 +79,29 @@ struct SettingsView: View {
         if allProjects.isEmpty {
             Text("No projects yet.").foregroundStyle(.secondary)
         } else {
-            ForEach(allProjects, id: \.self) { Text($0) }
-                .onDelete { idx in
-                    var custom = Settings.list(customProjectsRaw)
-                    for i in idx { let name = allProjects[i]; custom.removeAll { $0 == name } }
-                    customProjectsRaw = Settings.join(custom)
+            ForEach(allProjects, id: \.self) { name in
+                HStack {
+                    Text(name)
+                    Spacer()
+                    Text("\(ProjectAdmin.count(name, in: photos))")
+                        .foregroundStyle(.secondary).monospacedDigit()
                 }
+                .contentShape(Rectangle())
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button(role: .destructive) { deletingProject = name } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                    Button { renamingProject = name } label: {
+                        Label("Rename", systemImage: "pencil")
+                    }.tint(Palette.ink)
+                }
+                .contextMenu {
+                    Button { renamingProject = name } label: { Label("Rename", systemImage: "pencil") }
+                    Button(role: .destructive) { deletingProject = name } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+            }
         }
         HStack {
             TextField("New project name", text: $newProject)

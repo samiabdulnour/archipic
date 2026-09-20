@@ -59,6 +59,8 @@ struct GalleryView: View {
     @State private var filterMaterial: String? // e.g. "Brick"
     @State private var filterYear = 0          // 0 = any (capture year)
     @State private var filterProject: String?
+    @State private var renamingProject: String?   // raises the shared rename prompt
+    @State private var deletingProject: String?   // raises the shared delete confirmation
     @State private var filterFavorites = false
     @State private var filterMinRating = 0     // 0 = any
 
@@ -300,13 +302,32 @@ struct GalleryView: View {
                             ForEach(groups[key] ?? []) { cell($0) }
                         }
                     } header: {
-                        Text(key).font(.subheadline.weight(.semibold))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 12).padding(.vertical, 6)
-                            .background(Palette.paper)
+                        HStack(spacing: 8) {
+                            Text(key).font(.subheadline.weight(.semibold))
+                            Spacer(minLength: 0)
+                            // Rename or delete the project right where it's shown.
+                            Menu {
+                                Button { renamingProject = key } label: { Label("Rename", systemImage: "pencil") }
+                                Button(role: .destructive) { deletingProject = key } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Palette.ink2)
+                                    .frame(width: 36, height: 28)
+                                    .contentShape(Rectangle())
+                            }
+                        }
+                        .padding(.leading, 12).padding(.trailing, 4).padding(.vertical, 3)
+                        .background(Palette.paper)
                     }
                 }
             }
+        }
+        .projectAdminDialogs(renaming: $renamingProject, deleting: $deletingProject, photos: photos) { old, new in
+            // A filter still pointing at the old name would show an empty grid.
+            if filterProject == old { filterProject = new }
         }
     }
 
