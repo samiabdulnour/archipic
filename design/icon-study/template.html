@@ -1,0 +1,257 @@
+<title>Archipic Icon Study</title>
+<style>
+:root{
+  --ground:#E4E3DA; --sheet:#F0EFE9; --ink:#16140F; --ink2:#5C5647; --rule:#C6C3B4;
+  --accent:#F44E48; --lemon:#E8E373; --grid:rgba(22,20,15,.11);
+  --ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --cut:2; --bey:1; --hatch:0; --axis:0; --join:round; --cap:round;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F0E0A; --sheet:#1A1812; --ink:#F0EFE9; --ink2:#A59E8E; --rule:#3A352B; --grid:rgba(240,239,233,.10);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F0E0A; --sheet:#1A1812; --ink:#F0EFE9; --ink2:#A59E8E; --rule:#3A352B; --grid:rgba(240,239,233,.10);
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--ui);font-size:15px;line-height:1.5}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:20px;padding-block:28px 40px;display:flex;flex-direction:column;gap:26px}
+.label{font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink2)}
+h1{font-size:30px;line-height:1.15;font-weight:600;letter-spacing:-.01em;margin:6px 0 0;text-wrap:balance}
+h2{font-size:19px;font-weight:600;margin:0 0 4px;text-wrap:balance}
+p{margin:0;max-width:66ch;color:var(--ink2)}
+.head p{margin-top:10px;color:var(--ink)}
+section > .intro{margin-bottom:14px}
+
+.c{fill:none;stroke:currentColor;stroke-width:var(--cut);stroke-linejoin:var(--join);stroke-linecap:var(--cap)}
+.b{fill:none;stroke:currentColor;stroke-width:var(--bey);stroke-linejoin:var(--join);stroke-linecap:var(--cap)}
+.d{fill:currentColor;stroke:none}
+.x{fill:none;stroke:currentColor;stroke-width:.7;opacity:var(--hatch)}
+.a{fill:none;stroke:currentColor;stroke-width:.6;stroke-dasharray:2.6 .9 .5 .9;opacity:var(--axis)}
+.sf{display:inline-block;flex:none;width:48px;height:34px;background:currentColor;
+    -webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
+.sf.x3{width:144px;height:102px}
+.sf.x25{width:120px;height:85px}
+
+.sheetframe{border:1px solid var(--ink);padding:22px;display:flex;flex-direction:column;gap:34px;background:var(--sheet)}
+.pen{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px 28px;align-items:start}
+.presets,.switch{display:flex;flex-wrap:wrap;gap:8px}
+.presets button,.switch button{font:inherit;font-size:13px;padding:7px 12px;border:1px solid var(--ink);background:transparent;color:var(--ink);border-radius:999px;cursor:pointer}
+.presets button[aria-pressed="true"],.switch button[aria-pressed="true"]{background:var(--ink);color:var(--sheet)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center}
+.row label{font-size:14px}
+.row output{font-family:var(--mono);font-size:12px;color:var(--ink2);font-variant-numeric:tabular-nums;text-align:right}
+.row input[type=range]{grid-column:1 / -1;width:100%;accent-color:var(--accent)}
+.checks{display:flex;flex-direction:column;gap:8px;font-size:14px}
+.checks label{display:flex;gap:9px;align-items:center;cursor:pointer}
+.checks input{accent-color:var(--accent);width:16px;height:16px}
+.recipe{font-family:var(--mono);font-size:12.5px;border-top:1px solid var(--rule);padding-top:12px;margin-top:16px;overflow-wrap:anywhere}
+
+.scroll{overflow-x:auto}
+table.cmp{border-collapse:collapse;width:100%;min-width:620px}
+table.cmp th,table.cmp td{border-bottom:1px solid var(--rule);padding:8px 10px;text-align:center;vertical-align:middle}
+table.cmp thead th{font-weight:600;font-size:14px;vertical-align:bottom;text-align:center;padding-bottom:12px}
+table.cmp thead th small{display:block;font-weight:400;font-size:12.5px;color:var(--ink2);max-width:26ch;margin:3px auto 0;line-height:1.4}
+table.cmp tbody th{text-align:left;font-weight:600;font-size:14px;width:150px}
+table.cmp tbody th span{display:block;font-family:var(--mono);font-weight:400;font-size:10.5px;color:var(--ink2);overflow-wrap:anywhere}
+table.cmp td svg{display:block;margin:0 auto}
+table.cmp td .sf{display:block;margin:0 auto}
+table.cmp td:nth-child(2){color:var(--ink2)}
+
+.pairs{display:grid;grid-template-columns:repeat(auto-fill,minmax(212px,1fr));gap:14px}
+.pair{margin:0;border:1px solid var(--rule);padding:10px 10px 12px}
+.pair figcaption{font-size:14px;font-weight:600;margin-bottom:6px}
+.two{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.box{display:flex;align-items:center;justify-content:center;height:88px;color:var(--ink2);min-width:0;overflow:hidden}
+.box.new{color:var(--ink);flex:none;width:72px}
+.keyline{display:flex;gap:18px;font-family:var(--mono);font-size:11px;color:var(--ink2);margin-bottom:10px}
+.keyline b{font-weight:400;color:var(--ink)}
+
+.mocks{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.mock{border-radius:22px;padding:16px 12px 16px;display:flex;flex-direction:column;gap:8px;background:#F0EFE9;color:#16140F;border:1px solid #C6C3B4}
+.mocks[data-look="dark"] .mock{background:#16140F;color:#F0EFE9;border-color:#3A352B}
+.mock h3{margin:0 0 0 8px;font-size:15px;font-weight:600}
+.tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.tile{font:inherit;font-size:11px;line-height:1.2;color:inherit;background:transparent;border:0;border-radius:14px;padding:6px 1px 7px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;min-width:0;overflow:hidden}
+.tile .art{height:34px;display:flex;align-items:center;justify-content:center}
+.tile[aria-pressed="true"]{background:#E8E373;color:#16140F}
+.hint{font-family:var(--mono);font-size:11px;opacity:.7;margin-left:8px}
+
+.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 28px}
+.legend div{display:flex;gap:12px;align-items:center;font-size:14px}
+.legend svg{flex:none;width:44px;height:14px;color:var(--ink)}
+.titleblock{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border:1px solid var(--ink)}
+.titleblock div{padding:9px 12px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);font-family:var(--mono);font-size:12px}
+.titleblock b{display:block;font-weight:400;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink2);margin-bottom:2px}
+__SFCSS__
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <path id="hatch" d="__HATCH__"/>
+    <clipPath id="cp-mat"><path d="__FRAME__"/></clipPath>
+__SYMBOLS__
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header class="head">
+    <div class="label">Archipic · tag icons · outline study</div>
+    <h1>Today's icons beside two ways of drawing them</h1>
+    <p>The grey icons are what the tag sheet shows now, rendered from the app at the same scale as everything beside them. The black ones are proposals in outline. Elements come in two sets, rooms are drawn as furniture in plan, and materials as the hatches a drawing legend uses.</p>
+  </header>
+
+  <section class="sheetframe" aria-label="Icon study sheet">
+
+    <section>
+      <div class="label" style="margin-bottom:12px">Pen table · applies to every proposed icon on this sheet</div>
+      <div class="pen">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="presets" role="group" aria-label="Presets">
+            <button type="button" id="p1" aria-pressed="false">One pen, 0.35</button>
+            <button type="button" id="p2" aria-pressed="false">One pen, 0.50</button>
+            <button type="button" id="p3" aria-pressed="true">Two pens, 0.50 / 0.25</button>
+            <button type="button" id="p4" aria-pressed="false">Two pens + hatch</button>
+          </div>
+          <p style="font-size:13px">Pen sizes are the ISO drafting set. At the app's 24 pt icon, 1 unit is 1 pt, and 2 units plays the part of the 0.50 pen.</p>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="row">
+            <label for="cut">Heavy line, the thing itself</label><output id="cutOut" for="cut">2.00 u</output>
+            <input type="range" id="cut" min="1" max="2.75" step="0.25" value="2">
+          </div>
+          <div class="row">
+            <label for="bey">Light line, detail and context</label><output id="beyOut" for="bey">1.00 u</output>
+            <input type="range" id="bey" min="0.75" max="2.75" step="0.25" value="1">
+          </div>
+        </div>
+        <div class="checks">
+          <label><input type="checkbox" id="hatchOn"> Hatch the cut material</label>
+          <label><input type="checkbox" id="roundOn" checked> Round joins and ends</label>
+          <label><input type="checkbox" id="axisOn"> Centre lines on column and beam</label>
+        </div>
+      </div>
+      <div class="recipe" id="recipe" aria-live="polite">recipe: heavy 2.00 · light 1.00 · hatch off · round · no centre lines</div>
+    </section>
+
+    <section>
+      <div class="intro">
+        <h2>Elements, three ways</h2>
+        <p>All three columns are drawn at three times real size, so widths compare honestly. The system symbols run from 21 to 29 pt wide; every proposed icon sits on the same 24 pt square.</p>
+      </div>
+      <div class="scroll">
+        <table class="cmp">
+          <thead><tr>
+            <th scope="col"></th>
+            <th scope="col">Now<small>Apple's system symbols, exactly as the tag sheet draws them today.</small></th>
+            <th scope="col">Section set<small>Rev B. Each element cut through, in whichever view shows it best.</small></th>
+            <th scope="col">Plan set<small>New. Everything as it sits on a floor plan. One projection throughout.</small></th>
+          </tr></thead>
+          <tbody>__MATRIX__</tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <div class="intro">
+        <h2>Rooms, as furniture in plan</h2>
+        <p>A floor plan says what a room is for by the furniture drawn in it. All 27 rooms follow that one rule, so Kitchen and Dining stop sharing a fork and knife, and Living and Lounge stop sharing a sofa.</p>
+      </div>
+      <div class="keyline"><span>left: <b>now</b></span><span>right: <b>proposed</b></span><span>both at 2.5 : 1</span></div>
+      <div class="pairs">__ROOMS__</div>
+    </section>
+
+    <section>
+      <div class="intro">
+        <h2>Materiality, as hatch swatches</h2>
+        <p>One sample square, ten hatches. Today Timber is a tree and Stone is a mountain range, which names where the material comes from rather than what it looks like on a drawing.</p>
+      </div>
+      <div class="keyline"><span>left: <b>now</b></span><span>right: <b>proposed</b></span><span>both at 2.5 : 1</span></div>
+      <div class="pairs">__MATERIALS__</div>
+    </section>
+
+    <section>
+      <div class="intro" style="display:flex;flex-wrap:wrap;gap:12px 24px;align-items:end;justify-content:space-between">
+        <div>
+          <h2>Real size, in the tag sheet</h2>
+          <p>Scale 1:1. Tap any tile to move the selection. Rooms show the ten a Residential photo offers.</p>
+        </div>
+        <div class="switch" role="group" aria-label="App appearance">
+          <button type="button" id="lookLight" aria-pressed="true">Light app</button>
+          <button type="button" id="lookDark" aria-pressed="false">Dark app</button>
+        </div>
+      </div>
+      <div class="mocks" id="mocks" data-look="light">__MOCKS__</div>
+    </section>
+
+    <section>
+      <div class="label" style="margin-bottom:12px">Reading the lines</div>
+      <div class="legend">
+        <div><svg viewBox="0 0 44 14" aria-hidden="true"><path class="c" d="M3 7H41"/></svg><span>Heavy: the thing the tag names.</span></div>
+        <div><svg viewBox="0 0 44 14" aria-hidden="true"><path class="b" d="M3 7H41"/></svg><span>Light: its detail, and what surrounds it.</span></div>
+        <div><svg viewBox="0 0 44 14" aria-hidden="true"><path d="M3 7H41" fill="none" stroke="currentColor" stroke-width=".9" stroke-dasharray="7 2.4 1.3 2.4"/></svg><span>Dash-dot: a centre line, borrowed from the app mark.</span></div>
+      </div>
+    </section>
+
+    <div class="titleblock" aria-label="Title block">
+      <div><b>Project</b>Archipic tag icons</div>
+      <div><b>Sheet</b>Outline study</div>
+      <div><b>Revision</b>C · 20 Sep 2026</div>
+      <div><b>Drawn</b>53 proposed, 45 current</div>
+      <div><b>Grid</b>24 u, live area 20 u</div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  var root=document.documentElement, KEY='archipic-icon-study-v1';
+  var presets={p1:{cut:1.5,bey:1.5,hatch:0},p2:{cut:2,bey:2,hatch:0},p3:{cut:2,bey:1,hatch:0},p4:{cut:2,bey:1,hatch:1}};
+  var state={cut:2,bey:1,hatch:0,round:1,axis:0,look:'light'};
+  function $(id){return document.getElementById(id);}
+  try{var saved=JSON.parse(localStorage.getItem(KEY)||'null');if(saved&&typeof saved.cut==='number'){for(var k in state){if(k in saved)state[k]=saved[k];}}}catch(e){}
+
+  function apply(){
+    root.style.setProperty('--cut',state.cut);
+    root.style.setProperty('--bey',state.bey);
+    root.style.setProperty('--hatch',state.hatch?1:0);
+    root.style.setProperty('--axis',state.axis?1:0);
+    root.style.setProperty('--join',state.round?'round':'miter');
+    root.style.setProperty('--cap',state.round?'round':'butt');
+    $('cut').value=state.cut; $('bey').value=state.bey;
+    $('hatchOn').checked=!!state.hatch; $('roundOn').checked=!!state.round; $('axisOn').checked=!!state.axis;
+    $('cutOut').textContent=state.cut.toFixed(2)+' u';
+    $('beyOut').textContent=state.bey.toFixed(2)+' u';
+    $('recipe').textContent='recipe: heavy '+state.cut.toFixed(2)+' · light '+state.bey.toFixed(2)+
+      ' · hatch '+(state.hatch?'on':'off')+' · '+(state.round?'round':'square')+
+      ' · '+(state.axis?'centre lines':'no centre lines');
+    for(var id in presets){var p=presets[id];
+      $(id).setAttribute('aria-pressed',String(p.cut===state.cut&&p.bey===state.bey&&(!!p.hatch)===(!!state.hatch)));}
+    $('mocks').setAttribute('data-look',state.look==='dark'?'dark':'light');
+    $('lookLight').setAttribute('aria-pressed',String(state.look!=='dark'));
+    $('lookDark').setAttribute('aria-pressed',String(state.look==='dark'));
+    try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}
+  }
+
+  $('cut').addEventListener('input',function(e){state.cut=parseFloat(e.target.value);apply();});
+  $('bey').addEventListener('input',function(e){state.bey=parseFloat(e.target.value);apply();});
+  $('hatchOn').addEventListener('change',function(e){state.hatch=e.target.checked?1:0;apply();});
+  $('roundOn').addEventListener('change',function(e){state.round=e.target.checked?1:0;apply();});
+  $('axisOn').addEventListener('change',function(e){state.axis=e.target.checked?1:0;apply();});
+  $('lookLight').addEventListener('click',function(){state.look='light';apply();});
+  $('lookDark').addEventListener('click',function(){state.look='dark';apply();});
+  Object.keys(presets).forEach(function(id){
+    $(id).addEventListener('click',function(){var p=presets[id];state.cut=p.cut;state.bey=p.bey;state.hatch=p.hatch;apply();});
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-tiles]'),function(group){
+    group.addEventListener('click',function(e){
+      var t=e.target.closest('.tile'); if(!t)return;
+      Array.prototype.forEach.call(group.querySelectorAll('.tile'),function(b){b.setAttribute('aria-pressed',String(b===t));});
+    });
+  });
+  apply();
+})();
+</script>
