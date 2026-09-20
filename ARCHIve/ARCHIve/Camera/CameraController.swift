@@ -187,6 +187,9 @@ final class CameraController: NSObject {
     /// the view from the live framing geometry so the save matches the preview.
     @ObservationIgnored private var pendingCropRatio: CGFloat = 3.0 / 4.0
     @ObservationIgnored private var pendingFront = false   // was this capture on the front camera?
+    /// Clockwise quarter-turns that stand the finished still upright for the way
+    /// the phone was held at the shutter (0 = portrait). See `uprighted`.
+    @ObservationIgnored private var pendingQuarterTurns = 0
 
     private func onMain(_ work: @escaping () -> Void) {
         if Thread.isMainThread { work() } else { DispatchQueue.main.async(execute: work) }
@@ -658,8 +661,11 @@ final class CameraController: NSObject {
 
     /// Call on the main thread. `completion` is delivered on the main thread.
     /// `cropRatio` (portrait width/height) is the exact region the preview is
-    /// showing, so the saved photo matches the frame.
-    func capture(cropRatio: CGFloat, completion: @escaping (Data?) -> Void) {
+    /// showing, so the saved photo matches the frame. `iconAngle` is the angle the
+    /// control icons are turned to at the shutter (`MotionLevel.iconAngle`); the
+    /// still is stood upright by the opposite turn, so a shot taken with the phone
+    /// on its side is stored the right way up instead of sideways.
+    func capture(cropRatio: CGFloat, iconAngle: Double = 0, completion: @escaping (Data?) -> Void) {
         guard configured else { completion(nil); return }
         // One capture at a time: ignore a second tap while one is outstanding,
         // rather than overwriting the handler and dropping the first frame.
@@ -670,6 +676,7 @@ final class CameraController: NSObject {
         let keystone: Double? = keystoneOn ? keystoneStrength : nil
         let look = self.colorLook
         let front = (position == .front)
+        let turns = CameraController.quarterTurns(forIconAngle: iconAngle, front: front)
 
         sessionQueue.async { [weak self] in
             guard let self else { return }
@@ -677,6 +684,7 @@ final class CameraController: NSObject {
             self.pendingLook = look
             self.pendingCropRatio = cropRatio
             self.pendingFront = front
+            self.pendingQuarterTurns = turns
             // No camera (e.g. the Simulator) → safe no-op instead of throwing.
             guard self.session.isRunning, self.photoOutput.connection(with: .video) != nil else {
                 self.onMain { self.deliver(nil) }
@@ -704,6 +712,34 @@ final class CameraController: NSObject {
         captureHandler = nil
         captureInFlight = false
         handler?(data)
+    }
+
+    /// Clockwise quarter-turns (0–3) that stand a portrait-framed still upright.
+    ///
+    /// The icons counter-rotate against the phone, so the scene needs the opposite
+    /// turn: icons at +90° mean the phone was rolled anticlockwise, which leaves the
+    /// world's "up" pointing at the image's right edge — one turn anticlockwise
+    /// (three clockwise) fixes it. The front camera is the mirror case: its still is
+    /// flipped left-to-right to un-mirror the selfie, which swaps which edge "up"
+    /// points at, so the sideways turns swap too. Upside-down is the same for both.
+    static func quarterTurns(forIconAngle iconAngle: Double, front: Bool) -> Int {
+        let raw = Int((-iconAngle / 90).rounded())
+        let turns = ((raw % 4) + 4) % 4
+        return front ? (4 - turns) % 4 : turns
+    }
+
+    /// Redraw `image` turned clockwise by `quarterTurns`. A no-op for portrait, so
+    /// the common case costs nothing.
+    static func uprighted(_ image: UIImage, quarterTurns: Int) -> UIImage {
+        let orientation: UIImage.Orientation
+        switch quarterTurns {
+        case 1: orientation = .right   // display = pixels turned 90° clockwise
+        case 2: orientation = .down
+        case 3: orientation = .left    // display = pixels turned 90° anticlockwise
+        default: return image
+        }
+        guard let cg = image.cgImage else { return image }
+        return normalized(UIImage(cgImage: cg, scale: image.scale, orientation: orientation))
     }
 
     /// Center-crop a UIImage to the given portrait ratio (width / height).
@@ -762,7 +798,12 @@ extension CameraController: AVCapturePhotoCaptureDelegate {
             ? image
             : processedStill(image, keystone: ks, look: pendingLook)
         let cropped = CameraController.crop(processed, toRatio: ratio)
-        let jpeg = cropped.jpegData(compressionQuality: 0.9)
+        // Last of all, stand the shot upright for how the phone was held. It has to
+        // come after the look, the keystone and the crop: those all work in the
+        // portrait frame the viewfinder shows, so doing them first keeps the saved
+        // photo identical to what was framed — only turned.
+        let upright = CameraController.uprighted(cropped, quarterTurns: pendingQuarterTurns)
+        let jpeg = upright.jpegData(compressionQuality: 0.9)
         onMain { self.deliver(jpeg) }
     }
 }

@@ -464,6 +464,10 @@ struct CameraView: View {
                         .monospacedDigit()
                         .foregroundStyle(active ? Palette.lemon : .white)
                         .shadow(color: .black.opacity(active ? 0 : 0.45), radius: 2)
+                        // Each number turns in place as the phone does; the bar itself
+                        // stays put. Rotating the whole bar stood it on end in landscape,
+                        // stacking the stops on top of each other.
+                        .rotatingIcon(motion.iconAngle)
                         .frame(width: active ? 46 : 32, height: 34)
                         .background(Circle().fill(.black.opacity(active ? 0.55 : 0)))
                         .scaleEffect(active ? 1 : 0.9)
@@ -472,7 +476,6 @@ struct CameraView: View {
                 .buttonStyle(.plain)
             }
         }
-        .rotatingIcon(motion.iconAngle)
         .padding(.horizontal, 6).padding(.vertical, 4)
         .background(Capsule().fill(.black.opacity(0.3)))
         .animation(.smooth(duration: 0.25), value: camera.activeStopFactor)
@@ -653,7 +656,7 @@ struct CameraView: View {
             try? await Task.sleep(nanoseconds: 90_000_000)
             withAnimation(.easeOut(duration: 0.18)) { shutterFlash = false }
         }
-        camera.capture(cropRatio: currentCropRatio()) { data in
+        camera.capture(cropRatio: currentCropRatio(), iconAngle: motion.iconAngle) { data in
             guard let data else { return }
             let coord = LocationProvider.shared.last
             let proj = camera.currentProject
