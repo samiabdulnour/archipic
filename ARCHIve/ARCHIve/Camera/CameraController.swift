@@ -121,12 +121,19 @@ final class CameraController: NSObject {
 
     /// Current zoom as a display multiplier (1× = the wide camera).
     var displayZoom: CGFloat { baseZoomFactor > 0 ? zoomFactor / baseZoomFactor : zoomFactor }
-    /// Live "×" readout, e.g. "1", "1.8", "0.5".
+    /// Live "×" readout for the active stop, in whole steps — "1", "2", "3" — because
+    /// a decimal ("3.7×") crowds the button. Two exceptions keep it honest: resting on
+    /// a lens stop shows that stop's own label, so tapping "0.5" or "2.5" never renames
+    /// it; and below the wide lens there are no whole numbers, so that range keeps one
+    /// decimal ("0.7").
     var displayZoomLabel: String {
+        // Same 0.05 tolerance as `activeStopFactor`, so the number and the highlight
+        // change at the same moment.
+        if let stop = zoomStops.first(where: { abs($0.factor - zoomFactor) < 0.05 }) { return stop.label }
         let x = displayZoom
         if x < 0.95 { return String(format: "%.1f", x) }
-        let r = (x * 10).rounded() / 10
-        return r.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", r) : String(format: "%.1f", r)
+        // Rounded down: the readout only says "2" once 2× is actually reached.
+        return String(max(1, Int((x + 0.001).rounded(.down))))
     }
     /// The active stop's factor (largest stop ≤ current zoom) — drives which
     /// switcher button is highlighted.

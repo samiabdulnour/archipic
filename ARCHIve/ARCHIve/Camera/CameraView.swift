@@ -448,8 +448,8 @@ struct CameraView: View {
     private var showsZoomControl: Bool { camera.zoomStops.count > 1 }
 
     /// Native-Camera lens/zoom switcher: a row of real stops (0.5× / 1× / 2× / 5×)
-    /// derived from the device's lenses. The active stop shows the live "×" while
-    /// pinched; tapping a stop ramps the virtual camera to it (seamless optical
+    /// derived from the device's lenses. The active stop shows the live "×" in whole
+    /// steps while pinched; tapping a stop ramps the virtual camera to it (seamless optical
     /// switch). Pinch (in FocusExposureView) zooms continuously across all lenses.
     private var zoomControl: some View {
         HStack(spacing: 3) {
@@ -464,6 +464,10 @@ struct CameraView: View {
                         .monospacedDigit()
                         .foregroundStyle(active ? Palette.lemon : .white)
                         .shadow(color: .black.opacity(active ? 0 : 0.45), radius: 2)
+                        // Always the number's natural width. Without this the text kept
+                        // the narrow width it had before its button grew to the active
+                        // size, and a longer readout was cut short ("3.7×" showed "3.…").
+                        .fixedSize()
                         // Each number turns in place as the phone does; the bar itself
                         // stays put. Rotating the whole bar stood it on end in landscape,
                         // stacking the stops on top of each other.
