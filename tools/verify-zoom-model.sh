@@ -6,7 +6,7 @@
 #
 # Run from the repo root:  bash tools/verify-zoom-model.sh
 set -euo pipefail
-SRC="ARCHIve/ARCHIve/Camera/CameraController.swift"
+SRC="Archipic/Archipic/Camera/CameraController.swift"
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 
 {

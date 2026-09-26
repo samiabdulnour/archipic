@@ -5,7 +5,7 @@ import WidgetKit
 /// Lock Screen / Control Center / Action Button control that opens Archipic
 /// straight into the camera. (iOS 18+.)
 @available(iOS 18.0, *)
-struct ArchiveWidgetsControl: ControlWidget {
+struct ArchipicWidgetsControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(kind: "com.samiabdulnour.archive.OpenCamera") {
             ControlWidgetButton(action: OpenCameraIntent()) {

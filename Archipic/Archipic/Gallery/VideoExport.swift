@@ -49,7 +49,7 @@ enum VideoExport {
 
         guard let export = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else { return nil }
         let out = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ARCHIve-\(photo.id.prefix(6)).mov")
+            .appendingPathComponent("Archipic-\(photo.id.prefix(6)).mov")
         try? FileManager.default.removeItem(at: out)
         export.outputURL = out
         export.outputFileType = .mov

@@ -10,7 +10,7 @@
 		266B77C03044487B0083A6A4 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 266B77B63044487B0083A6A4 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		26AF03832FDC2CA100072458 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 26AF03822FDC2CA100072458 /* WidgetKit.framework */; };
 		26AF03852FDC2CA100072458 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 26AF03842FDC2CA100072458 /* SwiftUI.framework */; };
-		26AF03922FDC2CA200072458 /* ArchiveWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 26AF03802FDC2CA100072458 /* ArchiveWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		26AF03922FDC2CA200072458 /* ArchipicWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 26AF03802FDC2CA100072458 /* ArchipicWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -26,7 +26,7 @@
 			containerPortal = 8F1720DC84C8F0F3881650F7 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 26AF037F2FDC2CA100072458;
-			remoteInfo = ArchiveWidgetsExtension;
+			remoteInfo = ArchipicWidgetsExtension;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -38,7 +38,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				266B77C03044487B0083A6A4 /* ShareExtension.appex in Embed Foundation Extensions */,
-				26AF03922FDC2CA200072458 /* ArchiveWidgetsExtension.appex in Embed Foundation Extensions */,
+				26AF03922FDC2CA200072458 /* ArchipicWidgetsExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -47,11 +47,11 @@
 
 /* Begin PBXFileReference section */
 		266B77B63044487B0083A6A4 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		26AF03802FDC2CA100072458 /* ArchiveWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ArchiveWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		26AF03802FDC2CA100072458 /* ArchipicWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ArchipicWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		26AF03822FDC2CA100072458 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		26AF03842FDC2CA100072458 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
-		26AF03982FDC2CF000072458 /* ArchiveWidgetsExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ArchiveWidgetsExtension.entitlements; sourceTree = "<group>"; };
-		AF5C9BF0C435F077ED603570 /* ARCHIve.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ARCHIve.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		26AF03982FDC2CF000072458 /* ArchipicWidgetsExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ArchipicWidgetsExtension.entitlements; sourceTree = "<group>"; };
+		AF5C9BF0C435F077ED603570 /* Archipic.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Archipic.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -67,14 +67,14 @@
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 26AF037F2FDC2CA100072458 /* ArchiveWidgetsExtension */;
+			target = 26AF037F2FDC2CA100072458 /* ArchipicWidgetsExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		266B77B73044487B0083A6A4 /* ShareExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (266B77C33044487B0083A6A4 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = ShareExtension; sourceTree = "<group>"; };
-		26AF03862FDC2CA100072458 /* ArchiveWidgets */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (26AF03932FDC2CA200072458 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = ArchiveWidgets; sourceTree = "<group>"; };
-		97718CB7683153DB642A6FDB /* ARCHIve */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = ARCHIve; sourceTree = "<group>"; };
+		26AF03862FDC2CA100072458 /* ArchipicWidgets */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (26AF03932FDC2CA200072458 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = ArchipicWidgets; sourceTree = "<group>"; };
+		97718CB7683153DB642A6FDB /* Archipic */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Archipic; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -116,9 +116,9 @@
 		7C3274C56F15EEBBD5BAB8BC = {
 			isa = PBXGroup;
 			children = (
-				26AF03982FDC2CF000072458 /* ArchiveWidgetsExtension.entitlements */,
-				97718CB7683153DB642A6FDB /* ARCHIve */,
-				26AF03862FDC2CA100072458 /* ArchiveWidgets */,
+				26AF03982FDC2CF000072458 /* ArchipicWidgetsExtension.entitlements */,
+				97718CB7683153DB642A6FDB /* Archipic */,
+				26AF03862FDC2CA100072458 /* ArchipicWidgets */,
 				266B77B73044487B0083A6A4 /* ShareExtension */,
 				26AF03812FDC2CA100072458 /* Frameworks */,
 				DAA02EFF7153A3747703B57B /* Products */,
@@ -128,8 +128,8 @@
 		DAA02EFF7153A3747703B57B /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				AF5C9BF0C435F077ED603570 /* ARCHIve.app */,
-				26AF03802FDC2CA100072458 /* ArchiveWidgetsExtension.appex */,
+				AF5C9BF0C435F077ED603570 /* Archipic.app */,
+				26AF03802FDC2CA100072458 /* ArchipicWidgetsExtension.appex */,
 				266B77B63044487B0083A6A4 /* ShareExtension.appex */,
 			);
 			name = Products;
@@ -160,9 +160,9 @@
 			productReference = 266B77B63044487B0083A6A4 /* ShareExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		26AF037F2FDC2CA100072458 /* ArchiveWidgetsExtension */ = {
+		26AF037F2FDC2CA100072458 /* ArchipicWidgetsExtension */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 26AF03942FDC2CA200072458 /* Build configuration list for PBXNativeTarget "ArchiveWidgetsExtension" */;
+			buildConfigurationList = 26AF03942FDC2CA200072458 /* Build configuration list for PBXNativeTarget "ArchipicWidgetsExtension" */;
 			buildPhases = (
 				26AF037C2FDC2CA100072458 /* Sources */,
 				26AF037D2FDC2CA100072458 /* Frameworks */,
@@ -173,18 +173,18 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				26AF03862FDC2CA100072458 /* ArchiveWidgets */,
+				26AF03862FDC2CA100072458 /* ArchipicWidgets */,
 			);
-			name = ArchiveWidgetsExtension;
+			name = ArchipicWidgetsExtension;
 			packageProductDependencies = (
 			);
-			productName = ArchiveWidgetsExtension;
-			productReference = 26AF03802FDC2CA100072458 /* ArchiveWidgetsExtension.appex */;
+			productName = ArchipicWidgetsExtension;
+			productReference = 26AF03802FDC2CA100072458 /* ArchipicWidgetsExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		C4858E194151EFA4C655464D /* ARCHIve */ = {
+		C4858E194151EFA4C655464D /* Archipic */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 6321DC9651DC04ACB23E5B42 /* Build configuration list for PBXNativeTarget "ARCHIve" */;
+			buildConfigurationList = 6321DC9651DC04ACB23E5B42 /* Build configuration list for PBXNativeTarget "Archipic" */;
 			buildPhases = (
 				195D42437E9AE47B89D0A5C4 /* Sources */,
 				8EB1B2F4F5A3B7454547FB7E /* Frameworks */,
@@ -198,11 +198,11 @@
 				266B77BF3044487B0083A6A4 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				97718CB7683153DB642A6FDB /* ARCHIve */,
+				97718CB7683153DB642A6FDB /* Archipic */,
 			);
-			name = ARCHIve;
-			productName = ARCHIve;
-			productReference = AF5C9BF0C435F077ED603570 /* ARCHIve.app */;
+			name = Archipic;
+			productName = Archipic;
+			productReference = AF5C9BF0C435F077ED603570 /* Archipic.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -226,7 +226,7 @@
 					};
 				};
 			};
-			buildConfigurationList = C2F16A3127551105E59F53C8 /* Build configuration list for PBXProject "ARCHIve" */;
+			buildConfigurationList = C2F16A3127551105E59F53C8 /* Build configuration list for PBXProject "Archipic" */;
 			compatibilityVersion = "Xcode 15.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -240,8 +240,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				C4858E194151EFA4C655464D /* ARCHIve */,
-				26AF037F2FDC2CA100072458 /* ArchiveWidgetsExtension */,
+				C4858E194151EFA4C655464D /* Archipic */,
+				26AF037F2FDC2CA100072458 /* ArchipicWidgetsExtension */,
 				266B77B53044487B0083A6A4 /* ShareExtension */,
 			);
 		};
@@ -303,7 +303,7 @@
 		};
 		26AF03912FDC2CA200072458 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 26AF037F2FDC2CA100072458 /* ArchiveWidgetsExtension */;
+			target = 26AF037F2FDC2CA100072458 /* ArchipicWidgetsExtension */;
 			targetProxy = 26AF03902FDC2CA200072458 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -437,12 +437,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
-				CODE_SIGN_ENTITLEMENTS = ArchiveWidgetsExtension.entitlements;
+				CODE_SIGN_ENTITLEMENTS = ArchipicWidgetsExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 8;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = ArchiveWidgets/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = ArchiveWidgets;
+				INFOPLIST_FILE = ArchipicWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Archipic Widgets";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -468,12 +468,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
-				CODE_SIGN_ENTITLEMENTS = ArchiveWidgetsExtension.entitlements;
+				CODE_SIGN_ENTITLEMENTS = ArchipicWidgetsExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 8;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = ArchiveWidgets/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = ArchiveWidgets;
+				INFOPLIST_FILE = ArchipicWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Archipic Widgets";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -557,7 +557,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = ARCHIve/ARCHIve.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Archipic/Archipic.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 8;
 				ENABLE_PREVIEWS = YES;
@@ -595,7 +595,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = ARCHIve/ARCHIve.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Archipic/Archipic.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 8;
 				ENABLE_PREVIEWS = YES;
@@ -640,7 +640,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		26AF03942FDC2CA200072458 /* Build configuration list for PBXNativeTarget "ArchiveWidgetsExtension" */ = {
+		26AF03942FDC2CA200072458 /* Build configuration list for PBXNativeTarget "ArchipicWidgetsExtension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				26AF03952FDC2CA200072458 /* Debug */,
@@ -649,7 +649,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		6321DC9651DC04ACB23E5B42 /* Build configuration list for PBXNativeTarget "ARCHIve" */ = {
+		6321DC9651DC04ACB23E5B42 /* Build configuration list for PBXNativeTarget "Archipic" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C4858E1A4151EFA4C655464E /* Debug */,
@@ -658,7 +658,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		C2F16A3127551105E59F53C8 /* Build configuration list for PBXProject "ARCHIve" */ = {
+		C2F16A3127551105E59F53C8 /* Build configuration list for PBXProject "Archipic" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				17C9B6AC2F3E44CAABDE9E0E /* Debug */,

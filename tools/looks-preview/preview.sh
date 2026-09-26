@@ -5,7 +5,7 @@
 set -e
 here="$(cd "$(dirname "$0")" && pwd)"
 dir="${1:-$here/samples}"
-engine="$here/../../ARCHIve/ARCHIve/Camera/CameraProcessing.swift"
+engine="$here/../../Archipic/Archipic/Camera/CameraProcessing.swift"
 mkdir -p "$dir"
 swiftc -O "$here/main.swift" "$engine" -o "$here/.render"
 "$here/.render" "$dir"

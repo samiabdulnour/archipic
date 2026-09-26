@@ -42,7 +42,7 @@ https://appstoreconnect.apple.com → **Apps → +**
 ## 3. Archive & upload the build
 
 Recommended (GUI, easiest):
-1. Open `ARCHIve/ARCHIve.xcodeproj` in **Xcode**.
+1. Open `Archipic/Archipic.xcodeproj` in **Xcode**.
 2. Top bar device selector → **Any iOS Device (arm64)**.
 3. **Product → Archive**. (Already verified to succeed from the command line.)
 4. In **Organizer** → select the archive → **Distribute App → App Store Connect

@@ -1,13 +1,13 @@
 # Building Archipic for the App Store (native SwiftUI)
 
-The app is a native SwiftUI / SwiftData project at `ARCHIve/ARCHIve.xcodeproj`.
+The app is a native SwiftUI / SwiftData project at `Archipic/Archipic.xcodeproj`.
 Bundle ID: `com.samiabdulnour.archive` · Team: `N6QDF49V2G`
 
 ---
 
 ## Updating and uploading a new build
 
-1. **Bump the version numbers** in `ARCHIve/ARCHIve.xcodeproj/project.pbxproj`
+1. **Bump the version numbers** in `Archipic/Archipic.xcodeproj/project.pbxproj`
    (or via Xcode → target General tab):
    - `MARKETING_VERSION` — the user-visible version string (e.g. `1.1`).
      Must be higher than the currently live App Store version to create a new
@@ -15,8 +15,8 @@ Bundle ID: `com.samiabdulnour.archive` · Team: `N6QDF49V2G`
    - `CURRENT_PROJECT_VERSION` — the build number (integer, e.g. `4`).
      Must be strictly higher than any build already uploaded to App Store
      Connect (including rejected or expired builds).
-   - Set the **same** values on **both** targets: `ARCHIve` and
-     `ArchiveWidgetsExtension`. App Store Connect rejects uploads where the
+   - Set the **same** values on **all three** targets: `Archipic`,
+     `ArchipicWidgetsExtension` and `ShareExtension`. App Store Connect rejects uploads where the
      extension build number doesn't match the app.
 
 2. **Deploy the CloudKit schema** — *only if the SwiftData model changed since
@@ -33,7 +33,7 @@ Bundle ID: `com.samiabdulnour.archive` · Team: `N6QDF49V2G`
 
    Or via the CLI:
    ```bash
-   xcodebuild -project ARCHIve/ARCHIve.xcodeproj -scheme ARCHIve \
+   xcodebuild -project Archipic/Archipic.xcodeproj -scheme Archipic \
      -configuration Release \
      -destination 'generic/platform=iOS' \
      -archivePath build/Archive.xcarchive \
@@ -70,5 +70,5 @@ Apple scales them down for older device sizes automatically.
 ## Privacy policy & support page
 
 `docs/privacy.html` and `docs/support.html` are served via GitHub Pages at
-`samiabdulnour.github.io/archi-ve/`. Those URLs are required by App Store
+`samiabdulnour.github.io/archipic/`. Those URLs are required by App Store
 Connect in the app's metadata.

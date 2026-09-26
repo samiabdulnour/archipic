@@ -6,8 +6,8 @@ backed up automatically.
 
 - **Container:** `iCloud.com.samiabdulnour.archive`
 - **Wiring:** `ModelContainer` uses `ModelConfiguration(cloudKitDatabase: .automatic)`
-  (see `ARCHIve/ARCHIve/ARCHIveApp.swift`).
-- **Entitlements:** `ARCHIve/ARCHIve/ARCHIve.entitlements` (iCloud container,
+  (see `Archipic/Archipic/ArchipicApp.swift`).
+- **Entitlements:** `Archipic/Archipic/Archipic.entitlements` (iCloud container,
   CloudKit service, `aps-environment`) + `remote-notification` background mode.
 - **Record type in CloudKit:** `CD_Photo` (SwiftData prefixes model names with
   `CD_`). Each photo's image/label become **CKAsset** fields.
@@ -120,4 +120,4 @@ you **Archive**. (Only if you ever switch to *manual* signing would you set
 | Record type | `CD_Photo` |
 | Team ID | `N6QDF49V2G` |
 | Console | https://icloud.developer.apple.com |
-| Code | `ARCHIveApp.swift`, `ARCHIve.entitlements` |
+| Code | `ArchipicApp.swift`, `Archipic.entitlements` |

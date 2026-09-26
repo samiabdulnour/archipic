@@ -45,8 +45,8 @@ libraries, no multi-user features.
 
 ## Architecture
 
-Native SwiftUI, built and shipped from `ARCHIve/ARCHIve.xcodeproj`. Two targets:
-the app (`ARCHIve`) and a widget extension (`ArchiveWidgetsExtension`).
+Native SwiftUI, built and shipped from `Archipic/Archipic.xcodeproj`. Two targets:
+the app (`Archipic`) and a widget extension (`ArchipicWidgetsExtension`).
 
 - **Persistence:** SwiftData, models `Photo` and `Board`.
 - **Sync:** CloudKit private database via
@@ -58,7 +58,7 @@ the app (`ARCHIve`) and a widget extension (`ArchiveWidgetsExtension`).
 - **Location:** CoreLocation, captured with the photo so the Map lens works.
   Requested only while capturing.
 - **Maps:** MapKit.
-- **Crash recovery:** if the SwiftData store fails to open, `ARCHIveApp` moves
+- **Crash recovery:** if the SwiftData store fails to open, `ArchipicApp` moves
   it aside as `default.store.corrupt-<timestamp>` (never deletes it) and retries
   once, letting CloudKit re-populate a fresh store. This exists to prevent a
   permanent launch crash-loop that would lock the user out of their own archive.
@@ -66,8 +66,8 @@ the app (`ARCHIve`) and a widget extension (`ArchiveWidgetsExtension`).
 ### File map
 
 ```
-ARCHIve/ARCHIve/
-  ARCHIveApp.swift        App entry, ModelContainer, store recovery
+Archipic/Archipic/
+  ArchipicApp.swift        App entry, ModelContainer, store recovery
   ContentView.swift       Root navigation
   Photo.swift             Photo model + HumanTags + TagClipboard
   PhotosLibrary.swift     Photos-library access and asset loading
@@ -78,7 +78,7 @@ ARCHIve/ARCHIve/
   Gallery/                Grid, library, reference lens, detail, video playback
   Print/                  Boards: model, composer, PDF renderer, geocoder
   Settings/               Welcome, how-to, about, sync monitor
-ARCHIve/ArchiveWidgets/   Home Screen, Lock Screen and Control Centre widgets
+Archipic/ArchipicWidgets/   Home Screen, Lock Screen and Control Centre widgets
 ```
 
 ---

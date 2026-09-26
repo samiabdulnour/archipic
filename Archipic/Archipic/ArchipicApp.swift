@@ -22,7 +22,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 }
 
 @main
-struct ARCHIveApp: App {
+struct ArchipicApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     // SwiftData container holding the photo archive, mirrored to the user's
     // private iCloud (CloudKit) so it syncs across their devices and is backed

@@ -139,7 +139,7 @@ the icon and waiting for launch is most of that time.
   Shortcuts, the Action Button, Siri and Spotlight.
 - Optional parameters so a shortcut can pre-select a project or a type, e.g.
   "capture into project X".
-- Check `ArchiveWidgetsControl.swift` first — a Control Centre control already
+- Check `ArchipicWidgetsControl.swift` first — a Control Centre control already
   exists and the intent should be shared, not duplicated.
 - Add an intent for "add last photo from Photos to Archipic" if it is cheap.
 

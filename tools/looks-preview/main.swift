@@ -1,7 +1,7 @@
 // Looks preview — renders every camera look on a folder of photos into one
-// contact sheet, using the REAL engine (ARCHIve/.../CameraProcessing.swift).
+// contact sheet, using the REAL engine (Archipic/.../CameraProcessing.swift).
 // No app, no device. Build + run via preview.sh, or:
-//   swiftc -O render.swift ../../ARCHIve/ARCHIve/Camera/CameraProcessing.swift -o render
+//   swiftc -O render.swift ../../Archipic/Archipic/Camera/CameraProcessing.swift -o render
 //   ./render /path/to/folder-of-photos
 // Output: <folder>/_looks-preview.png  (rows = photos, columns = looks).
 import AppKit

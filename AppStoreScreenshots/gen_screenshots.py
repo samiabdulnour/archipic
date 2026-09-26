@@ -4,7 +4,7 @@
 import subprocess, os, textwrap
 
 W, H = 1320, 2868
-OUT = "/Users/Sami/Code/archi-ve/AppStoreScreenshots"
+OUT = "/Users/Sami/Code/archipic/AppStoreScreenshots"
 PAPER = "#F5F0E8"; INK = "#1A1A1A"; INK2 = "#5A5A5A"; INK3 = "#9A9A9A"
 CORAL = "#E3523A"; LEMON = "#EDE34A"; TILE = "#E8E3DA"; WHITE = "#FFFFFF"
 

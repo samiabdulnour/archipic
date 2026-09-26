@@ -1,7 +1,7 @@
 # Looks preview
 
 Review the camera colour looks on real photos **without the app or a device**.
-It compiles the actual engine (`ARCHIve/ARCHIve/Camera/CameraProcessing.swift`)
+It compiles the actual engine (`Archipic/Archipic/Camera/CameraProcessing.swift`)
 and renders every look on a folder of photos into one contact sheet
 (rows = photos, columns = looks).
 
