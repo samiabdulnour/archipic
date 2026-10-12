@@ -8,14 +8,14 @@ Merging to main publishes docs/ to archi-ve.app, so run this first:
 It reads every docs/*.html page, then:
   - local links and files (href/src/content="...png") must exist in docs/,
   - #anchors must match an id on the target page,
-  - external http(s) links must answer with a 2xx or 3xx status.
-Exits non-zero if anything is broken. Standard library only.
+  - external http(s) links must answer with a 2xx or 3xx status (after redirects).
+Exits non-zero if anything is broken. Standard library plus curl.
 """
 import html.parser
 import pathlib
+import subprocess
 import sys
 import urllib.parse
-import urllib.request
 
 DOCS = pathlib.Path(__file__).resolve().parent.parent / "docs"
 SITE = "https://archi-ve.app"
@@ -68,17 +68,14 @@ for name, page in pages.items():
             problems.append(f"{name}: no #{frag} on {target}")
 
 for url in sorted(external):
-    req = urllib.request.Request(url, method="GET", headers={"User-Agent": "archipic-link-check"})
-    try:
-        with urllib.request.urlopen(req, timeout=20) as r:
-            status = r.status
-    except urllib.error.HTTPError as e:
-        status = e.code
-    except Exception as e:                             # DNS, timeout, TLS
-        problems.append(f"external {url}: {e}")
-        continue
-    if status >= 400:
-        problems.append(f"external {url}: HTTP {status}")
+    # curl (built into macOS) rather than urllib: it copes with IPv6/IPv4
+    # fallback, where urllib can hang for minutes on some networks.
+    r = subprocess.run(["curl", "-s", "-L", "-o", "/dev/null", "--max-time", "20",
+                        "-A", "archipic-link-check", "-w", "%{http_code}", url],
+                       capture_output=True, text=True)
+    status = int(r.stdout or 0)
+    if r.returncode != 0 or not 200 <= status < 400:
+        problems.append(f"external {url}: HTTP {status} (curl exit {r.returncode})")
     else:
         print(f"ok  {status}  {url}")
 
