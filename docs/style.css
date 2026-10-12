@@ -123,3 +123,20 @@ footer.site nav { display: flex; gap: 20px; flex-wrap: wrap; }
 .doc a { text-decoration: underline; text-underline-offset: 3px; color: var(--ink); }
 .doc a:hover { color: var(--coral); }
 .back { display: inline-block; margin-top: 36px; font-size: 15px; color: var(--ink-3); }
+
+/* ---- press page ---- */
+dl.facts { display: grid; grid-template-columns: 11em 1fr; gap: 0; margin: 12px 0 0; border-top: 1px solid var(--rule-2); }
+dl.facts dt, dl.facts dd { margin: 0; padding: 9px 0; border-bottom: 1px solid var(--rule-2); font-size: 16px; }
+dl.facts dt { color: var(--ink-3); padding-right: 16px; }
+dl.facts dd { color: var(--ink-2); }
+@media (max-width: 620px) {
+  dl.facts { grid-template-columns: 1fr; }
+  dl.facts dt { border-bottom: none; padding-bottom: 0; font-size: 13px; }
+}
+.doc .btn { color: var(--paper); text-decoration: none; }
+.doc .btn:hover { color: #fff; }
+.doc h3.press-h { font-size: 15px; letter-spacing: 0.02em; color: var(--ink-3); font-weight: 600; margin: 28px 0 10px; }
+.press-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.press-grid.wide { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.doc .press-grid a { text-decoration: none; color: var(--ink-3); font-size: 13px; display: block; }
+.press-grid img { width: 100%; height: auto; display: block; border-radius: 10px; border: 1px solid var(--rule); background: var(--paper-2); margin-bottom: 6px; }
