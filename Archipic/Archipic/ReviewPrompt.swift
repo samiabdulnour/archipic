@@ -2,7 +2,7 @@ import SwiftUI
 import StoreKit
 
 /// Asks for an App Store review — but only at a genuine success moment (a Board
-/// export, or tagging the 50th photo), at most once per app version, and only
+/// export, or saving a photo once the archive holds 20), at most once per app version, and only
 /// after the app has been in use for more than a few days. Never on launch and
 /// never after an error.
 ///
@@ -13,6 +13,11 @@ enum ReviewPrompt {
     private static let firstUseKey = "reviewFirstUseDate"
     private static let promptedVersionKey = "reviewPromptedVersion"
     private static let minDaysOfUse = 3.0
+
+    /// Archive size at which saving a tagged photo counts as a success moment.
+    /// 20 (was 50) so someone who starts in a launch week can reach it within
+    /// their first weeks of use; the 3-day and once-per-version gates still apply.
+    static let photoMilestone = 20
 
     private static var defaults: UserDefaults { .standard }
 
@@ -44,4 +49,12 @@ enum ReviewPrompt {
         defaults.set(appVersion, forKey: promptedVersionKey)
         request()
     }
+}
+
+/// The App Store listing, for the "Rate Archipic" and "Tell a colleague" rows in
+/// Settings. Plain URLs with no campaign or tracking parameters.
+enum AppStoreLink {
+    static let listing = URL(string: "https://apps.apple.com/app/id6777989742")!
+    /// Opens the listing straight on the "Write a Review" sheet.
+    static let writeReview = URL(string: "https://apps.apple.com/app/id6777989742?action=write-review")!
 }
