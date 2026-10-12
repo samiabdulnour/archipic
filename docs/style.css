@@ -1,4 +1,4 @@
-/* Archi.vé — site styles. Brand: warm paper, near-black ink, coral accent,
+/* Archipic site styles. Brand: warm paper, near-black ink, coral accent,
    system font (matches the app). Plain CSS, no build step. */
 
 :root {
@@ -112,7 +112,8 @@ footer.site a { color: var(--ink-2); }
 footer.site nav { display: flex; gap: 20px; flex-wrap: wrap; }
 
 /* ---- legal/support pages ---- */
-.doc { padding: 56px 0 72px; }
+/* Only top and bottom: the side padding comes from .wrap (a 0 here would cancel it on phones). */
+.doc { padding-top: 56px; padding-bottom: 72px; }
 .doc h1 { font-size: clamp(32px, 6vw, 48px); letter-spacing: -0.02em; margin: 0 0 6px; }
 .doc .updated { color: var(--ink-3); font-size: 14px; margin: 0 0 32px; }
 .doc h2 { font-size: 22px; letter-spacing: -0.01em; margin: 34px 0 8px; }

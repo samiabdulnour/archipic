@@ -3,18 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Archipic — a private photo journal for architects</title>
-  <meta name="description" content="Notice architecture everywhere, tag it in two taps, and find it again by what it is or where you found it. Private by design — your photos stay on your device and your own iCloud.">
+  <title>Archipic: a private photo journal for architects</title>
+  <meta name="description" content="A photo journal for architects and architecture students. Photograph what you notice, tag it in two taps, and find it again by what it is, when you took it, which project it belongs to or where it was. Photos stay on your device and in your own iCloud.">
+  <meta name="apple-itunes-app" content="app-id=6777989742">
   <link rel="icon" href="favicon.png">
   <link rel="apple-touch-icon" href="icon.png">
   <link rel="stylesheet" href="style.css">
 
-  <!-- Open Graph / social -->
-  <meta property="og:title" content="Archipic — a private photo journal for architects">
-  <meta property="og:description" content="Notice it, tag it in two taps, find it again. Private by design.">
+  <!-- Open Graph / social. og.png is built by tools/og-card/make-og.swift. -->
+  <meta property="og:title" content="Archipic: a private photo journal for architects">
+  <meta property="og:description" content="Photograph architecture, tag it in two taps, find it again. Free for iPhone and iPad. No accounts, no analytics.">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://archi-ve.app">
-  <meta property="og:image" content="https://archi-ve.app/icon.png">
+  <meta property="og:url" content="https://archi-ve.app/">
+  <meta property="og:image" content="https://archi-ve.app/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Archipic icon and name beside an iPhone showing a grid of tagged architecture photos.">
+  <meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
   <header class="site">
@@ -34,44 +39,45 @@
         <img class="icon" src="icon.png" alt="Archipic app icon">
         <h1>Archipic</h1>
         <p class="tagline">A private photo journal for architects.</p>
-        <p class="lede">You notice architecture everywhere — a façade on a walk, a joint at an exhibition, a plan in a book, a model on a desk. Archipic turns that habit into a structured, searchable archive. Take the photo, answer two quick prompts, and it files itself.</p>
+        <p class="lede">Architects and students notice buildings everywhere: a façade on a walk, a joint at an exhibition, a plan in a book, a model on a desk. Archipic keeps those photos in a searchable archive. Take the picture, tap twice to say what it shows, and it is filed.</p>
         <div class="btn-row" id="get">
-          <a class="btn" href="#" data-appstore>Download on the App&nbsp;Store</a>
+          <a class="btn" href="https://apps.apple.com/app/id6777989742">Download on the App&nbsp;Store</a>
           <a class="btn ghost" href="#features">See how it works</a>
         </div>
-        <p class="note">iPhone · iOS 17+ · Free</p>
+        <p class="note">Free · iPhone and iPad · iOS 17 or later</p>
       </div>
     </section>
 
     <section id="features">
       <div class="wrap">
-        <p class="eyebrow">Capture in seconds</p>
-        <h2>Built for the street, not the desk.</h2>
-        <p class="big">A focused native camera: tap the shutter, two taps to tag, done — fast enough to use while walking. Grid, level, aspect-ratio guides, tap-to-focus and exposure, pinch zoom, and film-inspired colour looks.</p>
+        <p class="eyebrow">Capture</p>
+        <h2>Fast enough to use while walking.</h2>
+        <p class="big">Archipic has its own camera, with a grid, a level, aspect-ratio guides, tap-to-focus and exposure, pinch zoom and a set of film-inspired colour looks. It records video as well as stills. The Action Button, Siri or a Shortcut can open the camera directly, and a Shortcut can send every shot into a named project.</p>
       </div>
     </section>
 
     <section>
       <div class="wrap">
-        <p class="eyebrow">Structured tags, not typing</p>
-        <h2>A small, consistent vocabulary — two taps, filed.</h2>
+        <p class="eyebrow">Tags, not typing</p>
+        <h2>A small, fixed vocabulary. Two taps per photo.</h2>
         <div class="grid">
           <div class="card">
             <p class="k">Building</p>
             <h3>The whole thing</h3>
-            <p>Typology — residential, office, public, civic, hospitality, heritage, industrial, landscape — and room.</p>
+            <p>Typology (residential, office, public, commercial, civic, hospitality, heritage, industrial, landscape), room and concepts.</p>
           </div>
           <div class="card">
             <p class="k">Element</p>
             <h3>A part of it</h3>
-            <p>Structure, openings, envelope, finishes and details — with materials, concepts and colour.</p>
+            <p>Structure, openings, envelope, finishes and details, with materials and colours.</p>
           </div>
           <div class="card">
             <p class="k">Graphic</p>
-            <h3>Flat references</h3>
-            <p>Artwork, book, drawing, plan, render, model — capture the wall label instead of typing it.</p>
+            <h3>A flat reference</h3>
+            <p>Artwork, book, drawing, plan, render, model or web page. Photograph a book page or a wall label and the app suggests the title, author and year, read on the phone itself.</p>
           </div>
         </div>
+        <p class="big" style="margin-top:24px">Optional fields hold the author and year, a note, the place, keywords and a rating from one to five. You switch on only the ones you use. The date and location come from the phone, so you never type them. Because the vocabulary is fixed, the archive stays searchable years later.</p>
       </div>
     </section>
 
@@ -79,24 +85,48 @@
       <div class="wrap two">
         <div>
           <p class="eyebrow">Find it again</p>
-          <h2>By time, by what it is, or by where you found it.</h2>
-          <p class="big">Browse the archive on a timeline, by reference, by project, or on a map. Search across every tag and filter by type, project, favourites or rating.</p>
+          <h2>By date, by what it is, by project or by place.</h2>
+          <p class="big">Four views sort the same archive. Search covers every tag, and filters narrow it by type, project, favourites or rating. Pinch the grid to show more or fewer photos per row.</p>
         </div>
         <ul class="ticks">
-          <li>Time — your whole archive, chronologically</li>
-          <li>Reference — grouped by what's in the photo</li>
-          <li>Project — a whole site shoot in one place</li>
-          <li>Place — pinned on a map</li>
-          <li>Search &amp; filters across every tag</li>
+          <li>Time: the whole archive in date order</li>
+          <li>Reference: grouped by what is in the photo</li>
+          <li>Project: a site visit or study trip in one place</li>
+          <li>Place: pinned on a map</li>
+          <li>Search and filters across every tag</li>
         </ul>
       </div>
     </section>
 
     <section>
       <div class="wrap">
-        <p class="eyebrow">Boards &amp; Journals</p>
-        <h2>Turn a selection into something printable.</h2>
-        <p class="big">Pick a set of photos and lay them out as a clean editorial <strong>poster</strong> (B1) or a chronological <strong>journal</strong> (A4 landscape) — captions drawn straight from your tags. Export as a PDF to print, save, or share.</p>
+        <p class="eyebrow">Boards</p>
+        <h2>Lay out a selection for print or for a feed.</h2>
+        <p class="big">Choose some photos and Archipic arranges them as a gallery-wall poster at B1 or A2, a chronological A4 journal, or a square, portrait or story image. Captions come from the tags. Posters and journals export as PDF, the others as images ready to post.</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap two">
+        <div>
+          <p class="eyebrow">In and out</p>
+          <h2>It works with the apps you already use.</h2>
+          <p class="big">References from elsewhere come in through the share sheet. Photos going out carry their tags as standard metadata, so the tagging you did is still there in your other software.</p>
+        </div>
+        <ul class="ticks">
+          <li>Share an image from Photos, Files or Messages, or a screenshot, to save it</li>
+          <li>Keywords, caption, title and rating open in Lightroom, Bridge and InDesign</li>
+          <li>The capture date goes with the photo</li>
+          <li>One setting keeps or removes the location</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <p class="eyebrow">iPad</p>
+        <h2>The same archive on a larger screen.</h2>
+        <p class="big">On iPad the four views move into a sidebar and the grid fills the page. The Board composer splits in two, with your photos on one side and a live preview of the board on the other. Everything syncs with your iPhone through iCloud.</p>
       </div>
     </section>
 
@@ -105,15 +135,15 @@
         <div>
           <p class="eyebrow">Private by design</p>
           <h2>Your photos are yours.</h2>
-          <p class="big">Everything is stored on your device and syncs through your <strong>own iCloud</strong> across your devices. No accounts, no ads, no analytics, no third-party servers.</p>
+          <p class="big">The archive is stored on your device and syncs through your <strong>own iCloud</strong>. There is no account and no developer server, so there is nowhere else for it to go. The App Store privacy label reads Data Not Collected.</p>
           <p style="margin-top:18px"><a class="btn ghost" href="privacy.html">Read the privacy policy</a></p>
         </div>
         <ul class="ticks">
           <li>No account, no sign-in</li>
           <li>No ads, no analytics, no tracking</li>
-          <li>No developer server — synced via your iCloud</li>
-          <li>The developer can't see your data</li>
-          <li>Designed for architects, by an architect</li>
+          <li>No developer server; sync runs through your iCloud</li>
+          <li>The developer cannot see your photos</li>
+          <li>Made by an architect</li>
         </ul>
       </div>
     </section>
@@ -125,15 +155,11 @@
       <nav>
         <a href="privacy.html">Privacy</a>
         <a href="support.html">Support</a>
-        <a href="#get">Get the app</a>
+        <a href="https://apps.apple.com/app/id6777989742">App Store</a>
       </nav>
     </div>
   </footer>
 
-  <script>
-    document.getElementById('yr').textContent = new Date().getFullYear();
-    // TODO: replace href with the real App Store URL once live, e.g.
-    // https://apps.apple.com/app/idXXXXXXXXXX
-  </script>
+  <script>document.getElementById('yr').textContent = new Date().getFullYear();</script>
 </body>
 </html>
