@@ -6,8 +6,10 @@ site in progress — tags it with a small structured vocabulary in about two tap
 and finds it again later by what it is, when it was taken, which project it
 belongs to, or where it was found.
 
-Shipped on the App Store as a free, native iPhone app. Bundle ID
-`com.samiabdulnour.archive`, Team `N6QDF49V2G`, iOS 17+.
+Shipped on the App Store as a free, native app for iPhone and iPad (it also
+runs on Apple silicon Macs and Vision Pro as an iPad app). App Store ID
+`6777989742`, bundle ID `com.samiabdulnour.archive`, Team `N6QDF49V2G`,
+iOS 17+.
 
 ---
 
@@ -45,8 +47,10 @@ libraries, no multi-user features.
 
 ## Architecture
 
-Native SwiftUI, built and shipped from `Archipic/Archipic.xcodeproj`. Two targets:
-the app (`Archipic`) and a widget extension (`ArchipicWidgetsExtension`).
+Native SwiftUI, built and shipped from `Archipic/Archipic.xcodeproj`. Three
+targets: the app (`Archipic`), a widget extension (`ArchipicWidgetsExtension`)
+and a Share extension (`ShareExtension`, which writes shared images to an App
+Group inbox that the app drains on launch; the store never moves).
 
 - **Persistence:** SwiftData, models `Photo` and `Board`.
 - **Sync:** CloudKit private database via
@@ -79,6 +83,7 @@ Archipic/Archipic/
   Print/                  Boards: model, composer, PDF renderer, geocoder
   Settings/               Welcome, how-to, about, sync monitor
 Archipic/ArchipicWidgets/   Home Screen, Lock Screen and Control Centre widgets
+Archipic/ShareExtension/    "Save to Archipic" from the system share sheet
 ```
 
 ---
@@ -159,14 +164,31 @@ exported as PDF.
   technical dash-dot ring) carried through the app and the widgets, a single
   unified camera for Reference and Project capture, colour looks rebuilt from
   measured colour, Boards, and a smoother gallery.
+- **1.4** (28 September 2026) — iPad (sidebar for the four lenses, two-pane
+  Board composer, landscape), saving from the system share sheet, a Capture
+  action for Shortcuts, Siri and the Action Button, find-a-tag-by-name,
+  on-device title/author/year suggestions from a book page or wall label,
+  tags exported as IPTC/XMP metadata, and Boards as square, portrait and
+  story images.
 
 ---
 
 ## Website
 
 `docs/` is served by GitHub Pages at **archi-ve.app** (see `docs/CNAME`):
-landing page, `privacy.html` and `support.html`. The latter two are required by
-App Store Connect and must stay reachable.
+landing page, `privacy.html`, `support.html` and `press.html` (with the press
+kit in `docs/press/`). Privacy and support are required by App Store Connect
+and must stay reachable. Merging to `main` deploys the site, so run
+`python3 tools/check-site-links.py` first.
+
+**archipic.app** is the long-term domain (bought October 2026, not live yet).
+Board exports already print it. The switch, and keeping archi-ve.app as a
+redirect, is a checklist in `BUILD-IOS.md` → "Website and domain".
+
+The privacy promise covers the website too: no analytics, tracking pixels,
+third-party scripts, or campaign parameters on links. Public copy follows the
+house style in `BUILD-IOS.md` → "Promotion, every release". The press bio is
+"Sami Abdulnour, a Czech architect"; never name the owner's employer.
 
 ---
 
@@ -188,7 +210,19 @@ App Store Connect and must stay reachable.
 ## Release
 
 See `BUILD-IOS.md` for the full procedure. In short: bump `MARKETING_VERSION`
-and `CURRENT_PROJECT_VERSION` on **both** targets, deploy the CloudKit schema to
-Production if and only if the SwiftData model changed (new keys inside the
-`humanTagsData` JSON need no deploy), archive for Any iOS Device, upload, then
-submit with a new What's New. `APPSTORE.md` holds the listing copy.
+and `CURRENT_PROJECT_VERSION` on **all three** targets, deploy the CloudKit
+schema to Production if and only if the SwiftData model changed (new keys
+inside the `humanTagsData` JSON need no deploy), archive for Any iOS Device,
+upload, write What's New in every language in
+`fastlane/metadata/*/release_notes.txt`, run `tools/fastlane.sh metadata
+version:X.Y`, then submit in App Store Connect.
+
+`fastlane/metadata/` is the single source of truth for the listing text;
+`APPSTORE.md` keeps only what fastlane doesn't cover. No lane uploads a build
+or submits for review.
+
+Every release also updates the website feature list, the press page fact
+sheet (version and date) and, if images changed, the press kit
+(`tools/make-presskit.sh`). Remind the owner to file a Featuring Nomination in
+App Store Connect a few weeks before any notable release. Details:
+`BUILD-IOS.md` → "Promotion, every release".

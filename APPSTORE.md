@@ -207,4 +207,7 @@ and private iCloud sync.
 
 **Standing (unchanged from before):**
 - [ ] Privacy Policy URL + Support URL reachable (archi-ve.app).
+
+For every release from 1.5 on, follow `BUILD-IOS.md` (steps 1–6 and
+"Promotion, every release") instead of a per-version checklist here.
 - [ ] Contact email/phone filled in App Review Information.
