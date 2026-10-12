@@ -98,16 +98,16 @@ enum BoardRenderer {
     /// Loads each photo's pixels, builds plates, renders the chosen layout to a PDF
     /// in the temporary directory, and returns its URL. Order is preserved.
     @MainActor static func makePDF(photos: [Photo], layout: BoardLayout, title: String? = nil,
-                                   geocode: Bool = true) async -> URL? {
+                                   geocode: Bool = true, mark: Bool = false) async -> URL? {
         let plates = await buildPlates(photos, geocode: geocode)
         guard !plates.isEmpty else { return nil }
         let data: Data
         if layout == .journalA4 {
-            data = journalPDF(plates)               // paginated, its own renderer
+            data = journalPDF(plates, mark: mark)   // paginated, its own renderer
         } else {
             guard let sheet = layout.sheetMM else { return nil }
             data = posterPDF(plates, widthMM: sheet.width, heightMM: sheet.height,
-                             social: layout.isSocial)
+                             social: layout.isSocial, mark: mark)
         }
         return writeTemp(data, title: title, ext: "pdf")
     }
@@ -115,10 +115,11 @@ enum BoardRenderer {
     /// Render the board as a shareable IMAGE at a social size, with an optional
     /// attribution mark. Same justified-wall layout as the poster, at the target
     /// aspect (never letterboxed).
-    @MainActor static func makeImage(photos: [Photo], pixels: CGSize, title: String? = nil) async -> URL? {
+    @MainActor static func makeImage(photos: [Photo], pixels: CGSize, title: String? = nil,
+                                     mark: Bool = false) async -> URL? {
         let plates = await buildPlates(photos)
         guard !plates.isEmpty else { return nil }
-        let image = posterImage(plates, pixel: pixels)
+        let image = posterImage(plates, pixel: pixels, mark: mark)
         guard let data = image.jpegData(compressionQuality: 0.92) else { return nil }
         return writeTemp(data, title: title, ext: "jpg")
     }
@@ -329,30 +330,31 @@ enum BoardRenderer {
     }
 
     static func posterPDF(_ plates: [BoardPlate], widthMM: CGFloat = 700, heightMM: CGFloat = 1000,
-                          social: Bool = false) -> Data {
+                          social: Bool = false, mark: Bool = false) -> Data {
         let W = widthMM * mm, H = heightMM * mm
         let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: W, height: H))
         return renderer.pdfData { ctx in
             ctx.beginPage()
             let cg = ctx.cgContext
             // A social canvas is a fraction of a B1 sheet, so print-size captions
-            // would be unreadable — enlarge them exactly as the image export does,
-            // and carry the attribution mark rather than the print footer.
+            // would be unreadable — enlarge them exactly as the image export does.
             drawPoster(plates, widthMM: widthMM, heightMM: heightMM,
                        captionScale: social ? 1.7 : 1, cg: cg) { x, w, y in
                 if social {
-                    // Social sheets carry no footer — the board is the whole post.
+                    // Social sheets carry no print footer — the board is the whole post.
+                    if mark { drawMark(x: x, y: y, size: socialMarkSize, cg: cg) }
                 } else {
                     drawFooter(plates: plates, x: x, w: w, y: y, sheet: widthMM > 500 ? "b1" : "a2", cg: cg)
+                    if mark { drawMark(x: x, y: y, size: footerSize, lineHeightMultiple: footerLineHeight, cg: cg) }
                 }
             }
         }
     }
 
     /// Render the justified wall to a bitmap of exactly `pixel` px at that aspect,
-    /// with an optional attribution mark in the reserved bottom band. Same layout
+    /// with an optional archipic.app mark in the reserved bottom band. Same layout
     /// as the poster, never letterboxed.
-    static func posterImage(_ plates: [BoardPlate], pixel: CGSize) -> UIImage {
+    static func posterImage(_ plates: [BoardPlate], pixel: CGSize, mark: Bool = false) -> UIImage {
         // A social canvas is far smaller than a B1 sheet, so the print-tiny 6.6pt
         // caption would be unreadable — use a narrower page (photos stay bold) and
         // enlarge the caption. Height follows the target aspect.
@@ -364,7 +366,9 @@ enum BoardRenderer {
         fmt.opaque = true
         return UIGraphicsImageRenderer(size: CGSize(width: W, height: heightMM * mm), format: fmt).image { ctx in
             let cg = ctx.cgContext
-            drawPoster(plates, widthMM: widthMM, heightMM: heightMM, captionScale: 1.7, cg: cg) { _, _, _ in }
+            drawPoster(plates, widthMM: widthMM, heightMM: heightMM, captionScale: 1.7, cg: cg) { x, _, y in
+                if mark { drawMark(x: x, y: y, size: socialMarkSize, cg: cg) }
+            }
         }
     }
 
@@ -384,21 +388,87 @@ enum BoardRenderer {
     private static func drawFooter(plates: [BoardPlate], x: CGFloat, w: CGFloat, y: CGFloat, sheet: String, cg: CGContext) {
         let dates = plates.map { $0.date }.filter { !$0.isEmpty }.sorted()
         let range = dates.isEmpty ? "" : (dates.first == dates.last ? dates.first! : "\(dates.first!)–\(dates.last!)")
-        let para = NSMutableParagraphStyle(); para.alignment = .right; para.lineHeightMultiple = 1.4
+        let para = NSMutableParagraphStyle(); para.alignment = .right; para.lineHeightMultiple = footerLineHeight
         let s = NSMutableAttributedString()
-        s.append(NSAttributedString(string: "catalogue · \(sheet)\n", attributes: [.font: semi(8.5), .foregroundColor: ink, .paragraphStyle: para]))
-        s.append(NSAttributedString(string: "\(plates.count) plates · \(range)\n", attributes: [.font: reg(8.5), .foregroundColor: ink, .paragraphStyle: para]))
-        s.append(NSAttributedString(string: String(format: "sequence 01–%02d", plates.count), attributes: [.font: reg(8.5), .foregroundColor: ink, .paragraphStyle: para]))
-        s.draw(with: CGRect(x: x, y: y, width: w, height: 15 * mm), options: [.usesLineFragmentOrigin], context: nil)
+        s.append(NSAttributedString(string: "catalogue · \(sheet)\n", attributes: [.font: semi(footerSize), .foregroundColor: ink, .paragraphStyle: para]))
+        s.append(NSAttributedString(string: "\(plates.count) plates · \(range)\n", attributes: [.font: reg(footerSize), .foregroundColor: ink, .paragraphStyle: para]))
+        s.append(NSAttributedString(string: String(format: "sequence 01–%02d", plates.count), attributes: [.font: reg(footerSize), .foregroundColor: ink, .paragraphStyle: para]))
+        // 20 mm tall: three lines at 1.4× need ~15.1 mm, and a 15 mm box silently
+        // dropped the last line ("sequence 01–NN"). Only the text box grows.
+        s.draw(with: CGRect(x: x, y: y, width: w, height: 20 * mm), options: [.usesLineFragmentOrigin], context: nil)
     }
 
-    /// Social-export attribution: the app mark + wordmark in the reserved bottom
-    /// band (never over a photo). Ink on the white ground, like the app icon.
+    // MARK: archipic.app mark
+    //
+    // A small colophon, not a watermark: the app mark (filled disc in its
+    // dash-dot ring) and "archipic.app", in the muted caption ink, in a footer
+    // band, never over a photo. On by default; the composer has a toggle.
+
+    /// Print poster footer type (the "catalogue · b1" block), shared with the mark
+    /// so the two sit on one line.
+    private static let footerSize: CGFloat = 8.5
+    private static let footerLineHeight: CGFloat = 1.4
+    /// Social canvases enlarge captions 1.7× (see posterImage); the mark follows.
+    private static let socialMarkSize: CGFloat = 6.6 * 1.7
+    /// Journal date-footer size.
+    private static let journalFootSize: CGFloat = 7.5
+
+    /// Draw the mark with its text line's top at `y` (the same `y` the footer
+    /// beside it uses) and its left edge at `x`. `size` is the font size; the
+    /// symbol scales with it.
+    private static func drawMark(x: CGFloat, y: CGFloat, size: CGFloat,
+                                 lineHeightMultiple: CGFloat = 1, cg: CGContext) {
+        let font = reg(size)
+        let para = NSMutableParagraphStyle(); para.lineHeightMultiple = lineHeightMultiple
+        let text = NSAttributedString(string: "archipic.app",
+                                      attributes: [.font: font, .foregroundColor: muted, .paragraphStyle: para])
+
+        // Where the text's baseline lands inside its line (a taller line height
+        // adds space above the letters), so the symbol centres on the letters.
+        let storage = NSTextStorage(attributedString: text)
+        let layout = NSLayoutManager()
+        let container = NSTextContainer(size: CGSize(width: 1000 * size, height: 10 * size))
+        container.lineFragmentPadding = 0
+        layout.addTextContainer(container)
+        storage.addLayoutManager(layout)
+        let baseline = y + layout.location(forGlyphAt: 0).y
+
+        // The symbol: a ring a little taller than the capitals, centred on them.
+        // The icon's proportions (disc 0.911 of the ring, 15 long-dash-double-dot
+        // repeats in a hairline) close into a grey dot at a few millimetres, so
+        // this small version opens the gap (disc 0.8), uses 7 repeats and a
+        // slightly heavier line, with gaps sized to stay open (round caps add
+        // half a line width to each end of every dash).
+        let ring = size * 1.3
+        let lw = ring * 0.055
+        let r = ring - lw
+        let disc = r * 0.8
+        let cx = x + ring / 2, cy = baseline - font.capHeight / 2
+        let repeatLength = CGFloat.pi * r / 7
+        let gapVisible = lw * 0.9
+        let longVisible = repeatLength - 2 * lw - 3 * gapVisible
+        let dot: CGFloat = 0.001                       // a round cap alone: a dot lw wide
+        let gap = gapVisible + lw
+        cg.saveGState()
+        cg.setStrokeColor(muted.cgColor)
+        cg.setLineWidth(lw)
+        cg.setLineCap(.round)
+        cg.setLineDash(phase: 0, lengths: [longVisible - lw, gap, dot, gap, dot, gap])
+        cg.strokeEllipse(in: CGRect(x: cx - r / 2, y: cy - r / 2, width: r, height: r))
+        cg.setLineDash(phase: 0, lengths: [])
+        cg.setFillColor(muted.cgColor)
+        cg.fillEllipse(in: CGRect(x: cx - disc / 2, y: cy - disc / 2, width: disc, height: disc))
+        cg.restoreGState()
+
+        text.draw(with: CGRect(x: x + ring + size * 0.45, y: y, width: 1000 * size, height: 10 * size),
+                  options: [.usesLineFragmentOrigin], context: nil)
+    }
+
     // MARK: Journal (A4-landscape spread = 2× A5, chronological flow)
 
     private struct JBlock { let isDivider: Bool; let month: String; let rec: BoardPlate? }
 
-    static func journalPDF(_ plates: [BoardPlate]) -> Data {
+    static func journalPDF(_ plates: [BoardPlate], mark: Bool = false) -> Data {
         // chronological by date (stable on original order)
         let recs = plates.enumerated()
             .sorted { ($0.element.date, $0.offset) < ($1.element.date, $1.offset) }
@@ -485,6 +555,9 @@ enum BoardRenderer {
                     let fx = pageX + (page == 0 ? outer : inner)
                     journalFoot(dates, x: fx, w: contentW, y: PGh - bottom - footH + 1 * mm, alignRight: page == 1, cg)
                 }
+                // The mark sits on the right page's footer line, at its inner edge,
+                // opposite that page's right-aligned dates.
+                if mark { drawMark(x: PGw + inner, y: PGh - bottom - footH + 1 * mm, size: journalFootSize, cg: cg) }
                 ci += perSpread
             }
         }
@@ -507,7 +580,7 @@ enum BoardRenderer {
         guard let lo = ds.first, let hi = ds.last else { return }
         let range = lo == hi ? lo : "\(lo) – \(hi)"
         let para = NSMutableParagraphStyle(); para.alignment = alignRight ? .right : .left
-        NSAttributedString(string: range, attributes: [.font: reg(7.5), .foregroundColor: muted, .paragraphStyle: para])
+        NSAttributedString(string: range, attributes: [.font: reg(journalFootSize), .foregroundColor: muted, .paragraphStyle: para])
             .draw(with: CGRect(x: x, y: y, width: w, height: 6 * mm), options: [.usesLineFragmentOrigin], context: nil)
     }
 

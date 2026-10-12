@@ -25,6 +25,10 @@ struct BoardComposerView: View {
     // iPad live preview (right pane)
     @State private var livePDF: URL?
     @State private var renderingPreview = false
+    /// The small archipic.app mark in the footer band of every export. A device
+    /// preference (UserDefaults via @AppStorage), not part of a saved Board, so
+    /// the data model and CloudKit schema are untouched. On by default.
+    @AppStorage("boardShowMark") private var showMark = true
 
     /// New board from a gallery selection.
     init(photos: [Photo]) {
@@ -60,6 +64,24 @@ struct BoardComposerView: View {
                         }
                     }
                     Text(layout.blurb).font(.caption).foregroundStyle(.secondary)
+                    // A plain Toggle ignores taps here: the list is always in edit
+                    // mode (for the drag handles), which swallows taps on switches
+                    // but not on buttons. So the whole row is a button that flips
+                    // the setting, and the switch inside only shows its state.
+                    Button { showMark.toggle() } label: {
+                        HStack {
+                            Text("Show archipic.app mark").foregroundStyle(Color.primary)  // not the button tint
+                            Spacer()
+                            Toggle("", isOn: .constant(showMark))
+                                .labelsHidden()
+                                .tint(Palette.coral)  // like the app's other switches
+                                .allowsHitTesting(false)
+                        }
+                    }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Show archipic.app mark")
+                    .accessibilityValue(showMark ? "On" : "Off")
+                    .accessibilityAddTraits(.isToggle)
                 }
                 // iPhone: show the board itself, live — so "what will this look
                 // like?" is answered without tapping. iPad shows it in pane two.
@@ -246,7 +268,7 @@ struct BoardComposerView: View {
 
     /// One value that changes whenever anything affecting the render changes, so a
     /// single `.task(id:)` cancels the in-flight render and starts a fresh one.
-    private var previewToken: String { "\(layout.rawValue)|\(title)|\(order.joined(separator: ","))" }
+    private var previewToken: String { "\(layout.rawValue)|\(title)|\(showMark)|\(order.joined(separator: ","))" }
 
     private func renderPreview() async {
         guard !order.isEmpty else { livePDF = nil; return }
@@ -259,7 +281,7 @@ struct BoardComposerView: View {
         // tags, so it must stay on explicit Preview/Export, not fire merely because
         // the composer is open.
         let url = await BoardRenderer.makePDF(photos: orderedPhotos, layout: layout,
-                                              title: title, geocode: false)
+                                              title: title, geocode: false, mark: showMark)
         if Task.isCancelled { BoardRenderer.discardTemp(url); return }
         BoardRenderer.discardTemp(livePDF)        // retire the previous render
         livePDF = url
@@ -294,7 +316,7 @@ struct BoardComposerView: View {
     private func export() async {
         guard !working else { return }   // no overlapping exports (shared Geocoder, memory)
         working = true
-        let url = await BoardRenderer.makePDF(photos: orderedPhotos, layout: layout, title: title)
+        let url = await BoardRenderer.makePDF(photos: orderedPhotos, layout: layout, title: title, mark: showMark)
         working = false
         if let url { shareURL = url; showShare = true }
     }
@@ -306,7 +328,7 @@ struct BoardComposerView: View {
     private func exportImage(pixels: CGSize) async {
         guard !working else { return }
         working = true
-        let url = await BoardRenderer.makeImage(photos: orderedPhotos, pixels: pixels, title: title)
+        let url = await BoardRenderer.makeImage(photos: orderedPhotos, pixels: pixels, title: title, mark: showMark)
         working = false
         if let url { shareURL = url; showShare = true }
     }
@@ -316,7 +338,7 @@ struct BoardComposerView: View {
     private func preview() async {
         guard !working else { return }
         working = true
-        let url = await BoardRenderer.makePDF(photos: orderedPhotos, layout: layout, title: title)
+        let url = await BoardRenderer.makePDF(photos: orderedPhotos, layout: layout, title: title, mark: showMark)
         working = false
         if let url { previewURL = url; showPreview = true }
     }
