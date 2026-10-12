@@ -1,0 +1,30 @@
+Archipic is a private photo journal for architects and architecture students, on iPhone and iPad.
+
+Photograph the architecture you notice: a façade on a walk, a joint at an exhibition, a plan in a book, a model on a desk. Tap twice to say what it shows, and it joins an archive you can search by type, date, project or place.
+
+CAPTURE
+Archipic has its own camera, with a grid, a level, aspect-ratio guides, tap-to-focus and exposure, pinch zoom and film-inspired colour looks. It records video as well as stills. The Action Button, Siri or a Shortcut can open it directly, and a Shortcut can file every shot into a named project.
+
+TAGS, NOT TYPING
+Each photo is filed with a small, fixed vocabulary, chosen with buttons instead of a keyboard:
+- Building: typology (residential, office, public, commercial, civic, hospitality, heritage, industrial, landscape), room and concepts.
+- Element: structure, openings, envelope, finishes and details, with materials and colours.
+- Graphic: artwork, book, drawing, plan, render, model or web page.
+Optional fields hold the author and year, a note, the place, keywords, a rating and a project. You switch on only the ones you use. If you can't remember where a tag lives, type its name and Archipic takes you to it. Photograph a book page or a wall label and the app suggests the title, author and year, read on the phone itself.
+
+FROM OTHER APPS
+Share an image from Photos, Files or Messages, or a screenshot, to Archipic. Pick Building, Element or Graphic and it is filed, ready to finish tagging later.
+
+FIND IT AGAIN
+Browse by Time, by Reference (what is in the photo), by Project, or by Place on a map. Search covers every tag. Filters narrow it by type, project, favourites or minimum rating. Pinch the grid to change its size.
+
+BOARDS
+Lay out any selection as a gallery-wall poster at B1 or A2, a chronological A4 journal, or a square, portrait or story image. Captions come from your tags. Posters and journals export as PDF, the others as images.
+
+INTO YOUR OTHER TOOLS
+Shared photos carry their tags as standard metadata (keywords, caption, title and rating), which Lightroom, Bridge and InDesign read. The capture date goes too. One setting keeps or removes the location.
+
+PRIVATE BY DESIGN
+Your photos and tags stay on your device and sync through your own iCloud. There are no accounts, no ads, no analytics and no third-party servers. The developer cannot see your archive.
+
+Made by an architect.

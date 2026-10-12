@@ -42,9 +42,16 @@ platform :ios do
     app_store_connect_api_key
   end
 
+  # Apple's length limits, keyword rules and house style, checked before any
+  # upload (tools/check-listing.py). Fails the lane if anything is wrong.
+  private_lane :check_listing do
+    sh("python3", File.join(REPO, "tools/check-listing.py"))
+  end
+
   desc "Upload the listing text from fastlane/metadata (no binary, no screenshots, no submission)."
   desc "Needs a version in 'Prepare for Submission'. Pass version:1.5 to create it if it doesn't exist yet."
   lane :metadata do |options|
+    check_listing
     asc_login
     deliver(SAFE.merge(
       metadata_path: METADATA,
@@ -55,6 +62,7 @@ platform :ios do
 
   desc "Upload promotional text only. Apple lets this change on the live version, without a new release."
   lane :promo_text do
+    check_listing
     asc_login
     # Copy just the promotional_text.txt files into a scratch folder, so deliver
     # sees nothing else to change.

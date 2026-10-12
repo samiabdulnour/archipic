@@ -1,0 +1,8 @@
+BOARDY NESOU MALOU ZNAČKU
+Exportované boardy mají v zápatí malou značku archipic.app, vysázenou stejně jako popisky. Vypnete ji přepínačem v editoru boardu.
+
+ÚPLNÉ ZÁPATÍ PLAKÁTŮ
+Třetí řádek zápatí na plakátech B1 a A2, číslování listů, se dosud nevytiskl. Teď už se tiskne.
+
+HODNOCENÍ A SDÍLENÍ
+V Nastavení přibyly dva řádky: jeden otevře hodnocení v App Storu, druhý pošle kolegovi odkaz na Archipic.

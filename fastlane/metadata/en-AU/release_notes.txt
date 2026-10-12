@@ -1,0 +1,8 @@
+BOARDS CARRY A SMALL MARK
+Exported Boards now carry a small archipic.app mark on their footer line, set like the captions. A switch in the Board composer turns it off.
+
+COMPLETE POSTER FOOTERS
+The third line of the B1 and A2 poster footer, the plate sequence, was being cut off. It now prints.
+
+RATE AND SHARE
+Two new rows in Settings: one opens the App Store review page, the other sends a colleague a link to Archipic.
