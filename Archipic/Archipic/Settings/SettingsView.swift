@@ -53,6 +53,19 @@ struct SettingsView: View {
                 Section {
                     NavigationLink { HowToUseView() } label: { Text("How to use Archipic") }
                     NavigationLink { AboutView() } label: { Text("About Archipic") }
+                    // Two quiet rows for word of mouth: plain store links, no
+                    // tracking. Styled like the rows above, with a small trailing
+                    // symbol saying where each one goes.
+                    Link(destination: AppStoreLink.writeReview) {
+                        quietRow("Rate Archipic", symbol: "arrow.up.right")
+                    }
+                    .tint(.primary)      // a Form tints button rows coral; keep these ink
+                    ShareLink(item: AppStoreLink.listing,
+                              subject: Text("Archipic"),
+                              message: Text("Archipic is a free photo journal for architects on iPhone and iPad, where each photo is tagged in two taps and stays in your own iCloud.")) {
+                        quietRow("Tell a colleague", symbol: "square.and.arrow.up")
+                    }
+                    .tint(.primary)
                 }
             }
             .scrollContentBackground(.hidden)
@@ -67,6 +80,16 @@ struct SettingsView: View {
         // so the sheet — and Auto — update correctly without a per-sheet
         // preferredColorScheme override.
         .onChange(of: appearance) { _, new in Settings.applyAppearance(new) }
+    }
+
+    /// A settings row that leaves the app (App Store, share sheet): plain text like
+    /// the navigation rows, with a secondary symbol in place of the chevron.
+    private func quietRow(_ title: LocalizedStringKey, symbol: String) -> some View {
+        HStack {
+            Text(title).foregroundStyle(.primary)
+            Spacer()
+            Image(systemName: symbol).font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+        }
     }
 
     private func header(_ t: String) -> some View {

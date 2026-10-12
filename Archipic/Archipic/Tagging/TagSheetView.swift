@@ -238,11 +238,12 @@ struct TagSheetView: View {
         }
         photo.labelImageData = labelImage?.jpegData(compressionQuality: 0.85)
         try? modelContext.save()
-        // Tagging the 50th photo is a genuine success moment — a milestone in a
-        // maturing archive. Only for a single save (not mid-batch), gated to
-        // once per version by ReviewPrompt.
+        // Saving a photo once the archive holds 20 is a genuine success moment —
+        // a milestone in a growing archive. Only for a single save (not
+        // mid-batch), gated to once per version by ReviewPrompt.
         if progress == nil, batchPhotos == nil,
-           let total = try? modelContext.fetchCount(FetchDescriptor<Photo>()), total >= 50 {
+           let total = try? modelContext.fetchCount(FetchDescriptor<Photo>()),
+           total >= ReviewPrompt.photoMilestone {
             ReviewPrompt.ask(requestReview)
         }
         finish()
