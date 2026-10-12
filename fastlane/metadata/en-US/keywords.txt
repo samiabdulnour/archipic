@@ -1,1 +1,1 @@
-architecture,reference,photo,moodboard,material,facade,detail,archive,journal,ipad,tag,design
+reference,moodboard,facade,material,detail,precedent,interior,building,inspiration,site,student,tag

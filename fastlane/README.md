@@ -34,9 +34,9 @@ fastlane/
   Appfile                 the app's bundle ID
   Fastfile                the lanes above
   metadata/
-    primary_category.txt  e.g. PHOTO_AND_VIDEO
+    primary_category.txt  e.g. GRAPHICS_AND_DESIGN
     secondary_category.txt
-    en-US/
+    en-US/ (also en-GB/, en-AU/, cs/)
       name.txt            30 characters max
       subtitle.txt        30 characters max
       keywords.txt        100 characters max, commas, no spaces
@@ -47,6 +47,30 @@ fastlane/
 ```
 
 A field with no file is left alone on upload.
+
+### Languages
+
+| Folder | Store(s) that read it | Keywords |
+| --- | --- | --- |
+| `en-US` | United States | the core English set |
+| `en-GB` | United Kingdom, Australia, Czechia (and other stores whose first language is UK English) | the same core set, so those stores don't lose it |
+| `en-AU` | Australia, United Kingdom | words that didn't fit in the core set |
+| `cs` | Czechia | Czech words |
+
+The Australian and UK stores read en-AU and en-GB together, so the two keyword
+fields should never share a word. Apple doesn't publish which store reads which
+language; this follows the commonly used table from ASO tools.
+
+### Check before uploading
+
+```
+python3 tools/check-listing.py
+```
+
+Checks Apple's limits (name and subtitle 30, keywords 100, promotional text 170,
+description and What's New 4000), keyword format, keywords that repeat a word
+from the name or subtitle, en-AU/en-GB overlap, and em-dashes (house style).
+The `metadata` and `promo_text` lanes run it first and stop if it fails.
 
 ## One-time setup: the App Store Connect API key
 

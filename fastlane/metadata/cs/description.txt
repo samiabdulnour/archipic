@@ -1,0 +1,32 @@
+Archipic je soukromý fotodeník pro architekty a studenty architektury. Funguje na iPhonu i iPadu.
+
+Vyfoťte architekturu, která vás zaujme: fasádu cestou po městě, spoj na výstavě, půdorys v knize, model na stole. Dvěma klepnutími určíte, co snímek zachycuje, a fotografie se zařadí do archivu. Později ji najdete podle typu, data, projektu nebo místa.
+
+Aplikace je zatím v angličtině.
+
+FOCENÍ
+Archipic má vlastní fotoaparát s mřížkou, vodováhou, vodítky pro poměr stran, ostřením a expozicí na klepnutí, zoomem dvěma prsty a barevnými vzhledy inspirovanými filmem. Kromě fotografií natáčí i video. Fotoaparát otevřete přímo tlačítkem Akce, přes Siri nebo zkratkou. Zkratka umí každý snímek rovnou uložit do zvoleného projektu.
+
+ŠTÍTKY MÍSTO PSANÍ
+Fotografie třídíte malým, pevně daným slovníkem. Vybíráte tlačítky, klávesnici nepotřebujete:
+- Building (stavba): typologie, například bydlení, kanceláře, veřejné a občanské stavby nebo památky, dále místnost a koncept.
+- Element (prvek): konstrukce, otvory, obálka, povrchy a detaily, k tomu materiály a barvy.
+- Graphic (grafika): umělecké dílo, kniha, výkres, půdorys, vizualizace, model nebo web.
+Volitelná pole nabízejí autora a rok, poznámku, místo, klíčová slova, hodnocení a projekt. Zapnete si jen ta, která používáte. Když nevíte, kam štítek patří, napíšete jeho název a Archipic vás k němu přenese. Vyfotíte-li stránku knihy nebo popisek na výstavě, aplikace přímo v telefonu přečte a nabídne název, autora a rok.
+
+Z JINÝCH APLIKACÍ
+Obrázek z Fotek, Souborů nebo Zpráv, případně snímek obrazovky, pošlete do Archipicu přes nabídku Sdílet. Zvolíte Building, Element nebo Graphic a obrázek je uložený. Štítky doplníte později.
+
+HLEDÁNÍ
+Archiv procházíte podle času, podle toho, co je na snímku, podle projektu nebo na mapě. Vyhledávání prochází všechny štítky. Filtry zúží výběr podle typu, projektu, oblíbených nebo minimálního hodnocení. Velikost mřížky změníte sevřením prstů.
+
+BOARDS
+Libovolný výběr rozložíte na plakát B1 nebo A2, na chronologický deník A4 nebo na čtvercový, svislý či příběhový obrázek. Popisky vzniknou ze štítků. Plakáty a deníky se exportují do PDF, ostatní formáty jako obrázky.
+
+DO DALŠÍCH PROGRAMŮ
+Sdílené fotografie si nesou štítky jako standardní metadata (klíčová slova, popis, název a hodnocení), která přečte Lightroom, Bridge i InDesign. Přenese se i datum pořízení. Jedním nastavením určíte, zda se přidá poloha.
+
+SOUKROMÍ
+Fotografie a štítky zůstávají ve vašem zařízení a synchronizují se jen přes váš vlastní iCloud. Aplikace nemá účty, reklamy ani analytiku a nepoužívá servery třetích stran. Autor do vašeho archivu nevidí.
+
+Aplikaci vytvořil architekt.
