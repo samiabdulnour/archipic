@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+"""Check every link and asset on the website before it deploys.
+
+Merging to main publishes docs/ to archi-ve.app, so run this first:
+
+    python3 tools/check-site-links.py
+
+It reads every docs/*.html page, then:
+  - local links and files (href/src/content="...png") must exist in docs/,
+  - #anchors must match an id on the target page,
+  - external http(s) links must answer with a 2xx or 3xx status.
+Exits non-zero if anything is broken. Standard library only.
+"""
+import html.parser
+import pathlib
+import sys
+import urllib.parse
+import urllib.request
+
+DOCS = pathlib.Path(__file__).resolve().parent.parent / "docs"
+SITE = "https://archi-ve.app"
+
+
+class Links(html.parser.HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.refs, self.ids = [], set()
+
+    def handle_starttag(self, tag, attrs):
+        a = dict(attrs)
+        if "id" in a:
+            self.ids.add(a["id"])
+        for key in ("href", "src"):
+            if a.get(key):
+                self.refs.append(a[key])
+        # og:image and similar meta tags point at files on this site.
+        if tag == "meta" and (a.get("content") or "").startswith(SITE + "/"):
+            self.refs.append(a["content"])
+
+
+def parse(page):
+    p = Links()
+    p.feed(page.read_text(encoding="utf-8"))
+    return p
+
+
+pages = {p.name: parse(p) for p in sorted(DOCS.glob("*.html"))}
+problems, external = [], set()
+
+for name, page in pages.items():
+    for ref in page.refs:
+        if ref.startswith("mailto:"):
+            continue
+        if ref.startswith(SITE):                       # our own absolute URLs
+            ref = ref[len(SITE):] or "/"
+        if ref.startswith(("http://", "https://")):
+            external.add(ref)
+            continue
+        path, _, frag = ref.partition("#")
+        path = urllib.parse.unquote(path.split("?")[0])
+        if path in ("", "/"):
+            target = name if path == "" else "index.html"
+        else:
+            target = path.lstrip("/")
+        if not (DOCS / target).exists():
+            problems.append(f"{name}: missing file {ref}")
+        elif frag and target in pages and frag not in pages[target].ids:
+            problems.append(f"{name}: no #{frag} on {target}")
+
+for url in sorted(external):
+    req = urllib.request.Request(url, method="GET", headers={"User-Agent": "archipic-link-check"})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            status = r.status
+    except urllib.error.HTTPError as e:
+        status = e.code
+    except Exception as e:                             # DNS, timeout, TLS
+        problems.append(f"external {url}: {e}")
+        continue
+    if status >= 400:
+        problems.append(f"external {url}: HTTP {status}")
+    else:
+        print(f"ok  {status}  {url}")
+
+print(f"Checked {len(pages)} pages, {len(external)} external links.")
+if problems:
+    print("\n".join(problems))
+    sys.exit(1)
+print("All links fine.")
