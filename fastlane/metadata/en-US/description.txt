@@ -1,0 +1,30 @@
+Archipic is a private photo journal for architects.
+
+You notice architecture everywhere — a façade on a walk, a joint at an exhibition, a plan in a book, a model on a desk. Archipic turns that habit into a structured, searchable archive. Take the photo, answer two quick prompts, and it files itself. On iPhone and iPad.
+
+CAPTURE IN SECONDS
+A focused camera built for the street: tap the shutter, two taps to tag, done — fast enough to use while walking. A native viewfinder with grid, level, aspect-ratio guides, tap-to-focus and exposure, pinch zoom, and film-inspired colour looks. Add a Capture action to your Action Button or Siri and you're in the viewfinder without even opening the app.
+
+STRUCTURED TAGS, NOT TYPING
+Every photo is filed with a small, consistent vocabulary instead of a keyboard:
+- Building — typology (residential, office, public, commercial, civic, hospitality, heritage, industrial, landscape) and room.
+- Element — structure, openings, envelope, finishes, details and more.
+- Graphic — artwork, book, drawing, plan, render, model, web and more.
+Add materials, concepts, a rating, keywords, author/year, or a project — only the fields you want. Can't remember which category something is under? Type its name and Archipic takes you straight to it.
+
+GET REFERENCES IN
+Save straight from Photos, Files, Messages or a screenshot — share an image to Archipic, pick its kind, and it's in your archive.
+
+FIND IT AGAIN
+Browse by Time, by Reference (what's in the photo), by Project, or by Place on a map. Search across every tag. Filter by type, project, favourites, or minimum rating. Pinch the grid to resize it.
+
+BOARDS
+Compose any selection into a print-ready poster — a justified gallery wall — or an A4 journal, exported as PDF, or as a square, portrait or story image ready to share.
+
+WORKS WITH YOUR TOOLS
+Exported photos carry your tags as standard metadata — keywords, caption, title and rating — so they open correctly in Lightroom, Bridge and InDesign. Your capture date comes along too, and a single setting keeps or strips the location when you share.
+
+PRIVATE BY DESIGN
+Your photos and tags are yours. They're stored on your device and sync through your own iCloud across your devices — no accounts, no ads, no analytics, no third-party servers.
+
+Designed for working architects, by an architect.

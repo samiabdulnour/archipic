@@ -19,3 +19,20 @@ build/
 # Icon study: Apple symbol renders and the built review page
 design/icon-study/sf/
 design/icon-study/out/
+
+# fastlane (dev tooling; see fastlane/README.md)
+vendor/bundle/
+.bundle/
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/test_output/
+fastlane/screenshots/
+fastlane/promo_text_only/
+# App Review contact details (name, email, phone) never belong in this public repo.
+fastlane/metadata/review_information/
+fastlane/metadata/trade_representative_contact_information/
+fastlane/metadata/app_clip_review_information/
+# App Store Connect API keys: keep them in ~/.appstoreconnect/, never here.
+*.p8
+AuthKey_*
+*api_key*.json

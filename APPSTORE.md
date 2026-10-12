@@ -1,115 +1,29 @@
-# App Store listing — Archipic (native app)
+# App Store listing: Archipic
 
-Paste-ready copy and metadata for App Store Connect. Fields map 1:1 to the
-listing form. Updated for the **native SwiftUI app** (SwiftData + private
-iCloud/CloudKit sync, Apple Maps) — not the old web build.
+**The listing text lives in [`fastlane/metadata/`](fastlane/metadata/).** That is
+the single source of truth for the name, subtitle, keywords, description,
+promotional text, What's New, categories and URLs. Edit the files there and
+upload with `tools/fastlane.sh` (see [`fastlane/README.md`](fastlane/README.md)).
+Don't copy that text back into this file.
+
+This file keeps only what fastlane doesn't handle: fixed identity fields, the
+App Privacy and age rating answers, screenshot sizes, App Review notes, the
+archive of past What's New texts, and checklists.
 
 ---
 
-## Identity
+## Identity (set once in App Store Connect)
 
 | Field | Value |
 | --- | --- |
-| **App name** (≤30) | Archipic |
-| **Subtitle** (≤30) | Architect's photo archive |
 | **Bundle ID** | com.samiabdulnour.archive |
+| **Apple ID** | 6777989742 |
 | **SKU** | archive-ios-001 |
-| **Primary category** | Photo & Video |
-| **Secondary category** | Productivity |
 | **Age rating** | 4+ |
 | **Price** | Free |
 
----
-
-## Description (≤4000 chars) — paste as-is
-
-Archipic is a private photo journal for architects.
-
-You notice architecture everywhere — a façade on a walk, a joint at an
-exhibition, a plan in a book, a model on a desk. Archipic turns that habit into
-a structured, searchable archive. Take the photo, answer two quick prompts, and
-it files itself. On iPhone and iPad.
-
-CAPTURE IN SECONDS
-A focused camera built for the street: tap the shutter, two taps to tag, done —
-fast enough to use while walking. A native viewfinder with grid, level,
-aspect-ratio guides, tap-to-focus and exposure, pinch zoom, and film-inspired
-colour looks. Add a Capture action to your Action Button or Siri and you're in
-the viewfinder without even opening the app.
-
-STRUCTURED TAGS, NOT TYPING
-Every photo is filed with a small, consistent vocabulary instead of a keyboard:
-- Building — typology (residential, office, public, commercial, civic,
-  hospitality, heritage, industrial, landscape) and room.
-- Element — structure, openings, envelope, finishes, details and more.
-- Graphic — artwork, book, drawing, plan, render, model, web and more.
-Add materials, concepts, a rating, keywords, author/year, or a project — only
-the fields you want. Can't remember which category something is under? Type its
-name and Archipic takes you straight to it.
-
-GET REFERENCES IN
-Save straight from Photos, Files, Messages or a screenshot — share an image to
-Archipic, pick its kind, and it's in your archive.
-
-FIND IT AGAIN
-Browse by Time, by Reference (what's in the photo), by Project, or by Place on a
-map. Search across every tag. Filter by type, project, favourites, or minimum
-rating. Pinch the grid to resize it.
-
-BOARDS
-Compose any selection into a print-ready poster — a justified gallery wall — or
-an A4 journal, exported as PDF, or as a square, portrait or story image ready to
-share.
-
-WORKS WITH YOUR TOOLS
-Exported photos carry your tags as standard metadata — keywords, caption, title
-and rating — so they open correctly in Lightroom, Bridge and InDesign. Your
-capture date comes along too, and a single setting keeps or strips the
-location when you share.
-
-PRIVATE BY DESIGN
-Your photos and tags are yours. They're stored on your device and sync through
-your own iCloud across your devices — no accounts, no ads, no analytics, no
-third-party servers.
-
-Designed for working architects, by an architect.
-
----
-
-## Promotional text (≤170, editable without a new build)
-
-Snap or share any reference, tag it in two taps, and find it by what it is or
-where you found it. Now on iPad. Private, synced through your own iCloud.
-
----
-
-## Keywords (≤100, comma-separated, NO spaces)
-
-```
-architecture,reference,photo,moodboard,material,facade,detail,archive,journal,ipad,tag,design
-```
-
-(93 chars. The previous list was 102 — over Apple's 100-char cap. Dropped
-`catalog`, `site`, `exhibition`; added `moodboard` and `ipad`. Tweak freely,
-just keep it ≤100 with no spaces.)
-
----
-
-## URLs
-
-| Field | Value | Notes |
-| --- | --- | --- |
-| **Support URL** (required) | https://archi-ve.app/support.html | Built in `docs/` → GitHub Pages. |
-| **Privacy Policy URL** (required) | https://archi-ve.app/privacy.html | Built in `docs/` → GitHub Pages. |
-| **Marketing URL** (optional) | https://archi-ve.app | Landing page. |
-
-### URLs you must provide (the only real blockers for review)
-Apple requires a working **Support URL** and **Privacy Policy URL**. Cheap options:
-- A free **GitHub Pages** site (public repo) rendering `PRIVACY.md`, plus a one-line
-  support page with your email.
-- A free **Carrd / Notion** public page.
-- Minimum viable: one page that states what the app does + a contact email
-  (support), and the privacy text (policy). They can be the same site, two pages.
+Support and privacy URLs are required by App Store Connect, so
+`docs/support.html` and `docs/privacy.html` must always stay reachable.
 
 ---
 
@@ -130,7 +44,7 @@ Run the questionnaire; everything is "None" → **4+**.
 
 ---
 
-## Screenshots — required
+## Screenshots (required sizes)
 
 Apple requires **6.9" iPhone** screenshots (e.g. iPhone 16 Pro Max,
 **1320 × 2868 px**). A 6.5" set (1242 × 2688) is optional but nice.
@@ -153,6 +67,9 @@ your phone. Suggested iPhone set (6):
 
 (Captions are optional overlays you'd add when composing the screenshots; App
 Store Connect itself doesn't take captions.)
+
+Upload with `tools/fastlane.sh screenshots` (reads `AppStoreScreenshots/Framed/` and
+`AppStoreScreenshots/iPad-13-gallery.png`).
 
 ---
 
@@ -177,7 +94,12 @@ capturing a photo (location is stored on the photo to enable the Map view).
 
 ---
 
-## Version 1.4 — What's New
+## What's New archive (shipped versions)
+
+The text for the *next* version goes in `fastlane/metadata/*/release_notes.txt`.
+After a release, copy it here under its version number.
+
+### 1.4 (28 September 2026)
 
 Archipic comes to iPad, opens up to the rest of your apps, and gets quicker to
 file.
@@ -217,9 +139,7 @@ post.
 
 Plus a smoother camera level, faster capture, and fixes throughout.
 
----
-
-## Version 1.3 — What's New
+### 1.3
 
 Video comes to Archipic — plus a visual refresh and a lot of polish.
 
@@ -252,9 +172,7 @@ animate cleanly, and the grid remembers your preferred photos-per-row.
 
 And dozens of fixes across video recording, capture speed, and stability.
 
----
-
-## Version 1.0 — What's New
+### 1.0 (11 June 2026)
 
 First release. Fast two-tap capture, the architecture tag taxonomy
 (Building / Element / Graphic), a native camera, gallery browsing by time,
@@ -263,7 +181,7 @@ and private iCloud sync.
 
 ---
 
-## Pre-submit checklist — Version 1.4
+## Pre-submit checklist: Version 1.4 (shipped)
 
 **Version bump (do it on BOTH targets — app + widget):**
 - [ ] `MARKETING_VERSION` 1.3 → **1.4**
