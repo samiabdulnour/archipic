@@ -1,0 +1,120 @@
+# Archipic: the App Store listing as code.
+#
+# fastlane/metadata/ is the single source of truth for the listing text. Edit the
+# .txt files there, then upload with one of the lanes below. Always run through
+# tools/fastlane.sh, which picks the right Ruby. See fastlane/README.md for the
+# one-time API key setup.
+#
+# None of these lanes uploads a build or submits anything for review. That stays
+# a manual step in App Store Connect.
+
+opt_out_usage # don't send usage statistics to fastlane (same promise as the app)
+default_platform(:ios)
+
+APP_ID = "com.samiabdulnour.archive"
+METADATA = File.expand_path("metadata", __dir__)
+REPO = File.expand_path("..", __dir__)
+
+# Never upload a binary, never submit, never release, skip the HTML preview prompt.
+SAFE = {
+  app_identifier: APP_ID,
+  skip_binary_upload: true,
+  submit_for_review: false,
+  automatic_release: false,
+  run_precheck_before_submit: false,
+  precheck_include_in_app_purchases: false,
+  force: true
+}.freeze
+
+KEY_VARS = %w[
+  APP_STORE_CONNECT_API_KEY_KEY_ID
+  APP_STORE_CONNECT_API_KEY_ISSUER_ID
+  APP_STORE_CONNECT_API_KEY_KEY_FILEPATH
+].freeze
+
+platform :ios do
+  # Log in with the App Store Connect API key. app_store_connect_api_key reads the
+  # three variables above by itself and never prints the key; later deliver calls
+  # in the same lane pick the login up automatically.
+  private_lane :asc_login do
+    missing = KEY_VARS.select { |v| ENV[v].to_s.empty? }
+    UI.user_error!("Not set: #{missing.join(', ')}. See fastlane/README.md.") unless missing.empty?
+    app_store_connect_api_key
+  end
+
+  desc "Upload the listing text from fastlane/metadata (no binary, no screenshots, no submission)."
+  desc "Needs a version in 'Prepare for Submission'. Pass version:1.5 to create it if it doesn't exist yet."
+  lane :metadata do |options|
+    asc_login
+    deliver(SAFE.merge(
+      metadata_path: METADATA,
+      skip_screenshots: true,
+      app_version: options[:version]
+    ).compact)
+  end
+
+  desc "Upload promotional text only. Apple lets this change on the live version, without a new release."
+  lane :promo_text do
+    asc_login
+    # Copy just the promotional_text.txt files into a scratch folder, so deliver
+    # sees nothing else to change.
+    files = Dir[File.join(METADATA, "*", "promotional_text.txt")]
+    UI.user_error!("No promotional_text.txt files found.") if files.empty?
+    staging = File.join(__dir__, "promo_text_only")
+    FileUtils.rm_rf(staging)
+    files.each do |src|
+      dest = File.join(staging, File.basename(File.dirname(src)))
+      FileUtils.mkdir_p(dest)
+      FileUtils.cp(src, dest)
+    end
+    deliver(SAFE.merge(metadata_path: staging, skip_screenshots: true, edit_live: true))
+    FileUtils.rm_rf(staging)
+  end
+
+  desc "Upload the framed iPhone screenshots and the iPad screenshot, replacing the current ones."
+  lane :screenshots do
+    asc_login
+    # deliver wants <folder>/<language>/*.png and tells iPhone from iPad by pixel
+    # size, so gather the App Store images into a scratch folder in that shape.
+    sources = Dir[File.join(REPO, "AppStoreScreenshots/Framed/*.png")].sort +
+              [File.join(REPO, "AppStoreScreenshots/iPad-13-gallery.png")]
+    missing = sources.reject { |f| File.exist?(f) }
+    UI.user_error!("Missing screenshots: #{missing.join(', ')}") unless missing.empty?
+    staging = File.join(__dir__, "screenshots")
+    FileUtils.rm_rf(staging)
+    FileUtils.mkdir_p(File.join(staging, "en-US"))
+    sources.each { |f| FileUtils.cp(f, File.join(staging, "en-US")) }
+    deliver(SAFE.merge(
+      screenshots_path: staging,
+      skip_metadata: true,
+      overwrite_screenshots: true
+    ))
+    FileUtils.rm_rf(staging)
+  end
+
+  desc "Pull the live listing into fastlane/metadata. Overwrites the local text files, so commit first."
+  lane :download_metadata do
+    asc_login
+    require "deliver"
+    require "deliver/setup"
+    # The same steps as `fastlane deliver download_metadata` (deliver's
+    # commands_generator.rb in the version pinned by Gemfile.lock), run inside a
+    # lane so it can use the API key login above.
+    options = FastlaneCore::Configuration.create(
+      Deliver::Options.available_options,
+      SAFE.merge(metadata_path: METADATA, skip_screenshots: true)
+    )
+    Deliver::Runner.new(options)
+    app = Deliver.cache[:app]
+    platform = Spaceship::ConnectAPI::Platform::IOS
+    version = app.get_live_app_store_version(platform: platform) ||
+              app.get_latest_app_store_version(platform: platform)
+    Deliver::Setup.new.generate_metadata_files(app, version, METADATA, options)
+    # App Review contact details (name, email, phone) must never land in this
+    # public repo. They're also git-ignored, as a second guard.
+    %w[review_information trade_representative_contact_information app_clip_review_information].each do |dir|
+      FileUtils.rm_rf(File.join(METADATA, dir))
+    end
+    UI.success("Pulled version #{version.version_string}. Review the changes with `git diff fastlane/metadata`.")
+  end
+end

@@ -1,0 +1,3 @@
+# The app this listing belongs to. Authentication comes from an App Store
+# Connect API key, not an Apple ID (see fastlane/README.md).
+app_identifier("com.samiabdulnour.archive")

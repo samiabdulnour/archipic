@@ -1,0 +1,24 @@
+Archipic comes to iPad, opens up to the rest of your apps, and gets quicker to file.
+
+NOW ON IPAD
+A proper big-screen archive. The four lenses move into a sidebar, the grid fills the page, and the Board composer becomes two panes — your photos on one side, a live poster preview on the other. Portrait and landscape.
+
+SAVE FROM THE SHARE SHEET
+A façade in your camera roll, a plan someone sent you, a screenshot you grabbed? Share the image straight to Archipic, pick Building, Element or Graphic, and it's filed — ready to finish tagging later.
+
+CAPTURE WITHOUT OPENING THE APP
+A new "Capture in Archipic" action for Shortcuts, Siri and the Action Button. Hold the button and you're in the viewfinder — optionally filing straight into a named project.
+
+FIND ANY TAG BY NAME
+Not sure which category a fence lives under? Tap the new search button and type it — Archipic jumps straight to the tag, wherever it's filed, so the vocabulary that makes your archive searchable stays consistent.
+
+SUGGESTIONS FROM THE PHOTO
+Photograph a book page or a wall label and Archipic reads it on-device, offering the title, author and year for one-tap confirmation. Nothing leaves your phone.
+
+YOUR TAGS TRAVEL
+Shared photos now carry their tags as standard metadata — keywords, caption, title and rating — so they open correctly in Lightroom, Bridge and InDesign. Keep or strip the location per share.
+
+SHAREABLE BOARDS
+Export a Board as a square, portrait or story image, not just a PDF — ready to post.
+
+Plus a smoother camera level, faster capture, and fixes throughout.
