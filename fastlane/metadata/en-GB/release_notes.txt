@@ -1,6 +1,9 @@
 BOARDS CARRY A SMALL MARK
 Exported Boards now carry a small archipic.app mark on their footer line, set like the captions. A switch in the Board composer turns it off.
 
+BOARDS FILL THE PAGE
+A Board of only a few photos used to sit at the top of the sheet. The photos now grow to fill it, on posters and on feed images alike, and feed images export at exactly 1080 × 1350 and 1080 × 1920 pixels.
+
 COMPLETE POSTER FOOTERS
 The third line of the B1 and A2 poster footer, the plate sequence, was being cut off. It now prints.
 
