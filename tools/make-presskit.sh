@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Builds the press kit served at archi-ve.app/press.html.
+# Builds the press kit served at archipic.app/press.html.
 #
 # Run from anywhere, on the Mac (it uses sips, which ships with macOS):
 #   tools/make-presskit.sh

@@ -34,7 +34,7 @@ on the student's phone and in their own iCloud, and nothing is collected, so
 there's nothing to set up or approve on the school's side.
 
 App Store: https://apps.apple.com/app/id6777989742
-More about it: https://archi-ve.app
+More about it: https://archipic.app
 
 If it would help, I'd be glad to show it to a studio in ten minutes.
 
@@ -66,7 +66,7 @@ neshromažďuje, takže škola nemusí nic nastavovat ani schvalovat. Aplikace j
 zatím v angličtině.
 
 App Store: https://apps.apple.com/app/id6777989742
-Více informací: https://archi-ve.app
+Více informací: https://archipic.app
 
 Pokud by to pomohlo, rád ji ateliéru za deset minut předvedu.
 

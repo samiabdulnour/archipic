@@ -1,5 +1,5 @@
 // Builds docs/og.png, the 1200×630 card that iMessage, Slack, LinkedIn and
-// Hacker News show when someone pastes a link to archi-ve.app.
+// Hacker News show when someone pastes a link to archipic.app.
 //
 // Run from the repo root:
 //   swift tools/og-card/make-og.swift [screenshot.png]

@@ -175,15 +175,16 @@ exported as PDF.
 
 ## Website
 
-`docs/` is served by GitHub Pages at **archi-ve.app** (see `docs/CNAME`):
+`docs/` is served by GitHub Pages at **archipic.app** (see `docs/CNAME`):
 landing page, `privacy.html`, `support.html` and `press.html` (with the press
 kit in `docs/press/`). Privacy and support are required by App Store Connect
 and must stay reachable. Merging to `main` deploys the site, so run
 `python3 tools/check-site-links.py` first.
 
-**archipic.app** is the long-term domain (bought October 2026, not live yet).
-Board exports already print it. The switch, and keeping archi-ve.app as a
-redirect, is a checklist in `BUILD-IOS.md` → "Website and domain".
+archipic.app is the permanent domain, and Board exports print it. The old
+address, archi-ve.app, forwards every page to archipic.app through a separate
+repository, `samiabdulnour/archi-ve-redirect`; keep it (see `BUILD-IOS.md` →
+"Website and domain").
 
 The privacy promise covers the website too: no analytics, tracking pixels,
 third-party scripts, or campaign parameters on links. Public copy follows the
