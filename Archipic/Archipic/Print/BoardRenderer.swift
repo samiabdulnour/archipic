@@ -126,6 +126,10 @@ enum BoardRenderer {
 
     @MainActor private static func buildPlates(_ photos: [Photo], geocode: Bool = true) async -> [BoardPlate] {
         var plates: [BoardPlate] = []
+        // A board with few photos lays them out large (on a B1, a few hundred mm
+        // each), where 1600 px would print soft. Up to 8 photos keep 2400 px: still
+        // under the memory a 20-photo board uses at 1600.
+        let maxPixel: CGFloat = photos.count <= 8 ? 2400 : 1600
         for p in photos {
             // Auto-fill the city from GPS for captions, when it's missing (sequential
             // so CLGeocoder is happy; cached; never overwrites a hand-typed place).
@@ -138,7 +142,7 @@ enum BoardRenderer {
             // jetsam-kills a large board export. Aspect ratio is preserved, so the
             // layout is identical.
             if let img = await PhotoImage.full(for: p) {
-                let small = autoreleasepool { jpegCompressed(downsampled(img, maxPixel: 1600)) }
+                let small = autoreleasepool { jpegCompressed(downsampled(img, maxPixel: maxPixel)) }
                 plates.append(plate(for: p, image: small))
             }
         }
@@ -243,7 +247,11 @@ enum BoardRenderer {
         let W = widthMM * mm, H = heightMM * mm
         let s = widthMM / 700                       // scale margins/footer with page size
         let MT = 32 * s * mm, MS = 30 * s * mm, MB = 28 * s * mm, FOOT = 16 * s * mm
-        let bodyX = MS, bodyY = MT, availW = W - 2 * MS, availH = H - MT - MB - FOOT
+        // A clear gap between the last caption and the footer line, so a wall that
+        // fills the sheet doesn't run its captions into the footer and mark: at
+        // least three caption lines (the social canvases enlarge captions 1.7x).
+        let FOOTGAP = max(10 * s * mm, 3 * 6.6 * 1.22 * captionScale)
+        let bodyX = MS, bodyY = MT, availW = W - 2 * MS, availH = H - MT - MB - FOOT - FOOTGAP
         let capGap = 1.5 * mm
 
         // Build each caption's attributed string once; measuring only re-flows to
@@ -301,17 +309,75 @@ enum BoardRenderer {
             return (rows, hgap, vgap, total)
         }
 
-        // 4) Binary-search the largest base height whose wall fits the content height.
-        var lo = 6 * mm, hi = 95 * mm, best = 6 * mm
-        for _ in 0..<22 {
-            let mid = (lo + hi) / 2
-            if wall(mid).total <= availH { best = mid; lo = mid } else { hi = mid }
+        // 4) Pick the base height that fills the content height best. Bigger photos
+        //    move the row breaks, so the wall's height jumps rather than growing
+        //    steadily, and a plain binary search could stop far short of the
+        //    bottom. Scan the range (upper bound scales with the sheet, not a fixed
+        //    95 mm that left a 6-photo B1 mostly blank), then refine around the
+        //    best fit. Many photos still shrink to fit; nothing ever overflows
+        //    unless even the smallest size can't fit.
+        let lo = 6 * mm, hi = max(lo, availH * 0.45)
+        let steps = 48
+        let ratio = pow(hi / lo, 1 / CGFloat(steps))   // geometric steps: finer at small sizes
+        var best = lo, bestTotal: CGFloat = -1
+        var h = lo
+        for _ in 0...steps {
+            let t = wall(h).total
+            if t <= availH && t >= bestTotal { best = h; bestTotal = t }
+            h *= ratio
+        }
+        var a = best, b = min(hi, best * ratio)
+        for _ in 0..<12 {
+            let mid = (a + b) / 2
+            let t = wall(mid).total
+            if t <= availH {
+                if t >= bestTotal { best = mid; bestTotal = t }
+                a = mid
+            } else { b = mid }
         }
         let laid = wall(best)
 
+        // 5) Grow into what's left. Justified rows already span the full width, so
+        //    photos can only get bigger by narrowing the gaps between them: scale
+        //    every photo by f, keep at least 40% of each gap, stop when the wall
+        //    reaches the content height (and at 2x, so a lone photo isn't blown up
+        //    past its resolution). Without this, a board of a few photos left a
+        //    band of empty sheet below or between its rows.
+        let minGap = laid.hgap * 0.4
+        func isShortLastRow(_ r: Int) -> Bool {     // the natural-size last row (see wall)
+            let row = laid.rows[r]
+            let w = row.photos.reduce(0) { $0 + $1.w }
+            return r == laid.rows.count - 1 && w + laid.hgap * CGFloat(row.photos.count - 1) < availW - 0.5
+        }
+        var fWidth: CGFloat = 2
+        for (r, row) in laid.rows.enumerated() {
+            let w = row.photos.reduce(0) { $0 + $1.w }
+            let gaps = (isShortLastRow(r) ? laid.hgap : minGap) * CGFloat(max(0, row.photos.count - 1))
+            if w > 0 { fWidth = min(fWidth, (availW - gaps) / w) }
+        }
+        let imgTotal = laid.rows.reduce(0) { $0 + $1.imgH }
+        // Captions only get shorter as photos widen, so this never overflows.
+        let fHeight = imgTotal > 0 ? (availH - (laid.total - imgTotal)) / imgTotal : 1
+        let f = max(1, min(fWidth, fHeight))
+
+        struct PlacedRow { let photos: [WallPhoto]; let gap: CGFloat; let imgH: CGFloat; let capH: CGFloat }
+        var placed: [PlacedRow] = []
+        for (r, row) in laid.rows.enumerated() {
+            let ps = row.photos.map { WallPhoto(idx: $0.idx, w: $0.w * f, h: $0.h * f) }
+            let w = ps.reduce(0) { $0 + $1.w }
+            let gap = (isShortLastRow(r) || ps.count < 2) ? laid.hgap : (availW - w) / CGFloat(ps.count - 1)
+            let ch = ps.map { capH($0.idx, $0.w) }.max() ?? 0
+            placed.append(PlacedRow(photos: ps, gap: gap, imgH: row.imgH * f, capH: ch))
+        }
+        var used: CGFloat = 0
+        for (r, row) in placed.enumerated() {
+            used += row.imgH + capGap + row.capH
+            if r < placed.count - 1 { used += laid.vgap }
+        }
+
         UIColor.white.setFill(); cg.fill(CGRect(x: 0, y: 0, width: W, height: H))
-        var y = bodyY
-        for row in laid.rows {
+        var y = bodyY + max(0, availH - used) / 2          // centre any small remainder
+        for row in placed {
             var x = bodyX
             for p in row.photos {
                 // Centre each photo on the row's mid-line; caption hangs below it.
@@ -322,7 +388,7 @@ enum BoardRenderer {
                 let o = UIBezierPath(rect: imgRect.insetBy(dx: 0.15 * mm, dy: 0.15 * mm)); o.lineWidth = 0.3 * mm; o.stroke()
                 captions[p.idx].draw(with: CGRect(x: x, y: py + p.h + capGap, width: p.w, height: row.capH + 4),
                                      options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
-                x += p.w + laid.hgap
+                x += p.w + row.gap
             }
             y += row.imgH + capGap + row.capH + laid.vgap
         }
@@ -360,12 +426,16 @@ enum BoardRenderer {
         // enlarge the caption. Height follows the target aspect.
         let widthMM: CGFloat = 300
         let heightMM = widthMM * (pixel.height / pixel.width)
-        let W = widthMM * mm
+        // Render at scale 1 onto a canvas of exactly `pixel` and scale the drawing
+        // instead. Scaling the canvas (the old way) rounded 1062.99 pt × 1.27 up to
+        // 1351 px, one more than Instagram's 1080×1350.
+        let k = pixel.width / (widthMM * mm)          // points → pixels
         let fmt = UIGraphicsImageRendererFormat.default()
-        fmt.scale = pixel.width / W        // → exactly pixel.width px wide
+        fmt.scale = 1
         fmt.opaque = true
-        return UIGraphicsImageRenderer(size: CGSize(width: W, height: heightMM * mm), format: fmt).image { ctx in
+        return UIGraphicsImageRenderer(size: pixel, format: fmt).image { ctx in
             let cg = ctx.cgContext
+            cg.scaleBy(x: k, y: k)
             drawPoster(plates, widthMM: widthMM, heightMM: heightMM, captionScale: 1.7, cg: cg) { x, _, y in
                 if mark { drawMark(x: x, y: y, size: socialMarkSize, cg: cg) }
             }
