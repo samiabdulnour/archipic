@@ -117,36 +117,25 @@ tools/fastlane.sh screenshots
 
 ## Website and domain
 
-`docs/` is served by GitHub Pages from `main`, at the domain in `docs/CNAME`
-(currently **archi-ve.app**). Merging to `main` deploys it within a minute or
-two. App Store Connect requires `support.html` and `privacy.html` to stay
-reachable.
+`docs/` is served by GitHub Pages from `main`, at the domain in `docs/CNAME`:
+**archipic.app** (DNS at Namecheap: four `A` and four `AAAA` records for
+GitHub Pages on `@`, `www` as a `CNAME` to `samiabdulnour.github.io`, plus
+GitHub's domain-verification `TXT`). Merging to `main` deploys it within a
+minute or two. App Store Connect requires `support.html` and `privacy.html`
+to stay reachable.
 
-### Moving to archipic.app (bought October 2026, not yet live)
+### The old address, archi-ve.app
 
-archipic.app is the long-term domain, and Board exports already print it. **Do
-not ship a release containing the Board mark until archipic.app answers.**
-The old address must keep working for a while, because the live listing links
-to `archi-ve.app/support.html` and `archi-ve.app/privacy.html`. Order:
+The site moved from archi-ve.app to archipic.app in October 2026. The old
+address is kept alive by a separate repository,
+[samiabdulnour/archi-ve-redirect](https://github.com/samiabdulnour/archi-ve-redirect),
+which GitHub Pages serves at archi-ve.app (its DNS never changed). Every page
+there forwards to the same page on archipic.app; `support.html`,
+`privacy.html` and `press.html` do it without JavaScript, so link checkers
+follow them too.
 
-1. **[owner] DNS for archipic.app** at the registrar: `A` records to GitHub
-   Pages (185.199.108.153, 185.199.109.153, 185.199.110.153,
-   185.199.111.153), the matching `AAAA` records (2606:50c0:8000::153 to
-   2606:50c0:8003::153), and `www` as a `CNAME` to `samiabdulnour.github.io`.
-2. **Switch the site:** change `docs/CNAME` to `archipic.app` and replace
-   `archi-ve.app` with `archipic.app` everywhere it's hard-coded
-   (`grep -rn "archi-ve\.app" docs tools fastlane/metadata CLAUDE.md APPSTORE.md BUILD-IOS.md`):
-   the `og:url` / `og:image` tags, the press page, the link checker's `SITE`,
-   and every `fastlane/metadata/*/*_url.txt`. Merge, then in GitHub →
-   Settings → Pages confirm the custom domain and tick **Enforce HTTPS** once
-   the certificate is issued.
-3. **[owner] Keep archi-ve.app alive** as a permanent redirect (HTTP 301)
-   that keeps the path, so `/support.html` and `/privacy.html` still land.
-   GitHub Pages serves one domain per repository, so do this with the
-   registrar's URL forwarding (forward with path) rather than GitHub.
-4. **Listing URLs:** the privacy policy URL can be changed in App Store
-   Connect at any time. The support and marketing URLs change with the next
-   version's `tools/fastlane.sh metadata`.
-5. Once the listing no longer points at archi-ve.app, the redirect can stay
-   indefinitely at the cost of the domain renewal. Links in old posts, emails
-   and printed matter keep working as long as it does.
+Keep that repository and the archi-ve.app domain until nothing links to the
+old address: the live 1.4 listing's support and marketing URLs point there
+until 1.5 replaces them (the privacy policy URL can be changed in App Store
+Connect at any time). Registrar URL forwarding is not a substitute: `.app`
+addresses only load over HTTPS, and GitHub Pages issues the certificate.

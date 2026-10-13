@@ -6,8 +6,7 @@ address on each outlet's contact or "submit news" page. Don't guess one.
 Personalise the first line for each outlet using the angles below.
 
 Before sending: check the press page has the example Boards (the TODO in
-`docs/press.html`). If archipic.app is live by then, use it in place of
-archi-ve.app.
+`docs/press.html`).
 
 ---
 
@@ -32,7 +31,7 @@ privacy label reads Data Not Collected. I'm a Czech architect and built it
 for my own reference archive, learning to program along the way.
 
 Facts, screenshots, the icon and example Boards are on the press page:
-https://archi-ve.app/press.html
+https://archipic.app/press.html
 
 App Store: https://apps.apple.com/app/id6777989742
 
@@ -97,7 +96,7 @@ učil právě při práci na ní. Aplikace je zatím v angličtině, popis v App
 Storu je i v češtině.
 
 Fakta, snímky obrazovky, ikonu a ukázky výstupů najdete na stránce pro
-média: https://archi-ve.app/press.html
+média: https://archipic.app/press.html
 
 App Store: https://apps.apple.com/app/id6777989742
 

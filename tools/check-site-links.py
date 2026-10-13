@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check every link and asset on the website before it deploys.
 
-Merging to main publishes docs/ to archi-ve.app, so run this first:
+Merging to main publishes docs/ to archipic.app, so run this first:
 
     python3 tools/check-site-links.py
 
@@ -18,7 +18,7 @@ import sys
 import urllib.parse
 
 DOCS = pathlib.Path(__file__).resolve().parent.parent / "docs"
-SITE = "https://archi-ve.app"
+SITE = "https://archipic.app"
 
 
 class Links(html.parser.HTMLParser):

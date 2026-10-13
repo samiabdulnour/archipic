@@ -15,7 +15,7 @@ folder is published, sent or scheduled automatically, and nothing should be.
 ## Before launch week
 
 - [ ] Send the ratings message to about 15 people who would genuinely use it.
-- [ ] Check archi-ve.app/press.html has the Board examples (see the TODO in it).
+- [ ] Check archipic.app/press.html has the Board examples (see the TODO in it).
 - [ ] Set the promotional text for launch (`fastlane/metadata/*/promotional_text.txt`,
       then `tools/fastlane.sh promo_text`). It can change without a release.
 
@@ -31,10 +31,9 @@ folder is published, sent or scheduled automatically, and nothing should be.
 
 ## Rules for every draft
 
-- Link the press page (`https://archi-ve.app/press.html`) and the App Store
+- Link the press page (`https://archipic.app/press.html`) and the App Store
   (`https://apps.apple.com/app/id6777989742`). Plain URLs only: no tracking or
   campaign parameters, no link shorteners. Never attach files to press emails.
-- When archipic.app goes live, replace archi-ve.app in these drafts.
 - Never name your employer.
 - The bio is "Sami Abdulnour, a Czech architect". The drafts don't say where
   you live or work; add it yourself where it helps (for example in the emails

@@ -206,7 +206,7 @@ and private iCloud sync.
       local).
 
 **Standing (unchanged from before):**
-- [ ] Privacy Policy URL + Support URL reachable (archi-ve.app).
+- [ ] Privacy Policy URL + Support URL reachable (archi-ve.app at the time; it now forwards to archipic.app).
 
 For every release from 1.5 on, follow `BUILD-IOS.md` (steps 1–6 and
 "Promotion, every release") instead of a per-version checklist here.
